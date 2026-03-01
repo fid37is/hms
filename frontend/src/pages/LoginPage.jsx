@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Hotel, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import * as authApi from '../lib/api/authApi';
@@ -76,7 +76,14 @@ export default function LoginPage() {
             </div>
 
             <div className="form-group">
-              <label className="label">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label">Password</label>
+                <Link to="/forgot-password"
+                  className="text-xs transition-colors"
+                  style={{ color: 'var(--brand)' }}>
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={show ? 'text' : 'password'}

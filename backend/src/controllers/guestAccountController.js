@@ -40,10 +40,31 @@ export const refreshToken = async (req, res, next) => {
 
 export const getMe = async (req, res, next) => {
   try {
-    return sendSuccess(res, {
+    // Fetch full profile from DB to get phone and address
+    const { data: guest } = await (await import('../config/supabase.js')).supabase
+      .from('guests')
+      .select('id, full_name, email, phone, address')
+      .eq('id', req.guest.sub)
+      .single();
+
+    return sendSuccess(res, guest || {
       id:        req.guest.sub,
       email:     req.guest.email,
       full_name: req.guest.full_name,
     }, 'Profile retrieved.');
+  } catch (err) { next(err); }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const data = await guestAccountService.forgotPassword(req.body.email);
+    return sendSuccess(res, data, data.message);
+  } catch (err) { next(err); }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const data = await guestAccountService.resetPassword(req.body);
+    return sendSuccess(res, data, data.message);
   } catch (err) { next(err); }
 };

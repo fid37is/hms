@@ -55,26 +55,31 @@ export const login = async (email, password) => {
   }
 
   // 4. Fetch permissions for this role
-  const { data: rolePermissions, error: permError } = await supabase
-    .from('role_permissions')
-    .select('permission_id')
-    .eq('role_id', role.id);
-
-  if (permError) {
-    throw new AppError('Failed to load user permissions.', 500);
-  }
-
+  //    Admin gets all permissions without a DB lookup
   let permissions = [];
 
-  if (rolePermissions && rolePermissions.length > 0) {
-    const permissionIds = rolePermissions.map((rp) => rp.permission_id);
+  if (role.name.toLowerCase() === 'admin') {
+    permissions = ['*']; // wildcard — frontend checks this
+  } else {
+    const { data: rolePermissions, error: permError } = await supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', role.id);
 
-    const { data: permissionData } = await supabase
-      .from('permissions')
-      .select('module, action')
-      .in('id', permissionIds);
+    if (permError) {
+      throw new AppError('Failed to load user permissions.', 500);
+    }
 
-    permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
+    if (rolePermissions && rolePermissions.length > 0) {
+      const permissionIds = rolePermissions.map((rp) => rp.permission_id);
+
+      const { data: permissionData } = await supabase
+        .from('permissions')
+        .select('module, action')
+        .in('id', permissionIds);
+
+      permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
+    }
   }
 
   // 5. Update last_login
@@ -141,21 +146,25 @@ export const refreshToken = async (token) => {
     .eq('id', user.role_id)
     .single();
 
-  const { data: rolePermissions } = await supabase
-    .from('role_permissions')
-    .select('permission_id')
-    .eq('role_id', role.id);
-
   let permissions = [];
 
-  if (rolePermissions && rolePermissions.length > 0) {
-    const permissionIds = rolePermissions.map((rp) => rp.permission_id);
-    const { data: permissionData } = await supabase
-      .from('permissions')
-      .select('module, action')
-      .in('id', permissionIds);
+  if (role.name.toLowerCase() === 'admin') {
+    permissions = ['*'];
+  } else {
+    const { data: rolePermissions } = await supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', role.id);
 
-    permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
+    if (rolePermissions && rolePermissions.length > 0) {
+      const permissionIds = rolePermissions.map((rp) => rp.permission_id);
+      const { data: permissionData } = await supabase
+        .from('permissions')
+        .select('module, action')
+        .in('id', permissionIds);
+
+      permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
+    }
   }
 
   const tokenPayload = {
@@ -224,4 +233,22 @@ export const changePassword = async (userId, currentPassword, newPassword) => {
   }
 
   return { message: 'Password updated successfully.' };
+};
+
+export const forgotPassword = async (email) => {
+  // Supabase sends the reset email automatically
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
+  });
+  // Always return success to prevent email enumeration
+  if (error) console.error('Password reset error:', error.message);
+  return { message: 'If that email exists, a reset link has been sent.' };
+};
+
+export const adminResetPassword = async (userId, newPassword) => {
+  const { error } = await supabase.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+  if (error) throw new AppError(`Failed to reset password: ${error.message}`, 500);
+  return { message: 'Password reset successfully.' };
 };

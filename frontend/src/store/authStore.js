@@ -16,10 +16,18 @@ export const useAuthStore = create(
 
       hasPermission: (permission) => {
         const { permissions } = get();
-        return permissions.includes(permission);
+        // '*' wildcard means Admin — full access
+        return permissions.includes('*') || permissions.includes(permission);
       },
 
-      isAuthenticated: () => !!get().token,
+      isAuthenticated: () => {
+        const { token, permissions, user } = get();
+        if (!token) return false;
+        // Detect stale token: admin with no wildcard = issued before the fix
+        const isAdmin = user?.role?.toLowerCase() === 'admin';
+        if (isAdmin && !permissions.includes('*')) return false;
+        return true;
+      },
     }),
     {
       name: 'hms-auth',

@@ -9,33 +9,24 @@ import * as ctrl             from '../controllers/userController.js';
 const router = Router();
 router.use(authenticate);
 
-const SETTINGS = PERMISSIONS.CONFIG;
+const { CONFIG: SETTINGS } = PERMISSIONS;
 
-// ─── Users ────────────────────────────────────────────────
-// GET    /api/v1/users              — list all users
-// GET    /api/v1/users/:id          — get user
-// POST   /api/v1/users              — create standalone user
-// PATCH  /api/v1/users/:id          — update user profile
-// PATCH  /api/v1/users/:id/toggle   — activate / deactivate
+// ─── Roles (MUST be before /:id to avoid wildcard capture) ──
+router.get('/roles',           requirePermission(SETTINGS.READ),   ctrl.getRoles);
+router.post('/roles',          requirePermission(SETTINGS.UPDATE), ctrl.createRole);
+router.delete('/roles/:id',    requirePermission(SETTINGS.UPDATE), ctrl.deleteRole);
 
-router.get('/',                requirePermission(SETTINGS.READ),   ctrl.getUsers);
-router.get('/:id',             requirePermission(SETTINGS.READ),   ctrl.getUserById);
-router.post('/',               requirePermission(SETTINGS.UPDATE), ctrl.createUser);
-router.patch('/:id',           requirePermission(SETTINGS.UPDATE), ctrl.updateUser);
-router.patch('/:id/toggle',    requirePermission(SETTINGS.UPDATE), ctrl.toggleUser);
-
-// ─── Staff access (grant / revoke) ────────────────────────
-// POST   /api/v1/users/staff/:staffId/grant    — create user account + link to staff
-// DELETE /api/v1/users/staff/:staffId/revoke   — deactivate + unlink
-
+// ─── Staff access ────────────────────────────────────────────
 router.post('/staff/:staffId/grant',    requirePermission(SETTINGS.UPDATE), ctrl.grantAccess);
 router.delete('/staff/:staffId/revoke', requirePermission(SETTINGS.UPDATE), ctrl.revokeAccess);
 
-// ─── Roles ────────────────────────────────────────────────
-// GET    /api/v1/users/roles         — list roles with permissions
-// POST   /api/v1/users/roles         — create role
-
-router.get('/roles',           requirePermission(SETTINGS.READ),   ctrl.getRoles);
-router.post('/roles',          requirePermission(SETTINGS.UPDATE), ctrl.createRole);
+// ─── Users ───────────────────────────────────────────────────
+router.get('/',             requirePermission(SETTINGS.READ),   ctrl.getUsers);
+router.post('/',            requirePermission(SETTINGS.UPDATE), ctrl.createUser);
+router.get('/:id',          requirePermission(SETTINGS.READ),   ctrl.getUserById);
+router.patch('/:id',        requirePermission(SETTINGS.UPDATE), ctrl.updateUser);
+router.patch('/:id/toggle', requirePermission(SETTINGS.UPDATE), ctrl.toggleUser);
+router.delete('/:id',       requirePermission(SETTINGS.UPDATE), ctrl.deleteUser);
+router.patch('/:id/reset-password', requirePermission(SETTINGS.UPDATE), ctrl.adminResetPassword);
 
 export default router;

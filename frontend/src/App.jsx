@@ -5,6 +5,8 @@ import AppShell from './components/layout/AppShell';
 
 // Pages
 import LoginPage       from './pages/LoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage  from './pages/ResetPasswordPage';
 import DashboardPage   from './pages/DashboardPage';
 import NotFoundPage    from './pages/NotFoundPage';
 
@@ -47,7 +49,9 @@ export default function App() {
         }}
       />
       <Routes>
-        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/login"           element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
         <Route element={<Guard><AppShell /></Guard>}>
           <Route index element={<Navigate to="/dashboard" replace />} />

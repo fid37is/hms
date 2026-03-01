@@ -53,6 +53,8 @@ import {
   getMyReservationById,
   refreshToken,
   getMe,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/guestAccountController.js';
 
 import {
@@ -174,6 +176,18 @@ router.post('/auth/refresh',
   rateLimiter,
   validate(guestRefreshSchema),
   refreshToken
+);
+
+// POST /api/v1/public/auth/forgot-password
+router.post('/auth/forgot-password',
+  rateLimiter,
+  forgotPassword
+);
+
+// POST /api/v1/public/auth/reset-password
+router.post('/auth/reset-password',
+  rateLimiter,
+  resetPassword
 );
 
 // GET /api/v1/public/auth/me

@@ -179,8 +179,8 @@ export const getRevenueReport = async (dateFrom, dateTo) => {
     date_from:     dateFrom,
     date_to:       dateTo,
     total_revenue: totalRevenue,
-    by_method:     byMethod,
-    by_department: byDepartment,
+    by_method:     Object.entries(byMethod).map(([method, total]) => ({ method, total })),
+    by_department: Object.entries(byDepartment).map(([department, total]) => ({ department, total })),
     payment_count: p.length,
   };
 };

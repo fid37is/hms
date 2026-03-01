@@ -178,26 +178,30 @@ export const revokeStaffAccess = async (staffId) => {
 // ─── Roles ────────────────────────────────────────────────
 
 export const getAllRoles = async () => {
-  const { data, error } = await supabase
+  // First get all roles
+  const { data: roles, error } = await supabase
     .from('roles')
-    .select(`
-      id, name, description, is_system_role, created_at,
-      role_permissions (
-        permissions ( module, action )
-      )
-    `)
+    .select('id, name, description, created_at')
     .order('name');
 
   if (error) throw new AppError(`Failed to fetch roles: ${error.message}`, 500);
 
-  // Flatten permissions into string array per role
-  return data.map(role => ({
+  // Then get all role_permissions with permissions joined
+  const { data: rolePerms } = await supabase
+    .from('role_permissions')
+    .select('role_id, permissions(module, action)');
+
+  const permsMap = {};
+  for (const rp of (rolePerms || [])) {
+    if (!permsMap[rp.role_id]) permsMap[rp.role_id] = [];
+    if (rp.permissions) {
+      permsMap[rp.role_id].push(`${rp.permissions.module}:${rp.permissions.action}`);
+    }
+  }
+
+  return roles.map(role => ({
     ...role,
-    permissions: (role.role_permissions || [])
-      .map(rp => rp.permissions)
-      .filter(Boolean)
-      .map(p => `${p.module}:${p.action}`),
-    role_permissions: undefined,
+    permissions: permsMap[role.id] || [],
   }));
 };
 
@@ -233,4 +237,28 @@ export const createRole = async ({ name, description, permissions = [] }) => {
   }
 
   return getAllRoles().then(roles => roles.find(r => r.id === role.id));
+};
+
+// ─── Delete user (deactivate auth + remove profile) ───────
+export const deleteUser = async (id) => {
+  // Soft approach: deactivate rather than hard delete to preserve audit trail
+  await supabase.auth.admin.updateUserById(id, { ban_duration: '87600h' });
+
+  const { error } = await supabase
+    .from('users')
+    .update({ is_active: false })
+    .eq('id', id);
+
+  if (error) throw new AppError(`Failed to deactivate user: ${error.message}`, 500);
+
+  // Unlink from staff record if linked
+  await supabase.from('staff').update({ user_id: null }).eq('user_id', id);
+
+  return { message: 'User deactivated and unlinked from staff.' };
+};
+
+export const deleteRole = async (id) => {
+  const { error } = await supabase.from('roles').delete().eq('id', id);
+  if (error) throw new AppError(`Failed to delete role: ${error.message}`, 500);
+  return { message: 'Role deleted.' };
 };
