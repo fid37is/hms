@@ -1,0 +1,138 @@
+// src/routes/publicRoutes.js
+//
+// Public-facing API for the hotel website.
+// Mount in app.js with:  app.use('/api/v1/public', publicRoutes);
+
+import { Router } from 'express';
+import { validate } from '../middleware/validate.js';
+
+// ─── Guest auth ───────────────────────────────────────────────────────────────
+import {
+  verifyGuestToken,
+  authorizeGuestReservation,
+} from '../middleware/guestAuth.js';
+
+// ─── Rate limiters ────────────────────────────────────────────────────────────
+import {
+  rateLimiter,
+  bookingLimiter,
+  availabilityLimiter,
+} from '../middleware/rateLimiter.js';
+
+// ─── Existing room controllers (no changes needed) ────────────────────────────
+import {
+  getAllRoomTypes,
+  getRoomTypeById,
+  getRatePlans,
+  getAvailableRooms,
+} from '../controllers/roomController.js';
+
+// ─── Existing reservation controller (read-only use) ─────────────────────────
+import {
+  getReservationById,
+} from '../controllers/reservationController.js';
+
+// ─── New public controller (handles guest write actions) ─────────────────────
+import {
+  publicCreateReservation,
+  publicCancelReservation,
+} from '../controllers/publicReservationController.js';
+
+// ─── Existing folio controller ────────────────────────────────────────────────
+import {
+  getFolioByReservation,
+  getFolioSummary,
+  addPayment,
+} from '../controllers/folioController.js';
+
+// ─── Public validators ────────────────────────────────────────────────────────
+import {
+  publicAvailabilitySchema,
+  publicCreateReservationSchema,
+  publicCancelReservationSchema,
+  publicAddPaymentSchema,
+} from '../validators/publicValidator.js';
+
+const router = Router();
+
+// =============================================================================
+// OPEN ROUTES — no authentication required
+// =============================================================================
+
+// GET /api/v1/public/rooms/types
+router.get('/rooms/types',
+  rateLimiter,
+  getAllRoomTypes
+);
+
+// GET /api/v1/public/rooms/types/:roomTypeId/rates  ← must be BEFORE /:id
+router.get('/rooms/types/:roomTypeId/rates',
+  rateLimiter,
+  getRatePlans
+);
+
+// GET /api/v1/public/rooms/types/:id
+router.get('/rooms/types/:id',
+  rateLimiter,
+  getRoomTypeById
+);
+
+// GET /api/v1/public/rooms/availability?check_in=&check_out=&guests=&type_id=
+router.get('/rooms/availability',
+  availabilityLimiter,
+  validate(publicAvailabilitySchema, 'query'),
+  getAvailableRooms
+);
+
+// POST /api/v1/public/reservations
+router.post('/reservations',
+  bookingLimiter,
+  validate(publicCreateReservationSchema),
+  publicCreateReservation
+);
+
+// =============================================================================
+// GUEST-AUTHENTICATED ROUTES — requires JWT from booking confirmation
+// =============================================================================
+
+// GET /api/v1/public/reservations/:id
+router.get('/reservations/:id',
+  rateLimiter,
+  verifyGuestToken,
+  authorizeGuestReservation,
+  getReservationById
+);
+
+// PATCH /api/v1/public/reservations/:id/cancel
+router.patch('/reservations/:id/cancel',
+  rateLimiter,
+  verifyGuestToken,
+  authorizeGuestReservation,
+  validate(publicCancelReservationSchema),
+  publicCancelReservation
+);
+
+// GET /api/v1/public/folio/reservation/:reservationId
+router.get('/folio/reservation/:reservationId',
+  rateLimiter,
+  verifyGuestToken,
+  authorizeGuestReservation,
+  getFolioByReservation
+);
+
+// GET /api/v1/public/folio/:id/summary
+router.get('/folio/:id/summary',
+  rateLimiter,
+  verifyGuestToken,
+  getFolioSummary
+);
+
+// POST /api/v1/public/folio/:id/payments
+router.post('/folio/:id/payments',
+  rateLimiter,
+  verifyGuestToken,
+  validate(publicAddPaymentSchema),
+  addPayment
+);
+
+export default router;

@@ -1,0 +1,10 @@
+import api from '../axios';
+export const getGuests      = (params) => api.get('/guests', { params });
+export const getGuestById   = (id)     => api.get(`/guests/${id}`);
+export const searchGuests   = (q)      => api.get('/guests/search', { params: { q } });
+export const createGuest    = (data)   => api.post('/guests', data);
+export const updateGuest    = (id, d)  => api.patch(`/guests/${id}`, d);
+export const deleteGuest    = (id)     => api.delete(`/guests/${id}`);
+export const getGuestHistory = (id)   => api.get(`/guests/${id}/history`);
+export const updateLoyalty  = (id, d)  => api.post(`/guests/${id}/loyalty`, d);
+export const flagGuest      = (id, d)  => api.patch(`/guests/${id}/flag`, d);

@@ -1,0 +1,11 @@
+import api from '../axios';
+export const getReservations  = (params) => api.get('/reservations', { params });
+export const getReservationById = (id)   => api.get(`/reservations/${id}`);
+export const createReservation = (data)  => api.post('/reservations', data);
+export const updateReservation = (id, d) => api.patch(`/reservations/${id}`, d);
+export const checkIn          = (id)     => api.patch(`/reservations/${id}/check-in`);
+export const checkOut         = (id)     => api.patch(`/reservations/${id}/check-out`);
+export const cancelReservation = (id, d) => api.patch(`/reservations/${id}/cancel`, d);
+export const assignRoom       = (id, d)  => api.patch(`/reservations/${id}/assign-room`, d);
+export const getTodayArrivals   = ()     => api.get('/reservations/arrivals/today');
+export const getTodayDepartures = ()     => api.get('/reservations/departures/today');

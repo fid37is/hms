@@ -1,0 +1,10 @@
+import api from '../axios';
+export const getFolioByReservation = (resId) => api.get(`/folio/reservation/${resId}`);
+export const getFolioById          = (id)    => api.get(`/folio/${id}`);
+export const getFolioSummary       = (id)    => api.get(`/folio/${id}/summary`);
+export const addCharge             = (id, d) => api.post(`/folio/${id}/charges`, d);
+export const voidCharge            = (id, itemId, d) => api.patch(`/folio/${id}/charges/${itemId}/void`, d);
+export const addPayment            = (id, d) => api.post(`/folio/${id}/payments`, d);
+export const refundPayment         = (id, payId, d) => api.patch(`/folio/${id}/payments/${payId}/refund`, d);
+export const openShift             = (d)    => api.post('/folio/shift/open', d);
+export const closeShift            = (d)    => api.post('/folio/shift/close', d);

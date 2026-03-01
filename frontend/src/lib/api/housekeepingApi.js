@@ -1,0 +1,15 @@
+import api from '../axios';
+export const getTasks         = (params) => api.get('/housekeeping/tasks', { params });
+export const getTaskById      = (id)     => api.get(`/housekeeping/tasks/${id}`);
+export const getTasksByRoom   = (roomId) => api.get(`/housekeeping/tasks/room/${roomId}`);
+export const createTask       = (data)   => api.post('/housekeeping/tasks', data);
+export const updateTask       = (id, d)  => api.patch(`/housekeeping/tasks/${id}`, d);
+export const assignTask       = (id, d)  => api.patch(`/housekeeping/tasks/${id}/assign`, d);
+export const startTask        = (id)     => api.patch(`/housekeeping/tasks/${id}/start`);
+export const completeTask     = (id, d)  => api.patch(`/housekeeping/tasks/${id}/complete`, d);
+export const deleteTask       = (id)     => api.delete(`/housekeeping/tasks/${id}`);
+export const getLostAndFound  = (params) => api.get('/housekeeping/lost-and-found', { params });
+export const getLostAndFoundById = (id)  => api.get(`/housekeeping/lost-and-found/${id}`);
+export const createLostItem   = (data)   => api.post('/housekeeping/lost-and-found', data);
+export const updateLostItem   = (id, d)  => api.patch(`/housekeeping/lost-and-found/${id}`, d);
+export const markReturned     = (id, d)  => api.patch(`/housekeeping/lost-and-found/${id}/returned`, d);

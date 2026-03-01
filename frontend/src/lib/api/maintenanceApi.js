@@ -1,0 +1,15 @@
+import api from '../axios';
+export const getWorkOrders    = (params) => api.get('/maintenance/work-orders', { params });
+export const getWOById        = (id)     => api.get(`/maintenance/work-orders/${id}`);
+export const createWO         = (data)   => api.post('/maintenance/work-orders', data);
+export const updateWO         = (id, d)  => api.patch(`/maintenance/work-orders/${id}`, d);
+export const assignWO         = (id, d)  => api.patch(`/maintenance/work-orders/${id}/assign`, d);
+export const startWO          = (id)     => api.patch(`/maintenance/work-orders/${id}/start`);
+export const resolveWO        = (id, d)  => api.patch(`/maintenance/work-orders/${id}/resolve`, d);
+export const closeWO          = (id)     => api.patch(`/maintenance/work-orders/${id}/close`);
+export const getAssets        = (params) => api.get('/maintenance/assets', { params });
+export const getAssetById     = (id)     => api.get(`/maintenance/assets/${id}`);
+export const getAssetsDue     = ()       => api.get('/maintenance/assets/due-for-service');
+export const createAsset      = (data)   => api.post('/maintenance/assets', data);
+export const updateAsset      = (id, d)  => api.patch(`/maintenance/assets/${id}`, d);
+export const deleteAsset      = (id)     => api.delete(`/maintenance/assets/${id}`);

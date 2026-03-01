@@ -1,0 +1,15 @@
+import api from '../axios';
+export const getDepartments   = ()       => api.get('/staff/departments');
+export const createDepartment = (data)   => api.post('/staff/departments', data);
+export const getStaff         = (params) => api.get('/staff', { params });
+export const getStaffById     = (id)     => api.get(`/staff/${id}`);
+export const createStaff      = (data)   => api.post('/staff', data);
+export const updateStaff      = (id, d)  => api.patch(`/staff/${id}`, d);
+export const deleteStaff      = (id)     => api.delete(`/staff/${id}`);
+export const getShifts        = (id, p)  => api.get(`/staff/${id}/shifts`, { params: p });
+export const createShift      = (data)   => api.post('/staff/shifts', data);
+export const clockIn          = (id)     => api.patch(`/staff/shifts/${id}/clock-in`);
+export const clockOut         = (id)     => api.patch(`/staff/shifts/${id}/clock-out`);
+export const getLeaveRequests = (params) => api.get('/staff/leave', { params });
+export const createLeave      = (data)   => api.post('/staff/leave', data);
+export const reviewLeave      = (id, d)  => api.patch(`/staff/leave/${id}/review`, d);

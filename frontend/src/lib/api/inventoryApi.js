@@ -1,0 +1,17 @@
+import api from '../axios';
+export const getSuppliers     = ()       => api.get('/inventory/suppliers');
+export const createSupplier   = (data)   => api.post('/inventory/suppliers', data);
+export const updateSupplier   = (id, d)  => api.patch(`/inventory/suppliers/${id}`, d);
+export const getItems         = (params) => api.get('/inventory/items', { params });
+export const getItemById      = (id)     => api.get(`/inventory/items/${id}`);
+export const getLowStock      = ()       => api.get('/inventory/items/low-stock');
+export const createItem       = (data)   => api.post('/inventory/items', data);
+export const updateItem       = (id, d)  => api.patch(`/inventory/items/${id}`, d);
+export const getMovements     = (id, p)  => api.get(`/inventory/items/${id}/movements`, { params: p });
+export const recordMovement   = (id, d)  => api.post(`/inventory/items/${id}/movements`, d);
+export const getPurchaseOrders = (params) => api.get('/inventory/purchase-orders', { params });
+export const getPOById        = (id)     => api.get(`/inventory/purchase-orders/${id}`);
+export const createPO         = (data)   => api.post('/inventory/purchase-orders', data);
+export const approvePO        = (id)     => api.patch(`/inventory/purchase-orders/${id}/approve`);
+export const receivePO        = (id)     => api.patch(`/inventory/purchase-orders/${id}/receive`);
+export const cancelPO         = (id)     => api.patch(`/inventory/purchase-orders/${id}/cancel`);
