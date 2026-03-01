@@ -45,6 +45,22 @@ import {
   addPayment,
 } from '../controllers/folioController.js';
 
+// ─── Guest account controllers ───────────────────────────────────────────────
+import {
+  register,
+  login,
+  getMyReservations,
+  getMyReservationById,
+  refreshToken,
+  getMe,
+} from '../controllers/guestAccountController.js';
+
+import {
+  guestRegisterSchema,
+  guestLoginSchema,
+  guestRefreshSchema,
+} from '../validators/guestAccountValidator.js';
+
 // ─── Public validators ────────────────────────────────────────────────────────
 import {
   publicAvailabilitySchema,
@@ -133,6 +149,52 @@ router.post('/folio/:id/payments',
   verifyGuestToken,
   validate(publicAddPaymentSchema),
   addPayment
+);
+
+// =============================================================================
+// GUEST ACCOUNT ROUTES
+// =============================================================================
+
+// POST /api/v1/public/auth/register
+router.post('/auth/register',
+  rateLimiter,
+  validate(guestRegisterSchema),
+  register
+);
+
+// POST /api/v1/public/auth/login
+router.post('/auth/login',
+  rateLimiter,
+  validate(guestLoginSchema),
+  login
+);
+
+// POST /api/v1/public/auth/refresh
+router.post('/auth/refresh',
+  rateLimiter,
+  validate(guestRefreshSchema),
+  refreshToken
+);
+
+// GET /api/v1/public/auth/me
+router.get('/auth/me',
+  rateLimiter,
+  verifyGuestToken,
+  getMe
+);
+
+// GET /api/v1/public/auth/my-reservations
+router.get('/auth/my-reservations',
+  rateLimiter,
+  verifyGuestToken,
+  getMyReservations
+);
+
+// GET /api/v1/public/auth/my-reservations/:id
+router.get('/auth/my-reservations/:id',
+  rateLimiter,
+  verifyGuestToken,
+  getMyReservationById
 );
 
 export default router;
