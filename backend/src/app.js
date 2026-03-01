@@ -1,43 +1,60 @@
 // src/app.js
 
-import express    from 'express';
-import cors       from 'cors';
-import helmet     from 'helmet';
-import rateLimit  from 'express-rate-limit';
+import express   from 'express';
+import cors      from 'cors';
+import helmet    from 'helmet';
+import rateLimit from 'express-rate-limit';
 
-import { env }            from './config/env.js';
-import { requestLogger }  from './middleware/requestLogger.js';
-import { errorHandler }   from './middleware/errorHandler.js';
-import router             from './routes/index.js';
-import publicRoutes       from './routes/publicRoutes.js';
+import { env }           from './config/env.js';
+import { requestLogger } from './middleware/requestLogger.js';
+import { errorHandler }  from './middleware/errorHandler.js';
+import router            from './routes/index.js';
 
 const app = express();
 
-// ── 1. CORS must be first — before any routes ─────────────────────────────────
-app.use(cors({
-  origin: [
-    env.FRONTEND_URL,              // HMS frontend (http://localhost:5173)
-    env.WEBSITE_URL  || 'http://localhost:5174',  // Hotel website
-  ],
+// ─── Allowed origins ─────────────────────────────────────
+// FRONTEND_URL can be comma-separated for multiple origins
+// e.g. "https://hms-67e.pages.dev,http://localhost:5173"
+const allowedOrigins = [
+  ...(env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean),
+  // Always allow localhost in development
+  ...(env.isDev ? ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4173'] : []),
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Render health checks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials:    true,
   methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  optionsSuccessStatus: 200, // Some browsers (IE11) choke on 204
+};
 
-// ── 2. Security & parsing ─────────────────────────────────────────────────────
 app.use(helmet());
+
+// Handle preflight for ALL routes before anything else
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+
 app.use(rateLimit({
   windowMs:        15 * 60 * 1000,
-  max:             100,
+  max:             200,
   message:         { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders:   false,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
-// ── 3. Health check ───────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -47,11 +64,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── 4. Routes ─────────────────────────────────────────────────────────────────
-app.use('/api/v1/public', publicRoutes);   // hotel website (public, guest-facing)
-app.use('/api/v1',        router);         // HMS dashboard (staff, authenticated)
+app.use('/api/v1', router);
 
-// ── 5. 404 & error handler ────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
