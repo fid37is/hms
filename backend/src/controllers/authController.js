@@ -51,3 +51,10 @@ export const logoutController = (req, res) => {
   // If refresh token blacklisting is needed in future, implement here.
   return sendSuccess(res, null, 'Logged out successfully.');
 };
+
+export const forgotPasswordController = async (req, res, next) => {
+  try {
+    const data = await authService.forgotPassword(req.body.email);
+    return sendSuccess(res, data);
+  } catch (err) { next(err); }
+};

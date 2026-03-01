@@ -141,3 +141,18 @@ export const getAvailableRooms = async (req, res, next) => {
     return sendSuccess(res, data, 'Available rooms retrieved.');
   } catch (err) { next(err); }
 };
+
+export const uploadMedia = async (req, res, next) => {
+  try {
+    if (!req.file) throw new (await import('../middleware/errorHandler.js')).AppError('No file provided.', 400);
+    const data = await roomService.uploadRoomMedia(req.params.id, req.file);
+    return sendSuccess(res, data, 'Media uploaded.');
+  } catch (err) { next(err); }
+};
+
+export const deleteMedia = async (req, res, next) => {
+  try {
+    const data = await roomService.deleteRoomMedia(req.params.id, req.body.path);
+    return sendSuccess(res, data, 'Media deleted.');
+  } catch (err) { next(err); }
+};

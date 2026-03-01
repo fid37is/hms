@@ -180,7 +180,7 @@ export default function RoleManager() {
   if (isLoading) return <LoadingSpinner center />;
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       <div className="flex justify-end">
         <button onClick={() => setShowForm(s => !s)} className="btn-primary">
           <Plus size={15} /> {showForm ? 'Cancel' : 'New Role'}

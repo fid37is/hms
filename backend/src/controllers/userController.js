@@ -65,3 +65,27 @@ export const createRole = async (req, res, next) => {
     return sendCreated(res, data, 'Role created.');
   } catch (err) { next(err); }
 };
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const data = await userService.deleteUser(req.params.id);
+    return sendSuccess(res, data, 'User deactivated.');
+  } catch (err) { next(err); }
+};
+
+export const deleteRole = async (req, res, next) => {
+  try {
+    const data = await userService.deleteRole(req.params.id);
+    return sendSuccess(res, data, 'Role deleted.');
+  } catch (err) { next(err); }
+};
+
+export const adminResetPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8)
+      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    const data = await (await import('../services/authService.js')).adminResetPassword(req.params.id, password);
+    return sendSuccess(res, data, 'Password reset.');
+  } catch (err) { next(err); }
+};

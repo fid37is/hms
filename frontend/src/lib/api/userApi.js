@@ -15,3 +15,4 @@ export const revokeAccess    = (staffId)        => axios.delete(`/users/staff/${
 // Roles
 export const getRoles        = ()          => axios.get('/users/roles');
 export const createRole      = (data)      => axios.post('/users/roles', data);
+export const deleteUser      = (id)        => axios.delete(`/users/${id}`);

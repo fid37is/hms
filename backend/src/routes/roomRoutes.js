@@ -16,6 +16,7 @@ import {
   blockRoomSchema,
   availabilitySchema,
 } from '../validators/roomValidator.js';
+import multer from 'multer';
 import {
   getAllRoomTypes,
   getRoomTypeById,
@@ -35,9 +36,15 @@ import {
   unblockRoom,
   deleteRoom,
   getAvailableRooms,
+  uploadMedia,
+  deleteMedia,
 } from '../controllers/roomController.js';
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 5 * 1024 * 1024 }, // 5MB hard limit
+});
 
 // All room routes require authentication
 router.use(authenticate);
@@ -89,5 +96,7 @@ router.patch('/:id/status',   requirePermission(PERMISSIONS.ROOMS.STATUS),  vali
 router.patch('/:id/block',    requirePermission(PERMISSIONS.ROOMS.UPDATE),  validate(blockRoomSchema),        blockRoom);
 router.patch('/:id/unblock',  requirePermission(PERMISSIONS.ROOMS.UPDATE),  unblockRoom);
 router.delete('/:id',         requirePermission(PERMISSIONS.ROOMS.UPDATE),  deleteRoom);
+router.post('/:id/media',     requirePermission(PERMISSIONS.ROOMS.UPDATE),  upload.single('file'), uploadMedia);
+router.delete('/:id/media',   requirePermission(PERMISSIONS.ROOMS.UPDATE),  deleteMedia);
 
 export default router;

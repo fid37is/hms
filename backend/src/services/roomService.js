@@ -350,3 +350,88 @@ export const getAvailableRooms = async (checkIn, checkOut, typeId = null) => {
   if (error) throw new AppError('Failed to fetch available rooms.', 500);
   return data;
 };
+
+// ─── Media ────────────────────────────────────────────────
+
+export const uploadRoomMedia = async (roomId, file) => {
+  const MAX_IMAGE_SIZE = 2 * 1024 * 1024;  // 2MB
+  const MAX_VIDEO_SIZE = 5 * 1024 * 1024;  // 5MB
+  const ALLOWED_TYPES  = ['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];
+
+  if (!ALLOWED_TYPES.includes(file.mimetype)) {
+    throw new AppError('Invalid file type. Allowed: JPG, PNG, WebP, GIF, MP4, WebM.', 400);
+  }
+
+  const isVideo = file.mimetype.startsWith('video/');
+  const limit   = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  if (file.size > limit) {
+    throw new AppError(`File too large. Max ${isVideo ? '5MB for video' : '2MB for images/GIFs'}.`, 400);
+  }
+
+  // Check current media count
+  const room = await getRoomById(roomId);
+  const currentMedia = room.media || [];
+  if (currentMedia.length >= 5) {
+    throw new AppError('Maximum 5 media files per room.', 400);
+  }
+
+  const ext      = file.originalname.split('.').pop().toLowerCase();
+  const filename = `rooms/${roomId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const type     = file.mimetype === 'image/gif' ? 'gif' : isVideo ? 'video' : 'image';
+
+  const { error: uploadError } = await supabase.storage
+    .from('room-media')
+    .upload(filename, file.buffer, {
+      contentType:  file.mimetype,
+      cacheControl: '3600',
+      upsert:       false,
+    });
+
+  if (uploadError) throw new AppError(`Upload failed: ${uploadError.message}`, 500);
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('room-media')
+    .getPublicUrl(filename);
+
+  const mediaItem = {
+    url:      publicUrl,
+    path:     filename,
+    type,
+    name:     file.originalname,
+    size:     file.size,
+    added_at: new Date().toISOString(),
+  };
+
+  const updatedMedia = [...currentMedia, mediaItem];
+
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({ media: updatedMedia })
+    .eq('id', roomId)
+    .select()
+    .single();
+
+  if (error) throw new AppError(`Failed to save media: ${error.message}`, 500);
+  return data;
+};
+
+export const deleteRoomMedia = async (roomId, mediaPath) => {
+  const room = await getRoomById(roomId);
+  const currentMedia = room.media || [];
+
+  // Remove from storage
+  await supabase.storage.from('room-media').remove([mediaPath]);
+
+  // Remove from room record
+  const updatedMedia = currentMedia.filter(m => m.path !== mediaPath);
+
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({ media: updatedMedia })
+    .eq('id', roomId)
+    .select()
+    .single();
+
+  if (error) throw new AppError(`Failed to update media: ${error.message}`, 500);
+  return data;
+};
