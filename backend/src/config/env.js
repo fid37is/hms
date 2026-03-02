@@ -38,4 +38,5 @@ export const env = {
   EMAIL_FROM: optional('EMAIL_FROM', 'noreply@hms.com'),
 
   FRONTEND_URL: optional('FRONTEND_URL', 'http://localhost:5173'),
+  WEBSITE_URL:  optional('WEBSITE_URL',  'http://localhost:5174'),
 };
