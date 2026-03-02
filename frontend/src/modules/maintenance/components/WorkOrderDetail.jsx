@@ -4,7 +4,7 @@ import StatusBadge   from '../../../components/shared/StatusBadge';
 import { formatDateTime } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
-export default function WorkOrderDetail({ wo, onUpdate }) {
+export default function WorkOrderDetail({ workOrder: wo, onClose, onUpdate }) {
   const start = useMutation({
     mutationFn: () => maintApi.startWO(wo.id),
     onSuccess: () => { toast.success('Work started'); onUpdate(); },
@@ -29,7 +29,7 @@ export default function WorkOrderDetail({ wo, onUpdate }) {
         {[
           ['Status',      <StatusBadge status={wo.status} />],
           ['Priority',    <span className="text-sm capitalize" style={{ color: 'var(--text-base)' }}>{wo.priority}</span>],
-          ['Category',    wo.category],
+          ['Category',    wo.category || '—'],
           ['Location',    wo.rooms?.number ? `Room ${wo.rooms.number}` : (wo.location || '—')],
           ['Assigned To', wo.assigned_to_user?.full_name || 'Unassigned'],
           ['Raised',      formatDateTime(wo.created_at)],
@@ -56,11 +56,11 @@ export default function WorkOrderDetail({ wo, onUpdate }) {
       )}
 
       <div className="flex gap-2 pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-        {wo.status === 'open' || wo.status === 'assigned' ? (
+        {(wo.status === 'open' || wo.status === 'assigned') && (
           <button onClick={() => start.mutate()} disabled={start.isPending} className="btn-primary">
             {start.isPending ? 'Updating…' : 'Start Work'}
           </button>
-        ) : null}
+        )}
         {wo.status === 'in_progress' && (
           <button onClick={() => resolve.mutate()} disabled={resolve.isPending} className="btn-primary">
             {resolve.isPending ? 'Updating…' : 'Mark Resolved'}

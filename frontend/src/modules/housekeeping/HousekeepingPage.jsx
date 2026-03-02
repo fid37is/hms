@@ -2,21 +2,21 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import * as hkApi     from '../../lib/api/housekeepingApi';
-import PageHeader      from '../../components/shared/PageHeader';
-import Modal           from '../../components/shared/Modal';
-import LoadingSpinner  from '../../components/shared/LoadingSpinner';
-import TaskBoard       from './components/TaskBoard';
-import TaskForm        from './components/TaskForm';
-import LostFoundPanel  from './components/LostFoundPanel';
+import Modal          from '../../components/shared/Modal';
+import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import TaskBoard      from './components/TaskBoard';
+import TaskForm       from './components/TaskForm';
+import LostFoundPanel from './components/LostFoundPanel';
 import toast from 'react-hot-toast';
 
 const TABS = ['Tasks', 'Lost & Found'];
 
 export default function HousekeepingPage() {
   const qc = useQueryClient();
-  const [tab,      setTab]      = useState('Tasks');
-  const [showForm, setShowForm] = useState(false);
-  const [editTask, setEditTask] = useState(null);
+  const [tab,            setTab]            = useState('Tasks');
+  const [showForm,       setShowForm]       = useState(false);
+  const [editTask,       setEditTask]       = useState(null);
+  const [lostFoundOpen,  setLostFoundOpen]  = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['hk-tasks'],
@@ -24,50 +24,53 @@ export default function HousekeepingPage() {
     refetchInterval: 30_000,
   });
 
-  const updateTask = useMutation({
-    mutationFn: ({ id, ...d }) => hkApi.updateTask(id, d),
-    onSuccess: () => { qc.invalidateQueries(['hk-tasks']); toast.success('Task updated'); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
-  });
-
   const startTask = useMutation({
     mutationFn: (id) => hkApi.startTask(id),
-    onSuccess: () => { qc.invalidateQueries(['hk-tasks']); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
+    onSuccess: () => qc.invalidateQueries(['hk-tasks']),
   });
 
   const completeTask = useMutation({
     mutationFn: (id) => hkApi.completeTask(id, {}),
     onSuccess: () => { qc.invalidateQueries(['hk-tasks']); toast.success('Task completed'); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Housekeeping"
-        action={
-          tab === 'Tasks' && (
-            <button onClick={() => { setEditTask(null); setShowForm(true); }} className="btn-primary">
-              <Plus size={15} /> New Task
-            </button>
-          )
-        }
-      />
+    <div className="space-y-4">
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className="px-4 py-1.5 text-xs font-medium rounded-md transition-all"
-            style={{
-              backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent',
-              color:           tab === t ? 'var(--text-base)'  : 'var(--text-muted)',
-              boxShadow:       tab === t ? 'var(--shadow-xs)'  : 'none',
-            }}>
-            {t}
+      {/* Tabs + action button on same row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="overflow-x-auto pb-1">
+          <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+            {TABS.map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className="px-4 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
+                style={{
+                  backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent',
+                  color:           tab === t ? 'var(--text-base)'  : 'var(--text-muted)',
+                  boxShadow:       tab === t ? 'var(--shadow-xs)'  : 'none',
+                }}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tab === 'Tasks' && (
+          <button
+            onClick={() => { setEditTask(null); setShowForm(true); }}
+            className="btn-primary text-xs flex-shrink-0"
+          >
+            <Plus size={14} /> Task
           </button>
-        ))}
+        )}
+        {tab === 'Lost & Found' && (
+          <button
+            onClick={() => setLostFoundOpen(true)}
+            className="btn-primary text-xs flex-shrink-0"
+          >
+            <Plus size={14} /> Log Item
+          </button>
+        )}
       </div>
 
       {tab === 'Tasks' && (
@@ -81,10 +84,14 @@ export default function HousekeepingPage() {
             />
       )}
 
-      {tab === 'Lost & Found' && <LostFoundPanel />}
+      {tab === 'Lost & Found' && (
+        <LostFoundPanel
+          openForm={lostFoundOpen}
+          onFormClose={() => setLostFoundOpen(false)}
+        />
+      )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)}
-        title={editTask ? 'Edit Task' : 'New Task'}>
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={editTask ? 'Edit Task' : 'New Task'}>
         <TaskForm
           task={editTask}
           onSuccess={() => { setShowForm(false); qc.invalidateQueries(['hk-tasks']); }}

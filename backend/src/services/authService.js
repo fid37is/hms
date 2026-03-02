@@ -105,13 +105,15 @@ export const login = async (email, password) => {
     access_token:  accessToken,
     refresh_token: refreshToken,
     expires_in:    env.JWT_EXPIRES_IN,
+    must_change_password: user.must_change_password || false,
     user: {
-      id:          user.id,
-      full_name:   user.full_name,
-      email:       user.email,
-      phone:       user.phone,
-      department:  user.department,
-      role:        role.name,
+      id:                  user.id,
+      full_name:           user.full_name,
+      email:               user.email,
+      phone:               user.phone,
+      department:          user.department,
+      role:                role.name,
+      must_change_password: user.must_change_password || false,
       permissions,
     },
   };
@@ -204,33 +206,32 @@ export const getProfile = async (userId) => {
   return { ...user, role };
 };
 
-export const changePassword = async (userId, currentPassword, newPassword) => {
+export const changePassword = async (userId, currentPassword, newPassword, forceChange = false) => {
   const { data: userData } = await supabase
     .from('users')
     .select('email')
     .eq('id', userId)
     .single();
 
-  if (!userData) {
-    throw new AppError('User not found.', 404);
-  }
+  if (!userData) throw new AppError('User not found.', 404);
 
-  const { error: verifyError } = await supabase.auth.signInWithPassword({
-    email:    userData.email,
-    password: currentPassword,
-  });
-
-  if (verifyError) {
-    throw new AppError('Current password is incorrect.', 401);
+  // Skip current password check on force-change (temp password flow)
+  if (!forceChange) {
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email:    userData.email,
+      password: currentPassword,
+    });
+    if (verifyError) throw new AppError('Current password is incorrect.', 401);
   }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
     password: newPassword,
   });
 
-  if (updateError) {
-    throw new AppError('Failed to update password.', 500);
-  }
+  if (updateError) throw new AppError('Failed to update password.', 500);
+
+  // Always clear the force-change flag
+  await supabase.from('users').update({ must_change_password: false }).eq('id', userId);
 
   return { message: 'Password updated successfully.' };
 };

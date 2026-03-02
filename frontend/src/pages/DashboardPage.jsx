@@ -11,11 +11,11 @@ import { useNavigate } from 'react-router-dom';
 function StatCard({ icon: Icon, label, value, sub, accent = false }) {
   return (
     <div className="stat-card">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="stat-label">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="stat-label truncate">{label}</p>
           <p className="stat-value">{value ?? '—'}</p>
-          {sub && <p className="stat-delta">{sub}</p>}
+          {sub && <p className="stat-delta truncate">{sub}</p>}
         </div>
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -36,14 +36,13 @@ function QuickLink({ label, to, icon: Icon }) {
   return (
     <button
       onClick={() => navigate(to)}
-      className="flex items-center justify-between w-full px-4 py-3 rounded-md transition-colors text-left"
-      style={{ color: 'var(--text-base)' }}
+      className="flex items-center justify-between w-full px-3 py-3 rounded-md transition-colors text-left active:opacity-70"
       onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
     >
       <div className="flex items-center gap-3">
         <Icon size={15} style={{ color: 'var(--text-muted)' }} />
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{label}</span>
       </div>
       <ArrowRight size={13} style={{ color: 'var(--text-muted)' }} />
     </button>
@@ -60,55 +59,30 @@ export default function DashboardPage() {
   if (isLoading) return <LoadingSpinner center />;
 
   const stats   = res || {};
-  const rooms   = stats.rooms   || {};
-  const today   = stats.today   || {};
-  const finance = stats.financials || {};
+  const rooms   = stats.rooms       || {};
+  const today   = stats.today       || {};
+  const finance = stats.financials  || {};
   const hk      = stats.housekeeping || {};
 
   return (
-    <div className="space-y-6">
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={BedDouble}
-          label="Occupancy"
-          value={rooms.occupancy_rate || '0%'}
-          sub={`${rooms.breakdown?.occupied || 0} of ${rooms.total || 0} rooms`}
-          accent
-        />
-        <StatCard
-          icon={Users}
-          label="In House"
-          value={today.in_house ?? 0}
-          sub="currently checked in"
-        />
-        <StatCard
-          icon={CalendarCheck}
-          label="Today"
-          value={today.arrivals ?? 0}
-          sub={`${today.departures ?? 0} departures`}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Monthly Revenue"
-          value={formatCurrency(finance.monthly_revenue || 0)}
-          sub={`${formatCurrency(finance.open_balance || 0)} outstanding`}
-          accent
-        />
+    <div className="space-y-4">
+      {/* Stat cards - 2 col mobile, 4 col desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={BedDouble}    label="Occupancy"       value={rooms.occupancy_rate || '0%'}    sub={`${rooms.breakdown?.occupied || 0} of ${rooms.total || 0} rooms`} accent />
+        <StatCard icon={Users}        label="In House"        value={today.in_house ?? 0}              sub="checked in" />
+        <StatCard icon={CalendarCheck} label="Arrivals Today" value={today.arrivals ?? 0}              sub={`${today.departures ?? 0} departures`} />
+        <StatCard icon={TrendingUp}   label="Monthly Revenue" value={formatCurrency(finance.monthly_revenue || 0)} sub={`${formatCurrency(finance.open_balance || 0)} outstanding`} accent />
       </div>
 
-      {/* Middle row */}
+      {/* Middle row - stacked on mobile, 3-col on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Room status breakdown */}
-        <div className="card col-span-1">
+        {/* Room status */}
+        <div className="card">
           <div className="card-header">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-              Room Status
-            </span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>Room Status</span>
           </div>
-          <div className="card-body space-y-2">
+          <div className="card-body space-y-3">
             {[
               { label: 'Available',    key: 'available',    color: 'var(--s-green-text)'  },
               { label: 'Occupied',     key: 'occupied',     color: 'var(--brand)'         },
@@ -120,21 +94,11 @@ export default function DashboardPage() {
               const pct   = rooms.total ? Math.round((count / rooms.total) * 100) : 0;
               return (
                 <div key={key} className="flex items-center gap-3">
-                  <span className="text-xs w-24 flex-shrink-0" style={{ color: 'var(--text-sub)' }}>
-                    {label}
-                  </span>
-                  <div
-                    className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ backgroundColor: 'var(--bg-muted)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: color }}
-                    />
+                  <span className="text-xs w-24 flex-shrink-0" style={{ color: 'var(--text-sub)' }}>{label}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-muted)' }}>
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
                   </div>
-                  <span className="text-xs font-medium w-5 text-right" style={{ color: 'var(--text-muted)' }}>
-                    {count}
-                  </span>
+                  <span className="text-xs font-medium w-5 text-right" style={{ color: 'var(--text-muted)' }}>{count}</span>
                 </div>
               );
             })}
@@ -142,45 +106,39 @@ export default function DashboardPage() {
         </div>
 
         {/* Today's activity */}
-        <div className="card col-span-1">
+        <div className="card">
           <div className="card-header">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-              Today's Activity
-            </span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>Today's Activity</span>
           </div>
-          <div className="card-body space-y-3">
+          <div className="card-body space-y-1">
             {[
               { icon: CheckCircle, label: 'Check-ins due',    value: today.arrivals   ?? 0, color: 'var(--s-green-text)'  },
               { icon: Clock,       label: 'Check-outs due',   value: today.departures ?? 0, color: 'var(--s-yellow-text)' },
               { icon: Users,       label: 'In-house guests',  value: today.in_house   ?? 0, color: 'var(--brand)'         },
               { icon: Sparkles,    label: 'Pending HK tasks', value: hk.pending_tasks ?? 0, color: 'var(--s-red-text)'    },
             ].map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="flex items-center justify-between py-1">
+              <div key={label} className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2.5">
-                  <Icon size={14} style={{ color }} />
+                  <Icon size={15} style={{ color }} />
                   <span className="text-sm" style={{ color: 'var(--text-sub)' }}>{label}</span>
                 </div>
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-                  {value}
-                </span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{value}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Quick links */}
-        <div className="card col-span-1">
+        {/* Quick actions */}
+        <div className="card">
           <div className="card-header">
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-              Quick Actions
-            </span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>Quick Actions</span>
           </div>
           <div className="card-body !p-2 space-y-0.5">
-            <QuickLink label="New Reservation"    to="/reservations"  icon={CalendarCheck} />
-            <QuickLink label="Check-in Guest"     to="/reservations"  icon={CheckCircle}   />
-            <QuickLink label="Room Status Board"  to="/rooms"         icon={BedDouble}     />
-            <QuickLink label="Housekeeping Tasks" to="/housekeeping"  icon={Sparkles}      />
-            <QuickLink label="Night Audit"        to="/reports"       icon={TrendingUp}    />
+            <QuickLink label="New Reservation"    to="/reservations" icon={CalendarCheck} />
+            <QuickLink label="Check-in Guest"     to="/reservations" icon={CheckCircle}   />
+            <QuickLink label="Room Status Board"  to="/rooms"        icon={BedDouble}     />
+            <QuickLink label="Housekeeping Tasks" to="/housekeeping" icon={Sparkles}      />
+            <QuickLink label="Night Audit"        to="/reports"      icon={TrendingUp}    />
           </div>
         </div>
       </div>

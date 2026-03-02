@@ -25,7 +25,7 @@ export default function GuestProfilePage() {
   if (!guest) return <p style={{ color: 'var(--text-muted)' }}>Guest not found</p>;
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5">
       <button onClick={() => navigate('/guests')}
         className="btn-ghost text-sm gap-1.5"
         style={{ color: 'var(--text-muted)' }}>

@@ -4,11 +4,12 @@ import { useAuthStore } from './store/authStore';
 import AppShell from './components/layout/AppShell';
 
 // Pages
-import LoginPage       from './pages/LoginPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage  from './pages/ResetPasswordPage';
-import DashboardPage   from './pages/DashboardPage';
-import NotFoundPage    from './pages/NotFoundPage';
+import LoginPage              from './pages/LoginPage';
+import ForgotPasswordPage     from './pages/ForgotPasswordPage';
+import ResetPasswordPage      from './pages/ResetPasswordPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
+import DashboardPage          from './pages/DashboardPage';
+import NotFoundPage           from './pages/NotFoundPage';
 
 // Modules
 import RoomsPage          from './modules/rooms/RoomsPage';
@@ -23,9 +24,13 @@ import StaffPage          from './modules/staff/StaffPage';
 import ReportsPage        from './modules/reports/ReportsPage';
 import SettingsPage       from './modules/settings/SettingsPage';
 
+// Guard: logged in but must change password → force change screen
 function Guard({ children }) {
-  const token = useAuthStore(s => s.token);
-  return token ? children : <Navigate to="/login" replace />;
+  const token              = useAuthStore(s => s.token);
+  const mustChangePassword = useAuthStore(s => s.mustChangePassword);
+  if (!token) return <Navigate to="/login" replace />;
+  if (mustChangePassword) return <Navigate to="/change-password" replace />;
+  return children;
 }
 
 function PublicRoute({ children }) {
@@ -33,11 +38,17 @@ function PublicRoute({ children }) {
   return token ? <Navigate to="/dashboard" replace /> : children;
 }
 
+// Special route: accessible when logged in but must_change_password is true
+function ChangePasswordRoute({ children }) {
+  const token = useAuthStore(s => s.token);
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <>
-      <Toaster
-        position="top-right"
+      <Toaster position="top-right"
         toastOptions={{
           style: {
             background:   'var(--bg-surface)',
@@ -49,10 +60,17 @@ export default function App() {
         }}
       />
       <Routes>
+        {/* Public */}
         <Route path="/login"           element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
+        {/* Force password change — user is authenticated but blocked */}
+        <Route path="/change-password" element={
+          <ChangePasswordRoute><ForceChangePasswordPage /></ChangePasswordRoute>
+        } />
+
+        {/* Protected app — blocked if must_change_password */}
         <Route element={<Guard><AppShell /></Guard>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"    element={<DashboardPage />} />
