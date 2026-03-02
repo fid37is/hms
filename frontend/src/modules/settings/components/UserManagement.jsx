@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, ShieldOff, Trash2, Plus, Search, UserCheck, KeyRound } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Trash2, Search, UserCheck, KeyRound } from 'lucide-react';
 import * as userApi   from '../../../lib/api/userApi';
 import * as staffApi  from '../../../lib/api/staffApi';
 import * as authApi   from '../../../lib/api/authApi';
@@ -11,18 +11,14 @@ import ConfirmDialog  from '../../../components/shared/ConfirmDialog';
 import { formatDate } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
-// ── Grant Access Modal ─────────────────────────────────────
 function GrantAccessModal({ onClose, onSuccess }) {
   const [search,   setSearch]   = useState('');
   const [selected, setSelected] = useState(null);
-  const [form,     setForm]     = useState(() => ({ role_id: '', password: '' }));
+  const [form,     setForm]     = useState({ role_id: '', password: '' });
 
   const { data: staffList } = useQuery({
     queryKey: ['staff-no-access'],
-    queryFn:  () => staffApi.getStaff({}).then(r =>
-      // Only show staff without a system account
-      (r.data.data || []).filter(s => !s.user_id)
-    ),
+    queryFn:  () => staffApi.getStaff({}).then(r => (r.data.data || []).filter(s => !s.user_id)),
   });
 
   const { data: roles } = useQuery({
@@ -54,9 +50,8 @@ function GrantAccessModal({ onClose, onSuccess }) {
             Select a staff member to give system access.
           </p>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--text-muted)' }} />
-            <input className="input pl-9" placeholder="Search staff by name or phone…"
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <input className="input pl-9" placeholder="Search by name or phone…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="space-y-1 max-h-60 overflow-y-auto">
@@ -85,9 +80,7 @@ function GrantAccessModal({ onClose, onSuccess }) {
         </>
       ) : (
         <>
-          {/* Selected staff summary */}
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-            style={{ backgroundColor: 'var(--bg-subtle)' }}>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase"
               style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}>
               {selected.full_name.charAt(0)}
@@ -96,17 +89,15 @@ function GrantAccessModal({ onClose, onSuccess }) {
               <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{selected.full_name}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selected.job_title || '—'}</p>
             </div>
-            <button type="button" onClick={() => setSelected(null)}
-              className="text-xs" style={{ color: 'var(--text-muted)' }}>Change</button>
+            <button type="button" onClick={() => setSelected(null)} className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Change
+            </button>
           </div>
 
-          <form onSubmit={e => { e.preventDefault(); grant.mutate({ ...form, email: selected.email }); }}
-            className="space-y-4">
-
+          <form onSubmit={e => { e.preventDefault(); grant.mutate({ ...form, email: selected.email }); }} className="space-y-4">
             <div className="form-group">
               <label className="label" htmlFor="ga-role_id">Role *</label>
-              <select id="ga-role_id" name="role_id" className="input" required
-                value={form.role_id} onChange={handleChange}>
+              <select id="ga-role_id" name="role_id" className="input" required value={form.role_id} onChange={handleChange}>
                 <option value="">Select role…</option>
                 {(roles || []).map(r => (
                   <option key={r.id} value={r.id}>
@@ -115,17 +106,14 @@ function GrantAccessModal({ onClose, onSuccess }) {
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label className="label" htmlFor="ga-password">Temporary Password *</label>
               <input id="ga-password" name="password" type="password" className="input" required
-                minLength={8} placeholder="Min. 8 characters"
-                value={form.password} onChange={handleChange} />
+                minLength={8} placeholder="Min. 8 characters" value={form.password} onChange={handleChange} />
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Share this with the staff member. They should change it after first login.
+                Share this with the staff member — they should change it on first login.
               </p>
             </div>
-
             <div className="flex justify-end">
               <button type="submit" disabled={grant.isPending} className="btn-primary">
                 <UserCheck size={14} />
@@ -139,13 +127,15 @@ function GrantAccessModal({ onClose, onSuccess }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────
-export default function UserManagement() {
+export default function UserManagement({ openForm, onFormClose }) {
   const qc = useQueryClient();
   const [showGrant,    setShowGrant]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetTarget,  setResetTarget]  = useState(null);
   const [newPassword,  setNewPassword]  = useState('');
+
+  useEffect(() => { if (openForm) setShowGrant(true); }, [openForm]);
+  const handleClose = () => { setShowGrant(false); onFormClose?.(); };
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -171,12 +161,8 @@ export default function UserManagement() {
 
   const resetPw = useMutation({
     mutationFn: ({ id, password }) => authApi.adminResetPassword(id, { password }),
-    onSuccess: () => {
-      toast.success('Password reset successfully');
-      setResetTarget(null);
-      setNewPassword('');
-    },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+    onSuccess: () => { toast.success('Password reset successfully'); setResetTarget(null); setNewPassword(''); },
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   const columns = [
@@ -194,25 +180,21 @@ export default function UserManagement() {
         </div>
       )
     },
-    { key: 'role',       label: 'Role',      render: r => r.roles?.name || '—' },
+    { key: 'role',       label: 'Role',       render: r => r.roles?.name || '—' },
     { key: 'department', label: 'Department', render: r => r.department || '—' },
     { key: 'last_login', label: 'Last Login', render: r => r.last_login ? formatDate(r.last_login) : 'Never' },
     { key: 'status',     label: 'Status',     render: r => <StatusBadge status={r.is_active ? 'active' : 'inactive'} /> },
-    { key: 'actions',    label: '',           width: '180px',
+    { key: 'actions', label: '', width: '180px',
       render: r => (
         <div className="flex gap-1.5 justify-end">
-          <button
-            onClick={e => { e.stopPropagation(); setResetTarget(r); }}
-            title="Reset password"
+          <button onClick={e => { e.stopPropagation(); setResetTarget(r); }} title="Reset password"
             className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors"
             style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--brand-subtle)'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}>
             <KeyRound size={12} />
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); toggle.mutate(r); }}
-            title={r.is_active ? 'Disable' : 'Enable'}
+          <button onClick={e => { e.stopPropagation(); toggle.mutate(r); }}
             className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md transition-colors"
             style={{
               backgroundColor: r.is_active ? 'var(--s-yellow-bg)' : 'var(--s-green-bg)',
@@ -220,9 +202,8 @@ export default function UserManagement() {
             }}>
             {r.is_active ? <><ShieldOff size={12} /> Disable</> : <><ShieldCheck size={12} /> Enable</>}
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); setDeleteTarget(r); }}
-            className="flex items-center text-xs px-2 py-1 rounded-md transition-colors"
+          <button onClick={e => { e.stopPropagation(); setDeleteTarget(r); }}
+            className="flex items-center text-xs px-2 py-1 rounded-md"
             style={{ backgroundColor: 'var(--s-red-bg)', color: 'var(--s-red-text)' }}>
             <Trash2 size={12} />
           </button>
@@ -232,66 +213,50 @@ export default function UserManagement() {
   ];
 
   return (
-    <div className="space-y-4">
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Grant staff members access to log into the HMS system.
-        </p>
-        <button onClick={() => setShowGrant(true)} className="btn-primary">
-          <Plus size={15} /> Grant Access
-        </button>
-      </div>
-
+    <>
       <div className="card overflow-hidden">
         <DataTable columns={columns} data={users || []} loading={isLoading}
           emptyTitle="No system users yet"
           emptySubtitle="Click 'Grant Access' to give a staff member login access" />
       </div>
 
-      <Modal open={showGrant} onClose={() => setShowGrant(false)} title="Grant System Access">
+      <Modal open={showGrant} onClose={handleClose} title="Grant System Access">
         <GrantAccessModal
-          onClose={() => setShowGrant(false)}
-          onSuccess={() => { setShowGrant(false); qc.invalidateQueries(['users']); qc.invalidateQueries(['staff']); }}
+          onClose={handleClose}
+          onSuccess={() => { handleClose(); qc.invalidateQueries(['users']); qc.invalidateQueries(['staff']); }}
         />
       </Modal>
 
       <ConfirmDialog
-        open={!!deleteTarget}
-        danger
+        open={!!deleteTarget} danger
         title="Remove User Account"
-        message={`Remove system access for ${deleteTarget?.full_name}? Their login will be disabled. Their staff record stays intact.`}
+        message={`Remove system access for ${deleteTarget?.full_name}? Their staff record stays intact.`}
         loading={del.isPending}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => del.mutate(deleteTarget.id)}
       />
 
-      {/* Admin Reset Password */}
       <Modal open={!!resetTarget} onClose={() => { setResetTarget(null); setNewPassword(''); }}
         title="Reset Password" size="sm">
         <div className="space-y-4">
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Set a new temporary password for <strong style={{ color: 'var(--text-base)' }}>
-            {resetTarget?.full_name}</strong>. Share it with them securely.
+            Set a new temporary password for{' '}
+            <strong style={{ color: 'var(--text-base)' }}>{resetTarget?.full_name}</strong>.
           </p>
           <div className="form-group">
             <label className="label" htmlFor="arp-password">New Password</label>
-            <input id="arp-password" type="password" className="input"
-              minLength={8} placeholder="Min. 8 characters"
-              value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            <input id="arp-password" type="password" className="input" minLength={8}
+              placeholder="Min. 8 characters" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2">
-            <button onClick={() => { setResetTarget(null); setNewPassword(''); }}
-              className="btn-secondary">Cancel</button>
-            <button
-              disabled={newPassword.length < 8 || resetPw.isPending}
-              onClick={() => resetPw.mutate({ id: resetTarget.id, password: newPassword })}
-              className="btn-primary">
+            <button onClick={() => { setResetTarget(null); setNewPassword(''); }} className="btn-secondary">Cancel</button>
+            <button disabled={newPassword.length < 8 || resetPw.isPending}
+              onClick={() => resetPw.mutate({ id: resetTarget.id, password: newPassword })} className="btn-primary">
               {resetPw.isPending ? 'Resetting…' : 'Reset Password'}
             </button>
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

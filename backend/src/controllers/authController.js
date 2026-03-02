@@ -34,16 +34,15 @@ export const getProfileController = async (req, res, next) => {
 
 export const changePasswordController = async (req, res, next) => {
   try {
-    const { current_password, new_password } = req.body;
-    const result = await authService.changePassword(
-      req.user.sub,
+    const { current_password, new_password, force_change } = req.body;
+    const data = await authService.changePassword(
+      req.user.id,
       current_password,
-      new_password
+      new_password,
+      force_change || false
     );
-    return sendSuccess(res, result, 'Password changed successfully.');
-  } catch (err) {
-    next(err);
-  }
+    return sendSuccess(res, data);
+  } catch (err) { next(err); }
 };
 
 export const logoutController = (req, res) => {

@@ -173,3 +173,39 @@
   from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
+
+/* ─── Mobile responsiveness ────────────────────────────────── */
+
+/* Ensure inputs are large enough to tap on mobile */
+@media (max-width: 767px) {
+  .input, select.input, textarea.input {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+  .btn, .btn-primary, .btn-secondary, .btn-ghost {
+    min-height: 44px;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+}
+
+/* Table rows use theme vars */
+.table-row:hover {
+  background-color: var(--bg-subtle) !important;
+}
+
+/* Safe area for iOS bottom notch */
+.safe-area-pb {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+/* ─── Fix table theme compliance ──────────────────────────── */
+.table-th {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-soft);
+}
+.table-td {
+  color: var(--text-base);
+  border-bottom: 1px solid var(--border-soft);
+}

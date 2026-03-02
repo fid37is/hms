@@ -17,11 +17,15 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login(form);
-      // Response shape: { success, message, data: { access_token, user, permissions } }
-      const { access_token, user, permissions } = res.data.data;
-      setAuth({ user, token: access_token, permissions });
-      toast.success(`Welcome, ${user.full_name}`);
-      navigate('/dashboard', { replace: true });
+      const { access_token, user, permissions, must_change_password } = res.data.data;
+      setAuth({ user, token: access_token, permissions, must_change_password });
+      if (must_change_password) {
+        // Don't greet yet — send to force-change screen
+        navigate('/change-password', { replace: true });
+      } else {
+        toast.success(`Welcome, ${user.full_name}`);
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid credentials');
     } finally {
@@ -30,30 +34,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ backgroundColor: 'var(--sidebar-bg)' }}
-    >
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
+    <div className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--sidebar-bg)' }}>
+      <div className="absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
       <div className="relative w-full max-w-[380px]">
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
-            style={{ backgroundColor: 'var(--accent)' }}
-          >
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
+            style={{ backgroundColor: 'var(--accent)' }}>
             <Hotel size={22} color="white" />
           </div>
           <h1 className="text-white text-xl font-semibold tracking-tight">HMS Pro</h1>
-          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Hotel Management System
-          </p>
+          <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Hotel Management System</p>
         </div>
 
         <div className="card p-7">
@@ -64,51 +57,30 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-group">
               <label className="label">Email address</label>
-              <input
-                type="email"
-                className="input"
-                placeholder="you@hotel.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-                autoFocus
-              />
+              <input type="email" className="input" placeholder="you@hotel.com" required autoFocus
+                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             </div>
 
             <div className="form-group">
               <div className="flex items-center justify-between mb-1">
-                <label className="label">Password</label>
-                <Link to="/forgot-password"
-                  className="text-xs transition-colors"
-                  style={{ color: 'var(--brand)' }}>
+                <label className="label mb-0">Password</label>
+                <Link to="/forgot-password" className="text-xs" style={{ color: 'var(--brand)' }}>
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <input
-                  type={show ? 'text' : 'password'}
-                  className="input pr-10"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow(!show)}
+                <input type={show ? 'text' : 'password'} className="input pr-10"
+                  placeholder="••••••••" required
+                  value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+                <button type="button" onClick={() => setShow(!show)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--text-muted)' }}
-                >
+                  style={{ color: 'var(--text-muted)' }}>
                   {show ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full justify-center py-2.5 mt-1"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5 mt-1">
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>

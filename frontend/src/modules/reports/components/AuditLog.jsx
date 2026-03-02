@@ -5,44 +5,47 @@ import DataTable      from '../../../components/shared/DataTable';
 import { formatDateTime } from '../../../utils/format';
 
 export default function AuditLog() {
-  const [filters, setFilters] = useState({ table_name: '', action: '', page: 1 });
+  const [filters, setFilters] = useState(() => ({ table_name: '', action: '', page: 1 }));
 
   const { data, isLoading } = useQuery({
     queryKey: ['audit-log', filters],
     queryFn:  () => reportApi.getAuditLog(filters).then(r => r.data),
   });
 
-  const set = (k, v) => setFilters(f => ({ ...f, [k]: v, page: 1 }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value, page: 1 }));
+  };
 
   const columns = [
-    { key: 'created_at', label: 'Time', render: r => (
-      <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDateTime(r.created_at)}</span>
-    )},
-    { key: 'action',     label: 'Action',
+    { key: 'created_at', label: 'Time',
+      render: r => <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{formatDateTime(r.created_at)}</span> },
+    { key: 'action', label: 'Action',
       render: r => {
         const colors = { CREATE: 'var(--s-green-text)', UPDATE: 'var(--brand)', DELETE: 'var(--s-red-text)' };
         return <span className="font-mono text-xs font-medium" style={{ color: colors[r.action] || 'var(--text-muted)' }}>{r.action}</span>;
-      }
+      },
     },
     { key: 'table_name', label: 'Table',
       render: r => <span className="font-mono text-xs" style={{ color: 'var(--text-sub)' }}>{r.table_name}</span> },
-    { key: 'user',       label: 'User',   render: r => r.users?.full_name || '—' },
-    { key: 'ip_address', label: 'IP',     render: r => (
-      <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{r.ip_address || '—'}</span>
-    )},
+    { key: 'user',       label: 'User',  render: r => r.users?.full_name || '—' },
+    { key: 'ip_address', label: 'IP',
+      render: r => <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{r.ip_address || '—'}</span> },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
         <div className="form-group">
-          <label className="label">Table</label>
-          <input className="input w-40 text-xs" placeholder="e.g. reservations"
-            value={filters.table_name} onChange={e => set('table_name', e.target.value)} />
+          <label className="label" htmlFor="al-table_name">Table</label>
+          <input id="al-table_name" name="table_name" className="input w-40 text-xs"
+            placeholder="e.g. reservations"
+            value={filters.table_name} onChange={handleChange} />
         </div>
         <div className="form-group">
-          <label className="label">Action</label>
-          <select className="input w-36" value={filters.action} onChange={e => set('action', e.target.value)}>
+          <label className="label" htmlFor="al-action">Action</label>
+          <select id="al-action" name="action" className="input w-36"
+            value={filters.action} onChange={handleChange}>
             <option value="">All</option>
             {['CREATE','UPDATE','DELETE','LOGIN','LOGOUT'].map(a => (
               <option key={a} value={a}>{a}</option>

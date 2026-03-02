@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
+  LayoutDashboard, BedDouble, CalendarCheck, Users,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings,
   ChevronLeft, ChevronRight, Hotel, LogOut,
 } from 'lucide-react';
@@ -9,7 +9,6 @@ import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import * as authApi from '../../lib/api/authApi';
 
-// Each nav item declares which permission it needs (null = always visible)
 const NAV = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard',    permission: null },
   { to: '/rooms',        icon: BedDouble,       label: 'Rooms',        permission: 'rooms:read' },
@@ -36,7 +35,6 @@ export default function Sidebar() {
     toast.success('Logged out');
   };
 
-  // Admin sees everything; others see only what their permissions allow
   const isAdmin    = user?.role?.toLowerCase() === 'admin';
   const visibleNav = NAV.filter(item =>
     item.permission === null || isAdmin || hasPermission(item.permission)
@@ -44,7 +42,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-full z-30 flex flex-col transition-all duration-200"
+      className="h-full flex flex-col transition-all duration-200"
       style={{ width: w, backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
     >
       {/* Logo */}
@@ -67,20 +65,20 @@ export default function Sidebar() {
         </div>
         <button
           onClick={toggleSidebar}
-          className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-colors"
+          className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded"
           style={{ color: 'var(--sidebar-text)' }}
         >
           {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </button>
       </div>
 
-      {/* Nav items — only what this user can access */}
+      {/* Nav */}
       <nav className="flex-1 sidebar-nav py-2 px-2 overflow-y-auto">
         {visibleNav.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} title={!sidebarOpen ? label : undefined} className="block">
             {({ isActive }) => (
               <div
-                className="flex items-center gap-3 px-2.5 py-2 rounded-md mb-0.5 transition-all duration-100 cursor-pointer"
+                className="flex items-center gap-3 px-2.5 py-2.5 rounded-md mb-0.5 transition-all duration-100 cursor-pointer"
                 style={{
                   backgroundColor: isActive ? 'var(--sidebar-item-active)' : 'transparent',
                   color:           isActive ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
@@ -90,9 +88,6 @@ export default function Sidebar() {
               >
                 <Icon size={16} className="flex-shrink-0" />
                 {sidebarOpen && <span className="text-sm font-medium truncate">{label}</span>}
-                {isActive && sidebarOpen && (
-                  <div className="ml-auto w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
-                )}
               </div>
             )}
           </NavLink>
@@ -117,19 +112,12 @@ export default function Sidebar() {
                 {user?.role}
               </p>
             </div>
-            <button onClick={handleLogout} title="Logout"
-              className="flex-shrink-0 transition-colors" style={{ color: 'var(--sidebar-text)' }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--sidebar-text-active)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--sidebar-text)'}
-            >
+            <button onClick={handleLogout} style={{ color: 'var(--sidebar-text)' }}>
               <LogOut size={14} />
             </button>
           </div>
         ) : (
-          <button onClick={handleLogout} title="Logout"
-            className="w-full flex justify-center py-2 transition-colors"
-            style={{ color: 'var(--sidebar-text)' }}
-          >
+          <button onClick={handleLogout} className="w-full flex justify-center py-2" style={{ color: 'var(--sidebar-text)' }}>
             <LogOut size={16} />
           </button>
         )}

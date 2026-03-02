@@ -54,7 +54,7 @@ export const createUser = async ({ full_name, email, phone, role_id, department,
   // 2. Insert into users table
   const { data, error } = await supabase
     .from('users')
-    .insert({ id: userId, full_name, email, phone, role_id, department, is_active: true })
+    .insert({ id: userId, full_name, email, phone, role_id, department, is_active: true, must_change_password: true })
     .select(`id, full_name, email, phone, department, is_active, roles ( id, name )`)
     .single();
 
@@ -261,4 +261,4 @@ export const deleteRole = async (id) => {
   const { error } = await supabase.from('roles').delete().eq('id', id);
   if (error) throw new AppError(`Failed to delete role: ${error.message}`, 500);
   return { message: 'Role deleted.' };
-};
+}

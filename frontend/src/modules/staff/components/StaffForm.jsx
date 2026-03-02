@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 
 export default function StaffForm({ staff, onSuccess }) {
   const isEdit = !!staff;
-
   const [form, setForm] = useState(() => ({
     full_name:       staff?.full_name       ?? '',
     email:           staff?.email           ?? '',
@@ -35,16 +34,11 @@ export default function StaffForm({ staff, onSuccess }) {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    save.mutate({ ...form, salary: Math.round(Number(form.salary) * 100) || 0 });
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-
-        <div className="form-group">
+    <form onSubmit={e => { e.preventDefault(); save.mutate({ ...form, salary: Math.round(Number(form.salary) * 100) || 0 }); }}
+      className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="form-group sm:col-span-2">
           <label className="label" htmlFor="sf-full_name">Full Name *</label>
           <input id="sf-full_name" name="full_name" className="input" required
             value={form.full_name} onChange={handleChange} />
@@ -52,8 +46,8 @@ export default function StaffForm({ staff, onSuccess }) {
 
         <div className="form-group">
           <label className="label" htmlFor="sf-phone">Phone *</label>
-          <input id="sf-phone" name="phone" className="input" required
-            value={form.phone} onChange={handleChange} />
+          <input id="sf-phone" name="phone" className="input" type="tel" required
+            placeholder="080xxxxxxxx" value={form.phone} onChange={handleChange} />
         </div>
 
         <div className="form-group">
@@ -69,8 +63,8 @@ export default function StaffForm({ staff, onSuccess }) {
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="sf-department_id">Department</label>
-          <select id="sf-department_id" name="department_id" className="input"
+          <label className="label" htmlFor="sf-dept">Department</label>
+          <select id="sf-dept" name="department_id" className="input"
             value={form.department_id} onChange={handleChange}>
             <option value="">None</option>
             {(depts || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -78,8 +72,8 @@ export default function StaffForm({ staff, onSuccess }) {
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="sf-employment_type">Employment Type</label>
-          <select id="sf-employment_type" name="employment_type" className="input"
+          <label className="label" htmlFor="sf-etype">Employment Type</label>
+          <select id="sf-etype" name="employment_type" className="input"
             value={form.employment_type} onChange={handleChange}>
             {['full_time','part_time','contract','intern'].map(t => (
               <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
@@ -88,43 +82,37 @@ export default function StaffForm({ staff, onSuccess }) {
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="sf-employment_date">Employment Date</label>
-          <input id="sf-employment_date" name="employment_date" type="date" className="input"
+          <label className="label" htmlFor="sf-edate">Employment Date</label>
+          <input id="sf-edate" name="employment_date" type="date" className="input"
             value={form.employment_date} onChange={handleChange} />
         </div>
 
-        <div className="form-group">
+        <div className="form-group sm:col-span-2">
           <label className="label" htmlFor="sf-salary">Monthly Salary (₦)</label>
           <input id="sf-salary" name="salary" type="number" min="0" step="0.01" className="input"
             value={form.salary} onChange={handleChange} />
         </div>
-
       </div>
 
-      <div className="rounded-lg p-4 space-y-3"
-        style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-          Bank Details
-        </p>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Bank Details</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="form-group">
-            <label className="label" htmlFor="sf-bank_name">Bank Name</label>
-            <input id="sf-bank_name" name="bank_name" className="input"
+            <label className="label" htmlFor="sf-bank">Bank Name</label>
+            <input id="sf-bank" name="bank_name" className="input"
               value={form.bank_name} onChange={handleChange} />
           </div>
           <div className="form-group">
-            <label className="label" htmlFor="sf-bank_account_no">Account Number</label>
-            <input id="sf-bank_account_no" name="bank_account_no" className="input"
+            <label className="label" htmlFor="sf-acct">Account Number</label>
+            <input id="sf-acct" name="bank_account_no" className="input"
               value={form.bank_account_no} onChange={handleChange} />
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end pt-1">
-        <button type="submit" disabled={save.isPending} className="btn-primary">
-          {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Staff Member'}
-        </button>
-      </div>
+      <button type="submit" disabled={save.isPending} className="btn-primary w-full justify-center py-2.5">
+        {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Staff Member'}
+      </button>
     </form>
   );
 }

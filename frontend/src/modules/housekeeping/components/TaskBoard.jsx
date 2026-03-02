@@ -1,5 +1,4 @@
-import { Play, CheckCircle, Pencil, Clock } from 'lucide-react';
-import StatusBadge from '../../../components/shared/StatusBadge';
+import { Play, CheckCircle, Pencil } from 'lucide-react';
 
 const COLUMNS = [
   { status: 'pending',     label: 'Pending',     color: 'var(--s-yellow-text)' },
@@ -30,11 +29,13 @@ function TaskCard({ task, onStart, onComplete, onEdit }) {
             Room {task.rooms?.number || '—'}
           </p>
         </div>
-        <button onClick={() => onEdit(task)}
+        <button
+          onClick={() => onEdit(task)}
           className="flex-shrink-0 p-1 rounded transition-colors"
           style={{ color: 'var(--text-muted)' }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--text-base)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+        >
           <Pencil size={12} />
         </button>
       </div>
@@ -47,7 +48,8 @@ function TaskCard({ task, onStart, onComplete, onEdit }) {
         <div className="flex items-center gap-1.5">
           <div
             className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)', fontSize: '9px' }}>
+            style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)', fontSize: '9px' }}
+          >
             {task.assigned_to_user?.full_name?.charAt(0)}
           </div>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -57,22 +59,25 @@ function TaskCard({ task, onStart, onComplete, onEdit }) {
       )}
 
       <div className="flex items-center justify-between pt-1">
-        <span className="text-xs capitalize font-medium"
-          style={{ color: PRIORITY_COLOR[task.priority] }}>
+        <span className="text-xs capitalize font-medium" style={{ color: PRIORITY_COLOR[task.priority] }}>
           {task.priority}
         </span>
         <div className="flex gap-1.5">
           {task.status === 'pending' && (
-            <button onClick={() => onStart(task.id)}
+            <button
+              onClick={() => onStart(task.id)}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
-              style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}>
+              style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}
+            >
               <Play size={10} /> Start
             </button>
           )}
           {task.status === 'in_progress' && (
-            <button onClick={() => onComplete(task.id)}
+            <button
+              onClick={() => onComplete(task.id)}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
-              style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
+              style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}
+            >
               <CheckCircle size={10} /> Done
             </button>
           )}
@@ -95,7 +100,8 @@ export default function TaskBoard({ tasks, onStart, onComplete, onEdit }) {
               </p>
               <span
                 className="text-xs font-medium px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+                style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
+              >
                 {colTasks.length}
               </span>
             </div>
@@ -107,7 +113,8 @@ export default function TaskBoard({ tasks, onStart, onComplete, onEdit }) {
               {!colTasks.length && (
                 <div
                   className="rounded-lg border-2 border-dashed flex items-center justify-center h-16"
-                  style={{ borderColor: 'var(--border-soft)' }}>
+                  style={{ borderColor: 'var(--border-soft)' }}
+                >
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Empty</span>
                 </div>
               )}

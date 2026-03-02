@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
 import * as invApi   from '../../../lib/api/inventoryApi';
 import DataTable     from '../../../components/shared/DataTable';
 import StatusBadge   from '../../../components/shared/StatusBadge';
@@ -12,11 +11,16 @@ import toast from 'react-hot-toast';
 const BLANK_FORM = () => ({ supplier_id: '', expected_date: '', notes: '' });
 const BLANK_LINE = () => ({ item_id: '', quantity: '1', unit_cost: '' });
 
-export default function PurchaseOrders() {
+export default function PurchaseOrders({ openForm, onFormClose }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form,     setForm]     = useState(BLANK_FORM);
+  const [form,     setForm]     = useState(BLANK_FORM());
   const [lines,    setLines]    = useState([BLANK_LINE()]);
+
+  // Sync external open trigger
+  useEffect(() => { if (openForm) setShowForm(true); }, [openForm]);
+
+  const handleClose = () => { setShowForm(false); onFormClose?.(); };
 
   const { data, isLoading } = useQuery({
     queryKey: ['purchase-orders'],
@@ -37,7 +41,7 @@ export default function PurchaseOrders() {
     mutationFn: (d) => invApi.createPO(d),
     onSuccess: () => {
       toast.success('Purchase order created');
-      setShowForm(false);
+      handleClose();
       setForm(BLANK_FORM());
       setLines([BLANK_LINE()]);
       qc.invalidateQueries(['purchase-orders']);
@@ -61,13 +65,11 @@ export default function PurchaseOrders() {
     onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
-  // Stable handler for the top-level form fields
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // Stable handler for line items — receives (index, fieldName, value) from POLineItem
   const handleLineChange = (index, name, value) => {
     setLines(prev => prev.map((line, i) => i === index ? { ...line, [name]: value } : line));
   };
@@ -89,7 +91,8 @@ export default function PurchaseOrders() {
 
   const columns = [
     { key: 'po_no', label: 'PO Number',
-      render: r => <span className="font-mono text-xs font-medium" style={{ color: 'var(--brand)' }}>{r.po_no}</span> },
+      render: r => <span className="font-mono text-xs font-medium" style={{ color: 'var(--brand)' }}>{r.po_no}</span>
+    },
     { key: 'supplier',      label: 'Supplier', render: r => r.suppliers?.name || '—' },
     { key: 'total_amount',  label: 'Amount',   render: r => formatCurrency(r.total_amount || 0) },
     { key: 'expected_date', label: 'Expected', render: r => formatDate(r.expected_date) },
@@ -117,20 +120,13 @@ export default function PurchaseOrders() {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button onClick={() => setShowForm(true)} className="btn-primary">
-          <Plus size={15} /> New PO
-        </button>
-      </div>
-
+    <>
       <div className="card overflow-hidden">
         <DataTable columns={columns} data={data || []} loading={isLoading} emptyTitle="No purchase orders" />
       </div>
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="New Purchase Order" size="lg">
+      <Modal open={showForm} onClose={handleClose} title="New Purchase Order" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group">
               <label className="label" htmlFor="po-supplier_id">Supplier *</label>
@@ -147,7 +143,6 @@ export default function PurchaseOrders() {
             </div>
           </div>
 
-          {/* Line items — each in its own component for stable handlers */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="label mb-0">Items *</label>
@@ -182,6 +177,6 @@ export default function PurchaseOrders() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -44,77 +44,84 @@ export default function GuestsPage() {
     { key: 'phone',       label: 'Phone',       render: r => r.phone || '—' },
     { key: 'nationality', label: 'Nationality',  render: r => r.nationality || '—' },
     { key: 'category',    label: 'Category',     render: r => <StatusBadge status={r.category || 'regular'} /> },
-    { key: 'visits',      label: 'Visits',
-      render: r => <span className="font-mono text-xs">{r.total_visits || 0}</span> },
+    { key: 'visits',      label: 'Visits',       render: r => <span className="font-mono text-xs">{r.total_visits || 0}</span> },
     { key: 'created_at',  label: 'Since',        render: r => formatDate(r.created_at) },
     { key: 'actions',     label: '', width: '80px',
       render: r => (
         <button
           onClick={e => { e.stopPropagation(); setEditGuest(r); setShowForm(true); }}
-          className="btn-ghost text-xs px-2 py-1"
-        >
-          Edit
-        </button>
+          className="btn-ghost text-xs px-2 py-1">Edit</button>
       )
     },
   ];
 
+  const MobileCard = ({ row: r }) => (
+    <div className="card p-4 active:opacity-80">
+      <div className="flex items-start justify-between gap-2">
+        <div onClick={() => navigate(`/guests/${r.id}`)} className="flex-1 cursor-pointer">
+          <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{r.full_name}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {r.phone || r.email || '—'} · {r.nationality || '—'}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <StatusBadge status={r.category || 'regular'} />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.total_visits || 0} visits</span>
+          </div>
+        </div>
+        <button
+          onClick={() => { setEditGuest(r); setShowForm(true); }}
+          className="btn-ghost text-xs px-2 py-1 flex-shrink-0">
+          Edit
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
-        title="Guests"
-        subtitle={`${data?.meta?.total || 0} total guests`}
+        subtitle={`${data?.meta?.total || 0} total`}
         action={
-          <button onClick={() => { setEditGuest(null); setShowForm(true); }} className="btn-primary">
-            <Plus size={15} /> Add Guest
+          <button onClick={() => { setEditGuest(null); setShowForm(true); }} className="btn-primary text-xs">
+            <Plus size={14} /> Add
           </button>
         }
       />
 
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--text-muted)' }} />
-          <input
-            className="input pl-8 w-64 text-xs"
-            placeholder="Search name, phone, email…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-          />
-        </div>
-      </div>
-
-      <div className="card overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={guests}
-          loading={isLoading}
-          emptyTitle="No guests found"
-          onRowClick={r => navigate(`/guests/${r.id}`)}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+        <input
+          className="input pl-8 text-sm"
+          placeholder="Search name, phone, email…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
         />
       </div>
 
-      {/* Pagination */}
-      {!search && data?.meta && data.meta.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm" style={{ color: 'var(--text-muted)' }}>
-          <span>Page {data.meta.page} of {data.meta.totalPages}</span>
+      <DataTable
+        columns={columns}
+        data={guests}
+        loading={isLoading}
+        emptyTitle="No guests found"
+        onRowClick={r => navigate(`/guests/${r.id}`)}
+        mobileCard={MobileCard}
+      />
+
+      {/* Pagination (desktop only - mobile just scrolls) */}
+      {!search && data?.meta && data.meta.total > 25 && (
+        <div className="hidden md:flex items-center justify-between">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Page {page} of {Math.ceil(data.meta.total / 25)}
+          </p>
           <div className="flex gap-2">
-            <button disabled={!data.meta.hasPrev} onClick={() => setPage(p => p - 1)} className="btn-secondary text-xs px-3">
-              Previous
-            </button>
-            <button disabled={!data.meta.hasNext} onClick={() => setPage(p => p + 1)} className="btn-secondary text-xs px-3">
-              Next
-            </button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary text-xs px-3">Prev</button>
+            <button onClick={() => setPage(p => p + 1)} disabled={page * 25 >= data.meta.total} className="btn-secondary text-xs px-3">Next</button>
           </div>
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)}
-        title={editGuest ? 'Edit Guest' : 'Add Guest'}>
-        <GuestForm
-          guest={editGuest}
-          onSuccess={() => { setShowForm(false); qc.invalidateQueries(['guests']); }}
-        />
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={editGuest ? 'Edit Guest' : 'Add Guest'}>
+        <GuestForm guest={editGuest} onSuccess={() => { setShowForm(false); qc.invalidateQueries(['guests']); }} />
       </Modal>
     </div>
   );
