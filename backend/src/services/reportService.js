@@ -9,7 +9,17 @@ const toDate = (d) => new Date(d).toISOString().split('T')[0];
 // ─── Dashboard Stats ──────────────────────────────────────
 
 export const getDashboardStats = async () => {
-  const today = toDate(new Date());
+  const now        = new Date();
+  const today      = toDate(now);
+  const tomorrow   = toDate(new Date(now.getTime() + 86400000));
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const weekAgo    = new Date(now.getTime() - 6 * 86400000);
+
+  // Build last-7-days date array
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekAgo.getTime() + i * 86400000);
+    return toDate(d);
+  });
 
   const [
     roomStats,
@@ -19,79 +29,130 @@ export const getDashboardStats = async () => {
     openFoliosBalance,
     pendingHKTasks,
     monthRevenue,
+    recentReservations,
+    upcomingArrivals,
+    lowStockItems,
+    weekPayments,
+    maintenanceOpen,
+    newGuestsMonth,
   ] = await Promise.all([
 
-    // Room status breakdown
-    supabase.from('rooms')
-      .select('status')
-      .eq('is_deleted', false),
+    supabase.from('rooms').select('status').eq('is_deleted', false),
 
-    // Today arrivals
     supabase.from('reservations')
       .select('id', { count: 'exact', head: true })
-      .eq('check_in_date', today)
-      .in('status', ['confirmed', 'checked_in']),
+      .eq('check_in_date', today).in('status', ['confirmed', 'checked_in']),
 
-    // Today departures
     supabase.from('reservations')
       .select('id', { count: 'exact', head: true })
-      .eq('check_out_date', today)
-      .eq('status', 'checked_in'),
+      .eq('check_out_date', today).eq('status', 'checked_in'),
 
-    // In-house guests
     supabase.from('reservations')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'checked_in'),
 
-    // Sum of all open folio balances
-    supabase.from('folios')
-      .select('balance')
-      .eq('status', 'open'),
+    supabase.from('folios').select('balance').eq('status', 'open'),
 
-    // Pending housekeeping tasks
     supabase.from('housekeeping_tasks')
       .select('id', { count: 'exact', head: true })
       .in('status', ['pending', 'in_progress']),
 
-    // This month's revenue (completed payments)
     supabase.from('payments')
-      .select('amount')
-      .eq('status', 'completed')
-      .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+      .select('amount').eq('status', 'completed')
+      .gte('created_at', monthStart),
+
+    // Recent reservations — last 5
+    supabase.from('reservations')
+      .select('id, reference_number, status, check_in_date, check_out_date, guests(name), rooms(number)')
+      .order('created_at', { ascending: false })
+      .limit(5),
+
+    // Upcoming arrivals next 7 days
+    supabase.from('reservations')
+      .select('id, reference_number, check_in_date, guests(name), rooms(number)')
+      .eq('status', 'confirmed')
+      .gte('check_in_date', today)
+      .lte('check_in_date', toDate(new Date(now.getTime() + 7 * 86400000)))
+      .order('check_in_date')
+      .limit(5),
+
+    // Low stock items
+    supabase.from('inventory_items')
+      .select('id, name, category, current_stock, reorder_level')
+      .eq('is_active', true)
+      .filter('current_stock', 'lte', supabase.raw('reorder_level'))
+      .limit(5),
+
+    // Revenue per day last 7 days
+    supabase.from('payments')
+      .select('amount, created_at').eq('status', 'completed')
+      .gte('created_at', weekAgo.toISOString()),
+
+    // Open maintenance orders
+    supabase.from('maintenance_orders')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['open', 'in_progress']),
+
+    // New guests this month
+    supabase.from('guests')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', monthStart),
   ]);
 
-  // Process room stats
+  // Room breakdown
   const rooms = roomStats.data || [];
   const roomBreakdown = rooms.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
     return acc;
   }, {});
-
   const totalRooms    = rooms.length;
-  const occupiedRooms = roomBreakdown.occupied || 0;
+  const occupiedRooms = (roomBreakdown.occupied || 0) + (roomBreakdown.clean || 0);
   const occupancyRate = totalRooms ? ((occupiedRooms / totalRooms) * 100).toFixed(1) : 0;
 
-  const totalOpenBalance = (openFoliosBalance.data || []).reduce((sum, f) => sum + f.balance, 0);
-  const monthlyRevenue   = (monthRevenue.data || []).reduce((sum, p) => sum + p.amount, 0);
+  const totalOpenBalance = (openFoliosBalance.data || []).reduce((sum, f) => sum + (f.balance || 0), 0);
+  const monthlyRevenue   = (monthRevenue.data || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  // Revenue chart — group payments by day
+  const revenueByDay = last7Days.map(date => {
+    const total = (weekPayments.data || [])
+      .filter(p => p.created_at.startsWith(date))
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    return { date, amount: total };
+  });
+
+  // Low stock — use raw filter fallback since .raw may not work
+  const lowStock = (lowStockItems.data || []).filter(
+    item => Number(item.current_stock) <= Number(item.reorder_level)
+  );
 
   return {
     rooms: {
-      total:        totalRooms,
-      breakdown:    roomBreakdown,
+      total:          totalRooms,
+      breakdown:      roomBreakdown,
       occupancy_rate: `${occupancyRate}%`,
     },
     today: {
-      arrivals:    todayArrivals.count   || 0,
-      departures:  todayDepartures.count || 0,
-      in_house:    inHouseGuests.count   || 0,
+      arrivals:   todayArrivals.count   || 0,
+      departures: todayDepartures.count || 0,
+      in_house:   inHouseGuests.count   || 0,
     },
     financials: {
       open_balance:    totalOpenBalance,
       monthly_revenue: monthlyRevenue,
+      revenue_chart:   revenueByDay,
     },
     housekeeping: {
       pending_tasks: pendingHKTasks.count || 0,
     },
+    maintenance: {
+      open_orders: maintenanceOpen.count || 0,
+    },
+    guests: {
+      new_this_month: newGuestsMonth.count || 0,
+    },
+    recent_reservations: recentReservations.data || [],
+    upcoming_arrivals:   upcomingArrivals.data   || [],
+    low_stock_alerts:    lowStock,
   };
 };
 
