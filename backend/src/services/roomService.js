@@ -7,14 +7,41 @@ import { ROOM_STATUS } from '../config/constants.js';
 // ─── Room Types ───────────────────────────────────────────
 
 export const getAllRoomTypes = async () => {
-  const { data, error } = await supabase
+  const { data: types, error } = await supabase
     .from('room_types')
     .select('*')
     .eq('is_active', true)
     .order('name');
 
   if (error) throw new AppError('Failed to fetch room types.', 500);
-  return data;
+
+  // Enrich each type with real room photos (images only, up to 6 per type)
+  // so the guest frontend can show an actual photo gallery per type.
+  const { data: rooms } = await supabase
+    .from('rooms')
+    .select('id, number, floor, type_id, media')
+    .eq('is_deleted', false)
+    .eq('is_blocked', false)
+    .not('media', 'is', null);
+
+  const photosByType = {};
+  for (const room of (rooms || [])) {
+    const photos = (room.media || []).filter(m => m.type === 'image' || m.type === 'gif');
+    if (!photos.length) continue;
+    if (!photosByType[room.type_id]) photosByType[room.type_id] = [];
+    if (photosByType[room.type_id].length < 6) {
+      photosByType[room.type_id].push({
+        url:         photos[0].url,
+        room_number: room.number,
+        room_id:     room.id,
+      });
+    }
+  }
+
+  return types.map(t => ({
+    ...t,
+    photos: photosByType[t.id] || [],
+  }));
 };
 
 export const getRoomTypeById = async (id) => {
@@ -25,7 +52,31 @@ export const getRoomTypeById = async (id) => {
     .single();
 
   if (error || !data) throw new AppError('Room type not found.', 404);
-  return data;
+
+  // Attach all room photos for this type (guest rooms page needs the full gallery)
+  const { data: rooms } = await supabase
+    .from('rooms')
+    .select('id, number, floor, status, media')
+    .eq('type_id', id)
+    .eq('is_deleted', false)
+    .eq('is_blocked', false)
+    .order('number');
+
+  const photos = [];
+  for (const room of (rooms || [])) {
+    for (const m of (room.media || [])) {
+      if (m.type === 'image' || m.type === 'gif') {
+        photos.push({
+          url:         m.url,
+          room_number: room.number,
+          room_id:     room.id,
+          floor:       room.floor,
+        });
+      }
+    }
+  }
+
+  return { ...data, photos };
 };
 
 export const createRoomType = async (payload) => {
@@ -136,6 +187,7 @@ export const getAllRooms = async (filters = {}) => {
       block_reason,
       notes,
       type_id,
+      media,
       room_types (
         id,
         name,
@@ -171,6 +223,7 @@ export const getRoomById = async (id) => {
       block_reason,
       notes,
       type_id,
+      media,
       room_types (
         id,
         name,
@@ -306,7 +359,7 @@ export const deleteRoom = async (id) => {
   return { message: 'Room deleted successfully.' };
 };
 
-export const getAvailableRooms = async (checkIn, checkOut, typeId = null) => {
+export const getAvailableRooms = async (checkIn, checkOut, typeId = null, withMedia = false) => {
   // Get all room IDs that have overlapping reservations
   const { data: occupied } = await supabase
     .from('reservations')
@@ -325,6 +378,7 @@ export const getAvailableRooms = async (checkIn, checkOut, typeId = null) => {
       floor,
       status,
       type_id,
+      ${withMedia ? 'media,' : ''}
       room_types (
         id,
         name,
@@ -433,5 +487,65 @@ export const deleteRoomMedia = async (roomId, mediaPath) => {
     .single();
 
   if (error) throw new AppError(`Failed to update media: ${error.message}`, 500);
+  return data;
+};
+
+// ─── Room Type Media ──────────────────────────────────────
+
+export const uploadRoomTypeImage = async (typeId, file) => {
+  const ALLOWED = ['image/jpeg','image/png','image/webp','image/gif'];
+  const MAX     = 5 * 1024 * 1024;
+
+  if (!ALLOWED.includes(file.mimetype))
+    throw new AppError('Invalid file type. Allowed: JPG, PNG, WebP, GIF.', 400);
+  if (file.size > MAX)
+    throw new AppError('File too large. Max 5MB.', 400);
+
+  const type   = await getRoomTypeById(typeId);
+  const current = type.images || [];
+  if (current.length >= 8)
+    throw new AppError('Maximum 8 images per room type.', 400);
+
+  const ext      = file.originalname.split('.').pop().toLowerCase();
+  const filename = `types/${typeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from('room-type-images')
+    .upload(filename, file.buffer, { contentType: file.mimetype, upsert: false });
+
+  if (uploadErr) throw new AppError(`Upload failed: ${uploadErr.message}`, 500);
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('room-type-images')
+    .getPublicUrl(filename);
+
+  const item = { url: publicUrl, path: filename, name: file.originalname, size: file.size, added_at: new Date().toISOString() };
+  const updated = [...current, item];
+
+  const { data, error } = await supabase
+    .from('room_types')
+    .update({ images: updated })
+    .eq('id', typeId)
+    .select()
+    .single();
+
+  if (error) throw new AppError('Failed to save image.', 500);
+  return data;
+};
+
+export const deleteRoomTypeImage = async (typeId, imagePath) => {
+  const type    = await getRoomTypeById(typeId);
+  const current = type.images || [];
+  await supabase.storage.from('room-type-images').remove([imagePath]);
+  const updated = current.filter(i => i.path !== imagePath);
+
+  const { data, error } = await supabase
+    .from('room_types')
+    .update({ images: updated })
+    .eq('id', typeId)
+    .select()
+    .single();
+
+  if (error) throw new AppError('Failed to update images.', 500);
   return data;
 };

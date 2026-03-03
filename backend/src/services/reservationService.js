@@ -1,14 +1,14 @@
 // src/services/reservationService.js
 
-import { supabase }             from '../config/supabase.js';
-import { AppError }             from '../middleware/errorHandler.js';
+import { supabase } from '../config/supabase.js';
+import { AppError } from '../middleware/errorHandler.js';
 import { RESERVATION_STATUS, ROOM_STATUS } from '../config/constants.js';
 
 // ─── Helpers ──────────────────────────────────────────────
 
 const getNightCount = (checkIn, checkOut) => {
   const start = new Date(checkIn);
-  const end   = new Date(checkOut);
+  const end = new Date(checkOut);
   return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 };
 
@@ -33,13 +33,14 @@ const checkRoomAvailability = async (roomId, checkIn, checkOut, excludeReservati
 
 export const getAllReservations = async (filters = {}, page = 1, limit = 20) => {
   const from = (page - 1) * limit;
-  const to   = from + limit - 1;
+  const to = from + limit - 1;
 
   let query = supabase
     .from('reservations')
     .select(`
       id,
       reservation_no,
+      room_type_id,  
       check_in_date,
       check_out_date,
       actual_check_in,
@@ -70,11 +71,11 @@ export const getAllReservations = async (filters = {}, page = 1, limit = 20) => 
     `, { count: 'exact' })
     .order('check_in_date', { ascending: false });
 
-  if (filters.status)      query = query.eq('status', filters.status);
-  if (filters.guest_id)    query = query.eq('guest_id', filters.guest_id);
-  if (filters.room_id)     query = query.eq('room_id', filters.room_id);
-  if (filters.date_from)   query = query.gte('check_in_date', filters.date_from);
-  if (filters.date_to)     query = query.lte('check_in_date', filters.date_to);
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.guest_id) query = query.eq('guest_id', filters.guest_id);
+  if (filters.room_id) query = query.eq('room_id', filters.room_id);
+  if (filters.date_from) query = query.gte('check_in_date', filters.date_from);
+  if (filters.date_to) query = query.lte('check_in_date', filters.date_to);
 
   // Today's arrivals
   if (filters.arrivals_today) {
@@ -103,6 +104,7 @@ export const getReservationById = async (id) => {
     .select(`
       id,
       reservation_no,
+      room_type_id,  
       check_in_date,
       check_out_date,
       actual_check_in,
@@ -220,8 +222,8 @@ export const createReservation = async (payload, createdBy) => {
   }
 
   // 4. Calculate total
-  const nights      = getNightCount(check_in_date, check_out_date);
-  const nightRate   = rate_per_night;
+  const nights = getNightCount(check_in_date, check_out_date);
+  const nightRate = rate_per_night;
   const totalAmount = nightRate * nights;
 
   // 5. Create reservation
@@ -229,21 +231,21 @@ export const createReservation = async (payload, createdBy) => {
     .from('reservations')
     .insert({
       guest_id,
-      room_id:         room_id || null,
-      room_type_id:    resolvedRoomTypeId,
+      room_id: room_id || null,
+      room_type_id: resolvedRoomTypeId,
       check_in_date,
       check_out_date,
-      adults:          adults || 1,
-      children:        children || 0,
-      status:          RESERVATION_STATUS.CONFIRMED,
-      booking_source:  booking_source || 'walk_in',
-      rate_per_night:  nightRate,
-      total_amount:    totalAmount,
-      deposit_amount:  deposit_amount || 0,
-      deposit_paid:    deposit_amount > 0,
+      adults: adults || 1,
+      children: children || 0,
+      status: RESERVATION_STATUS.CONFIRMED,
+      booking_source: booking_source || 'walk_in',
+      rate_per_night: nightRate,
+      total_amount: totalAmount,
+      deposit_amount: deposit_amount || 0,
+      deposit_paid: deposit_amount > 0,
       special_requests: special_requests || null,
-      notes:           notes || null,
-      created_by:      createdBy,
+      notes: notes || null,
+      created_by: createdBy,
     })
     .select()
     .single();
@@ -266,8 +268,8 @@ export const updateReservation = async (id, payload) => {
 
   // If dates or room changed, re-check availability
   if (payload.room_id || payload.check_in_date || payload.check_out_date) {
-    const roomId   = payload.room_id     || reservation.rooms?.id;
-    const checkIn  = payload.check_in_date  || reservation.check_in_date;
+    const roomId = payload.room_id || reservation.rooms?.id;
+    const checkIn = payload.check_in_date || reservation.check_in_date;
     const checkOut = payload.check_out_date || reservation.check_out_date;
 
     if (roomId) {
@@ -310,7 +312,7 @@ export const checkIn = async (id, checkedInBy) => {
   const { data, error } = await supabase
     .from('reservations')
     .update({
-      status:          RESERVATION_STATUS.CHECKED_IN,
+      status: RESERVATION_STATUS.CHECKED_IN,
       actual_check_in: new Date().toISOString(),
     })
     .eq('id', id)
@@ -330,8 +332,8 @@ export const checkIn = async (id, checkedInBy) => {
     .from('folios')
     .insert({
       reservation_id: id,
-      guest_id:       reservation.guests.id,
-      status:         'open',
+      guest_id: reservation.guests.id,
+      status: 'open',
     })
     .select()
     .single();
@@ -339,7 +341,7 @@ export const checkIn = async (id, checkedInBy) => {
   if (folioError) throw new AppError('Check-in succeeded but failed to create folio.', 500);
 
   // Post the room charge to the folio automatically
-  const nights     = Math.ceil(
+  const nights = Math.ceil(
     (new Date(reservation.check_out_date) - new Date(reservation.check_in_date))
     / (1000 * 60 * 60 * 24)
   );
@@ -348,16 +350,16 @@ export const checkIn = async (id, checkedInBy) => {
   await supabase
     .from('folio_items')
     .insert({
-      folio_id:    folio.id,
-      department:  'room',
+      folio_id: folio.id,
+      department: 'room',
       description: `Room charge - ${reservation.rooms.number} (${nights} night${nights > 1 ? 's' : ''})`,
-      quantity:    nights,
-      unit_price:  reservation.rate_per_night,
-      amount:      roomAmount,
-      tax_amount:  0,
-      is_voided:   false,
-      posted_by:   checkedInBy,
-      posted_at:   new Date().toISOString(),
+      quantity: nights,
+      unit_price: reservation.rate_per_night,
+      amount: roomAmount,
+      tax_amount: 0,
+      is_voided: false,
+      posted_by: checkedInBy,
+      posted_at: new Date().toISOString(),
       reference_id: id,
     });
 
@@ -390,7 +392,7 @@ export const checkOut = async (id, checkedOutBy) => {
   const { data, error } = await supabase
     .from('reservations')
     .update({
-      status:           RESERVATION_STATUS.CHECKED_OUT,
+      status: RESERVATION_STATUS.CHECKED_OUT,
       actual_check_out: new Date().toISOString(),
     })
     .eq('id', id)
@@ -412,7 +414,7 @@ export const checkOut = async (id, checkedOutBy) => {
     await supabase
       .from('folios')
       .update({
-        status:    'closed',
+        status: 'closed',
         closed_at: new Date().toISOString(),
         closed_by: checkedOutBy,
       })
@@ -436,7 +438,7 @@ export const cancelReservation = async (id, reason, cancelledBy) => {
   const { data, error } = await supabase
     .from('reservations')
     .update({
-      status:       RESERVATION_STATUS.CANCELLED,
+      status: RESERVATION_STATUS.CANCELLED,
       cancel_reason: reason,
       cancelled_at: new Date().toISOString(),
     })
@@ -486,6 +488,7 @@ export const getTodayArrivals = async () => {
     .select(`
       id,
       reservation_no,
+      room_type_id,
       check_in_date,
       check_out_date,
       adults,

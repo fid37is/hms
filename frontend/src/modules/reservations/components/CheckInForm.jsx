@@ -9,14 +9,15 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
   const [roomId, setRoomId] = useState(res.room_id || '');
 
   const { data: availableRooms } = useQuery({
-    queryKey: ['rooms-available-checkin', res.check_in_date, res.check_out_date],
+    queryKey: ['rooms-available-checkin', res.check_in_date, res.check_out_date, res.room_type_id],
     queryFn:  () => roomApi.checkAvailability({
-      check_in_date: res.check_in_date,
+      check_in_date:  res.check_in_date,
       check_out_date: res.check_out_date,
+      type_id:        res.room_type_id,
     }).then(r => r.data.data),
     enabled: !res.room_id,
   });
-
+console.log('reservation:', res);
   const assignRoom = useMutation({
     mutationFn: (rid) => resApi.assignRoom(res.id, { room_id: rid }),
     onError: (e) => toast.error(e.response?.data?.message || 'Failed to assign room'),

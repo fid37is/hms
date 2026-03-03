@@ -11,7 +11,7 @@ const STATUS_META = {
   out_of_order: { label: 'Out of Order', color: 'var(--s-gray-text)',   bg: 'var(--s-gray-bg)'   },
 };
 
-function RoomCard({ room, onStatusChange, onEdit }) {
+function RoomCard({ room, onStatusChange, onView }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const meta = STATUS_META[room.status] || STATUS_META.available;
 
@@ -24,7 +24,10 @@ function RoomCard({ room, onStatusChange, onEdit }) {
   ].filter(a => a.show.includes(room.status));
 
   return (
-    <div className="card p-3 relative" style={{ borderTop: `3px solid ${meta.color}` }}>
+    <div className="card p-3 relative cursor-pointer"
+      style={{ borderTop: `3px solid ${meta.color}` }}
+      onClick={() => onView(room)}
+    >
       <div className="flex items-start justify-between mb-2">
         <div>
           <p className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{room.number}</p>
@@ -34,7 +37,7 @@ function RoomCard({ room, onStatusChange, onEdit }) {
         </div>
         <div className="relative">
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
             className="w-7 h-7 flex items-center justify-center rounded-md"
             style={{ color: 'var(--text-muted)' }}
           >
@@ -42,24 +45,22 @@ function RoomCard({ room, onStatusChange, onEdit }) {
           </button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div
-                className="absolute right-0 top-8 z-20 w-44 rounded-lg py-1"
-                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-md)' }}
-              >
+              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }} />
+              <div className="absolute right-0 top-8 z-20 w-44 rounded-lg py-1"
+                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-soft)', boxShadow: 'var(--shadow-md)' }}>
                 <button
-                  onClick={() => { onEdit(room); setMenuOpen(false); }}
+                  onClick={(e) => { e.stopPropagation(); onView(room); setMenuOpen(false); }}
                   className="flex items-center gap-2 w-full px-3 py-2.5 text-xs"
                   style={{ color: 'var(--text-sub)' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <Pencil size={12} /> Edit Room
+                  <Pencil size={12} /> View Details
                 </button>
                 {actions.map(a => (
                   <button
                     key={a.status}
-                    onClick={() => { onStatusChange(room.id, a.status); setMenuOpen(false); }}
+                    onClick={(e) => { e.stopPropagation(); onStatusChange(room.id, a.status); setMenuOpen(false); }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 text-xs"
                     style={{ color: 'var(--text-sub)' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
@@ -93,7 +94,7 @@ function RoomCard({ room, onStatusChange, onEdit }) {
   );
 }
 
-export default function RoomGrid({ rooms, onStatusChange, onEdit }) {
+export default function RoomGrid({ rooms, onStatusChange, onView }) {
   const floors = [...new Set(rooms.map(r => r.floor ?? 0))].sort((a, b) => a - b);
 
   if (!rooms.length) {
@@ -111,12 +112,11 @@ export default function RoomGrid({ rooms, onStatusChange, onEdit }) {
           <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
             {floor === 0 ? 'Ground Floor' : `Floor ${floor}`}
           </p>
-          {/* 2 cols on mobile, scales up */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
             {rooms
               .filter(r => (r.floor ?? 0) === floor)
               .map(room => (
-                <RoomCard key={room.id} room={room} onStatusChange={onStatusChange} onEdit={onEdit} />
+                <RoomCard key={room.id} room={room} onStatusChange={onStatusChange} onView={onView} />
               ))}
           </div>
         </div>
