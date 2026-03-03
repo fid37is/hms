@@ -8,7 +8,8 @@ import crypto       from 'crypto';
 import jwt          from 'jsonwebtoken';
 import { supabase } from '../config/supabase.js';
 import { env }      from '../config/env.js';
-import { AppError } from '../middleware/errorHandler.js';
+import { AppError }      from '../middleware/errorHandler.js';
+import * as emailService from '../services/emailService.js';
 
 const SALT_ROUNDS = 12;
 
@@ -86,6 +87,10 @@ export const register = async ({ full_name, email, phone, address, password }) =
 
   const tokenPayload = { sub: guest.id, email: guest.email, full_name: guest.full_name };
 
+  // Send welcome email (non-blocking)
+  emailService.sendWelcome({ email: guest.email, fullName: guest.full_name })
+    .catch(e => console.error('[email] welcome failed:', e));
+
   return {
     access_token:  generateGuestAccessToken(tokenPayload),
     refresh_token: generateGuestRefreshToken(guest.id),
@@ -123,6 +128,10 @@ export const login = async ({ email, password }) => {
   }
 
   const tokenPayload = { sub: guest.id, email: guest.email, full_name: guest.full_name };
+
+  // Send welcome email (non-blocking)
+  emailService.sendWelcome({ email: guest.email, fullName: guest.full_name })
+    .catch(e => console.error('[email] welcome failed:', e));
 
   return {
     access_token:  generateGuestAccessToken(tokenPayload),
@@ -243,17 +252,16 @@ export const forgotPassword = async (email) => {
     .update({ reset_token_hash: tokenHash, reset_token_expires: new Date(Date.now() + 3600000).toISOString() })
     .eq('id', guest.id);
 
-  // TODO: Send email with reset link
-  // The reset link should be: https://yourhotel.com/reset-password?token=<resetToken>
-  // Integrate with your email provider (Nodemailer, Resend, SendGrid, etc.)
-  // Example with Nodemailer:
-  //   await sendEmail({
-  //     to: guest.email,
-  //     subject: 'Reset your password',
-  //     html: `<p>Click <a href="${env.WEBSITE_URL}/reset-password?token=${resetToken}">here</a> to reset your password. Link expires in 1 hour.</p>`
-  //   });
+  // Send reset email (non-blocking)
+  const resetUrl = `${env.WEBSITE_URL || 'http://localhost:5174'}/reset-password?token=${resetToken}`;
+  emailService.sendPasswordReset({
+    email:    guest.email,
+    fullName: guest.full_name,
+    resetUrl,
+  }).catch(e => console.error('[email] password reset failed:', e));
 
-  console.log(`[DEV] Password reset link: ${env.WEBSITE_URL || 'http://localhost:5174'}/reset-password?token=${resetToken}`);
+  // Dev fallback — also print to console so you can test without email setup
+  console.log(`[DEV] Password reset URL: ${resetUrl}`);
 
   return { message: 'If this email is registered, a reset link has been sent.' };
 };

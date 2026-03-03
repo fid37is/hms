@@ -23,3 +23,12 @@ export const updateConfig = async (req, res, next) => {
     return sendSuccess(res, data, 'Hotel configuration updated.');
   } catch (err) { next(err); }
 };
+
+// Public — no auth required, strips internal/billing fields
+export const getPublicConfig = async (req, res, next) => {
+  try {
+    const data = await configService.getConfig();
+    const { id, created_at, updated_at, receipt_footer, ...publicData } = data;
+    return sendSuccess(res, publicData, 'Hotel configuration retrieved.');
+  } catch (err) { next(err); }
+};

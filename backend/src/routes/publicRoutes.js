@@ -19,6 +19,9 @@ import {
   availabilityLimiter,
 } from '../middleware/rateLimiter.js';
 
+// ─── Config controller ────────────────────────────────────────────────────────
+import { getPublicConfig } from '../controllers/configController.js';
+
 // ─── Existing room controllers (no changes needed) ────────────────────────────
 import {
   getAllRoomTypes,
@@ -76,6 +79,12 @@ const router = Router();
 // =============================================================================
 // OPEN ROUTES — no authentication required
 // =============================================================================
+
+// GET /api/v1/public/config — hotel branding & contact info for the website
+router.get('/config',
+  rateLimiter,
+  getPublicConfig
+);
 
 // GET /api/v1/public/rooms/types
 router.get('/rooms/types',

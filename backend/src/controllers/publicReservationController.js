@@ -7,7 +7,8 @@
 import { supabase }           from '../config/supabase.js';
 import * as reservationService from '../services/reservationService.js';
 import { AppError }           from '../middleware/errorHandler.js';
-import { sendCreated, sendSuccess } from '../utils/response.js';
+import { sendCreated, sendSuccess }  from '../utils/response.js';
+import * as emailService             from '../services/emailService.js';
 
 // ─── Helper: find or create guest record ─────────────────────────────────────
 // For logged-in guests  → use their existing guest_id from JWT
@@ -106,6 +107,34 @@ export const publicCreateReservation = async (req, res, next) => {
       deposit_amount:  0,
       special_requests: special_requests || null,
     }, null);
+
+    // Send confirmation email (non-blocking — don't fail booking if email fails)
+    try {
+      const { data: guestData } = await supabase
+        .from('guests')
+        .select('full_name, email')
+        .eq('id', guest_id)
+        .single();
+
+      const { data: roomTypeData } = room_type_id ? await supabase
+        .from('room_types').select('name').eq('id', room_type_id).single()
+        : { data: null };
+
+      const { data: ratePlanData } = rate_plan_id ? await supabase
+        .from('rate_plans').select('name').eq('id', rate_plan_id).single()
+        : { data: null };
+
+      if (guestData?.email) {
+        emailService.sendBookingConfirmation({
+          reservation: data,
+          guest:        guestData,
+          roomTypeName: roomTypeData?.name,
+          ratePlanName: ratePlanData?.name,
+        }).catch(e => console.error('[email] booking confirmation failed:', e));
+      }
+    } catch (e) {
+      console.error('[email] pre-send lookup failed:', e);
+    }
 
     return sendCreated(res, {
       reservation: data,
