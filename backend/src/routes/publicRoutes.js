@@ -1,223 +1,92 @@
 // src/routes/publicRoutes.js
-//
-// Public-facing API for the hotel website.
-// Mount in app.js with:  app.use('/api/v1/public', publicRoutes);
+import { Router }       from 'express';
+import { validate }     from '../middleware/validate.js';
+import { resolveOrg }   from '../middleware/resolveOrg.js';
+import { verifyGuestToken, authorizeGuestReservation } from '../middleware/guestAuth.js';
+import { rateLimiter, bookingLimiter, availabilityLimiter } from '../middleware/rateLimiter.js';
 
-import { Router } from 'express';
-import { validate } from '../middleware/validate.js';
-
-// ─── Guest auth ───────────────────────────────────────────────────────────────
-import {
-  verifyGuestToken,
-  authorizeGuestReservation,
-} from '../middleware/guestAuth.js';
-
-// ─── Rate limiters ────────────────────────────────────────────────────────────
-import {
-  rateLimiter,
-  bookingLimiter,
-  availabilityLimiter,
-} from '../middleware/rateLimiter.js';
-
-// ─── Config controller ────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 import { getPublicConfig } from '../controllers/configController.js';
 
-// ─── Existing room controllers (no changes needed) ────────────────────────────
+// ─── Rooms ────────────────────────────────────────────────────────────────────
 import {
-  getAllRoomTypes,
-  getRoomTypeById,
-  getRatePlans,
-  getAvailableRooms,
+  getAllRoomTypes, getRoomTypeById, getRatePlans,
+  getAvailableRooms, getAllRooms, getRoomById,
 } from '../controllers/roomController.js';
 
-// ─── Existing reservation controller (read-only use) ─────────────────────────
-import {
-  getReservationById,
-} from '../controllers/reservationController.js';
+// ─── Reservations ─────────────────────────────────────────────────────────────
+import { getReservationById } from '../controllers/reservationController.js';
+import { publicCreateReservation, publicCancelReservation } from '../controllers/publicReservationController.js';
 
-// ─── New public controller (handles guest write actions) ─────────────────────
-import {
-  publicCreateReservation,
-  publicCancelReservation,
-} from '../controllers/publicReservationController.js';
+// ─── Folio ────────────────────────────────────────────────────────────────────
+import { getFolioByReservation, getFolioSummary, addPayment } from '../controllers/folioController.js';
 
-// ─── Existing folio controller ────────────────────────────────────────────────
+// ─── Guest accounts ───────────────────────────────────────────────────────────
 import {
-  getFolioByReservation,
-  getFolioSummary,
-  addPayment,
-} from '../controllers/folioController.js';
-
-// ─── Guest account controllers ───────────────────────────────────────────────
-import {
-  register,
-  login,
-  getMyReservations,
-  getMyReservationById,
-  refreshToken,
-  getMe,
-  forgotPassword,
-  resetPassword,
+  register, login, getMyReservations, getMyReservationById,
+  refreshToken, getMe, updateMe, forgotPassword, resetPassword,
 } from '../controllers/guestAccountController.js';
+import { guestRegisterSchema, guestLoginSchema, guestRefreshSchema } from '../validators/guestAccountValidator.js';
 
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+import { getActiveDepartments } from '../controllers/departmentController.js';
 import {
-  guestRegisterSchema,
-  guestLoginSchema,
-  guestRefreshSchema,
-} from '../validators/guestAccountValidator.js';
+  startConversation, getMyConversations, getMessages, sendMessage,
+} from '../controllers/conversationController.js';
 
-// ─── Public validators ────────────────────────────────────────────────────────
+// ─── Validators ───────────────────────────────────────────────────────────────
 import {
-  publicAvailabilitySchema,
-  publicCreateReservationSchema,
-  publicCancelReservationSchema,
-  publicAddPaymentSchema,
+  publicAvailabilitySchema, publicCreateReservationSchema,
+  publicCancelReservationSchema, publicAddPaymentSchema,
 } from '../validators/publicValidator.js';
 
 const router = Router();
 
-// =============================================================================
-// OPEN ROUTES — no authentication required
-// =============================================================================
-
-// GET /api/v1/public/config — hotel branding & contact info for the website
-router.get('/config',
-  rateLimiter,
-  getPublicConfig
-);
-
-// GET /api/v1/public/rooms/types
-router.get('/rooms/types',
-  rateLimiter,
-  getAllRoomTypes
-);
-
-// GET /api/v1/public/rooms/types/:roomTypeId/rates  ← must be BEFORE /:id
-router.get('/rooms/types/:roomTypeId/rates',
-  rateLimiter,
-  getRatePlans
-);
-
-// GET /api/v1/public/rooms/types/:id
-router.get('/rooms/types/:id',
-  rateLimiter,
-  getRoomTypeById
-);
-
-// GET /api/v1/public/rooms/availability?check_in=&check_out=&guests=&type_id=
-router.get('/rooms/availability',
-  availabilityLimiter,
-  validate(publicAvailabilitySchema, 'query'),
-  getAvailableRooms
-);
-
-// POST /api/v1/public/reservations
-router.post('/reservations',
-  bookingLimiter,
-  validate(publicCreateReservationSchema),
-  publicCreateReservation
-);
+// resolveOrg runs on ALL public routes.
+// Resolves req.orgId via: subdomain → custom domain → API key → DEV_ORG_ID
+router.use(resolveOrg);
 
 // =============================================================================
-// GUEST-AUTHENTICATED ROUTES — requires JWT from booking confirmation
+// OPEN ROUTES — org resolved, no guest auth required
 // =============================================================================
 
-// GET /api/v1/public/reservations/:id
-router.get('/reservations/:id',
-  rateLimiter,
-  verifyGuestToken,
-  authorizeGuestReservation,
-  getReservationById
-);
+router.get('/config',           rateLimiter, getPublicConfig);
+router.get('/chat-departments', rateLimiter, getActiveDepartments);
 
-// PATCH /api/v1/public/reservations/:id/cancel
-router.patch('/reservations/:id/cancel',
-  rateLimiter,
-  verifyGuestToken,
-  authorizeGuestReservation,
-  validate(publicCancelReservationSchema),
-  publicCancelReservation
-);
+router.get('/rooms',                         rateLimiter, getAllRooms);
+router.get('/rooms/types',                   rateLimiter, getAllRoomTypes);
+router.get('/rooms/types/:roomTypeId/rates', rateLimiter, getRatePlans);       // before /rooms/types/:id
+router.get('/rooms/types/:id',               rateLimiter, getRoomTypeById);
+router.get('/rooms/availability',            availabilityLimiter, validate(publicAvailabilitySchema, 'query'), getAvailableRooms);
+router.get('/rooms/:id',                     rateLimiter, getRoomById);        // after /rooms/types/*
 
-// GET /api/v1/public/folio/reservation/:reservationId
-router.get('/folio/reservation/:reservationId',
-  rateLimiter,
-  verifyGuestToken,
-  authorizeGuestReservation,
-  getFolioByReservation
-);
+router.post('/reservations', bookingLimiter, validate(publicCreateReservationSchema), publicCreateReservation);
 
-// GET /api/v1/public/folio/:id/summary
-router.get('/folio/:id/summary',
-  rateLimiter,
-  verifyGuestToken,
-  getFolioSummary
-);
-
-// POST /api/v1/public/folio/:id/payments
-router.post('/folio/:id/payments',
-  rateLimiter,
-  verifyGuestToken,
-  validate(publicAddPaymentSchema),
-  addPayment
-);
+router.post('/auth/register',        rateLimiter, validate(guestRegisterSchema), register);
+router.post('/auth/login',           rateLimiter, validate(guestLoginSchema),    login);
+router.post('/auth/forgot-password', rateLimiter, forgotPassword);
+router.post('/auth/refresh',         rateLimiter, validate(guestRefreshSchema),  refreshToken);
+router.post('/auth/reset-password',  rateLimiter, resetPassword);
 
 // =============================================================================
-// GUEST ACCOUNT ROUTES
+// GUEST-AUTHENTICATED ROUTES — requires guest JWT
 // =============================================================================
 
-// POST /api/v1/public/auth/register
-router.post('/auth/register',
-  rateLimiter,
-  validate(guestRegisterSchema),
-  register
-);
+router.get('/auth/me',                  rateLimiter, verifyGuestToken, getMe);
+router.patch('/auth/me',                rateLimiter, verifyGuestToken, updateMe);        // ✅ update profile
+router.get('/auth/my-reservations',     rateLimiter, verifyGuestToken, getMyReservations);
+router.get('/auth/my-reservations/:id', rateLimiter, verifyGuestToken, getMyReservationById);
 
-// POST /api/v1/public/auth/login
-router.post('/auth/login',
-  rateLimiter,
-  validate(guestLoginSchema),
-  login
-);
+router.get('/reservations/:id',          rateLimiter, verifyGuestToken, authorizeGuestReservation, getReservationById);
+router.patch('/reservations/:id/cancel', rateLimiter, verifyGuestToken, authorizeGuestReservation, validate(publicCancelReservationSchema), publicCancelReservation);
 
-// POST /api/v1/public/auth/refresh
-router.post('/auth/refresh',
-  rateLimiter,
-  validate(guestRefreshSchema),
-  refreshToken
-);
+router.get('/folio/reservation/:reservationId', rateLimiter, verifyGuestToken, authorizeGuestReservation, getFolioByReservation);
+router.get('/folio/:id/summary',                rateLimiter, verifyGuestToken, getFolioSummary);
+router.post('/folio/:id/payments',              rateLimiter, verifyGuestToken, validate(publicAddPaymentSchema), addPayment);
 
-// POST /api/v1/public/auth/forgot-password
-router.post('/auth/forgot-password',
-  rateLimiter,
-  forgotPassword
-);
-
-// POST /api/v1/public/auth/reset-password
-router.post('/auth/reset-password',
-  rateLimiter,
-  resetPassword
-);
-
-// GET /api/v1/public/auth/me
-router.get('/auth/me',
-  rateLimiter,
-  verifyGuestToken,
-  getMe
-);
-
-// GET /api/v1/public/auth/my-reservations
-router.get('/auth/my-reservations',
-  rateLimiter,
-  verifyGuestToken,
-  getMyReservations
-);
-
-// GET /api/v1/public/auth/my-reservations/:id
-router.get('/auth/my-reservations/:id',
-  rateLimiter,
-  verifyGuestToken,
-  getMyReservationById
-);
+router.post('/conversations',              rateLimiter, verifyGuestToken, startConversation);
+router.get('/conversations',               rateLimiter, verifyGuestToken, getMyConversations);
+router.get('/conversations/:id/messages',  rateLimiter, verifyGuestToken, getMessages);
+router.post('/conversations/:id/messages', rateLimiter, verifyGuestToken, sendMessage);
 
 export default router;

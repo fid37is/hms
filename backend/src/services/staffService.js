@@ -1,35 +1,36 @@
 // src/services/staffService.js
 // Schema ref:
-// staff: id, user_id, full_name NN, email, phone NN, department_id, job_title,
+// staff: id, org_id, user_id, full_name NN, email, phone NN, department_id, job_title,
 //   employment_type('full_time'), employment_date(CURRENT_DATE), salary(0),
 //   bank_name, bank_account_no, emergency_contact jsonb({}), status('active'),
 //   notes, is_deleted(false), created_at, updated_at
-// shifts: id, staff_id, shift_date NN, scheduled_start time, scheduled_end time,
+// shifts: id, org_id, staff_id, shift_date NN, scheduled_start time, scheduled_end time,
 //   actual_start tstz, actual_end tstz, hours_worked numeric, status('scheduled'),
 //   notes, created_at
-// leave_requests: id, staff_id, leave_type, start_date NN, end_date NN, reason,
+// leave_requests: id, org_id, staff_id, leave_type, start_date NN, end_date NN, reason,
 //   status('pending'), reviewed_by, reviewed_at, review_notes, created_at
-// departments: id, name NN, manager_id, created_at
+// departments: id, org_id, name NN, manager_id, created_at
 
 import { supabase } from '../config/supabase.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 // ─── Departments ──────────────────────────────────────────
 
-export const getAllDepartments = async () => {
+export const getAllDepartments = async (orgId) => {
   const { data, error } = await supabase
     .from('departments')
     .select('id, name, manager_id')
+    .eq('org_id', orgId)
     .order('name');
 
   if (error) throw new AppError(`Failed to fetch departments: ${error.message}`, 500);
   return data;
 };
 
-export const createDepartment = async (payload) => {
+export const createDepartment = async (orgId, payload) => {
   const { data, error } = await supabase
     .from('departments')
-    .insert(payload)
+    .insert({ ...payload, org_id: orgId })
     .select()
     .single();
 
@@ -37,11 +38,12 @@ export const createDepartment = async (payload) => {
   return data;
 };
 
-export const updateDepartment = async (id, payload) => {
+export const updateDepartment = async (orgId, id, payload) => {
   const { data, error } = await supabase
     .from('departments')
     .update(payload)
     .eq('id', id)
+    .eq('org_id', orgId)
     .select()
     .single();
 
@@ -51,7 +53,7 @@ export const updateDepartment = async (id, payload) => {
 
 // ─── Staff ────────────────────────────────────────────────
 
-export const getAllStaff = async (filters = {}, page = 1, limit = 20) => {
+export const getAllStaff = async (orgId, filters = {}, page = 1, limit = 20) => {
   const from = (page - 1) * limit;
   const to   = from + limit - 1;
 
@@ -62,6 +64,7 @@ export const getAllStaff = async (filters = {}, page = 1, limit = 20) => {
       employment_date, status, created_at,
       departments ( id, name )
     `, { count: 'exact' })
+    .eq('org_id', orgId)
     .eq('is_deleted', false)
     .order('full_name');
 
@@ -73,7 +76,7 @@ export const getAllStaff = async (filters = {}, page = 1, limit = 20) => {
   return { data, total: count };
 };
 
-export const getStaffById = async (id) => {
+export const getStaffById = async (orgId, id) => {
   const { data, error } = await supabase
     .from('staff')
     .select(`
@@ -83,6 +86,7 @@ export const getStaffById = async (id) => {
       departments ( id, name )
     `)
     .eq('id', id)
+    .eq('org_id', orgId)
     .eq('is_deleted', false)
     .single();
 
@@ -90,10 +94,10 @@ export const getStaffById = async (id) => {
   return data;
 };
 
-export const createStaff = async (payload) => {
+export const createStaff = async (orgId, payload) => {
   const { data, error } = await supabase
     .from('staff')
-    .insert(payload)
+    .insert({ ...payload, org_id: orgId })
     .select()
     .single();
 
@@ -101,13 +105,14 @@ export const createStaff = async (payload) => {
   return data;
 };
 
-export const updateStaff = async (id, payload) => {
-  await getStaffById(id);
+export const updateStaff = async (orgId, id, payload) => {
+  await getStaffById(orgId, id);
 
   const { data, error } = await supabase
     .from('staff')
     .update(payload)
     .eq('id', id)
+    .eq('org_id', orgId)
     .select()
     .single();
 
@@ -115,13 +120,14 @@ export const updateStaff = async (id, payload) => {
   return data;
 };
 
-export const deleteStaff = async (id) => {
-  await getStaffById(id);
+export const deleteStaff = async (orgId, id) => {
+  await getStaffById(orgId, id);
 
   const { error } = await supabase
     .from('staff')
     .update({ is_deleted: true, status: 'terminated' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('org_id', orgId);
 
   if (error) throw new AppError(`Failed to delete staff record: ${error.message}`, 500);
   return { message: 'Staff record deleted successfully.' };
@@ -129,11 +135,12 @@ export const deleteStaff = async (id) => {
 
 // ─── Shifts ───────────────────────────────────────────────
 
-export const getStaffShifts = async (staffId, filters = {}) => {
+export const getStaffShifts = async (orgId, staffId, filters = {}) => {
   let query = supabase
     .from('shifts')
     .select('*')
     .eq('staff_id', staffId)
+    .eq('org_id', orgId)
     .order('shift_date', { ascending: false });
 
   if (filters.date_from) query = query.gte('shift_date', filters.date_from);
@@ -145,13 +152,12 @@ export const getStaffShifts = async (staffId, filters = {}) => {
   return data;
 };
 
-export const createShift = async (payload) => {
-  // Verify staff exists
-  await getStaffById(payload.staff_id);
+export const createShift = async (orgId, payload) => {
+  await getStaffById(orgId, payload.staff_id);
 
   const { data, error } = await supabase
     .from('shifts')
-    .insert(payload)
+    .insert({ ...payload, org_id: orgId })
     .select()
     .single();
 
@@ -159,11 +165,12 @@ export const createShift = async (payload) => {
   return data;
 };
 
-export const updateShift = async (id, payload) => {
+export const updateShift = async (orgId, id, payload) => {
   const { data: existing } = await supabase
     .from('shifts')
     .select('id')
     .eq('id', id)
+    .eq('org_id', orgId)
     .single();
 
   if (!existing) throw new AppError('Shift not found.', 404);
@@ -172,6 +179,7 @@ export const updateShift = async (id, payload) => {
     .from('shifts')
     .update(payload)
     .eq('id', id)
+    .eq('org_id', orgId)
     .select()
     .single();
 
@@ -179,11 +187,12 @@ export const updateShift = async (id, payload) => {
   return data;
 };
 
-export const clockIn = async (shiftId, staffId) => {
+export const clockIn = async (orgId, shiftId, staffId) => {
   const { data: shift } = await supabase
     .from('shifts')
     .select('id, status, staff_id')
     .eq('id', shiftId)
+    .eq('org_id', orgId)
     .single();
 
   if (!shift) throw new AppError('Shift not found.', 404);
@@ -194,6 +203,7 @@ export const clockIn = async (shiftId, staffId) => {
     .from('shifts')
     .update({ status: 'active', actual_start: new Date().toISOString() })
     .eq('id', shiftId)
+    .eq('org_id', orgId)
     .select()
     .single();
 
@@ -201,11 +211,12 @@ export const clockIn = async (shiftId, staffId) => {
   return data;
 };
 
-export const clockOut = async (shiftId, staffId) => {
+export const clockOut = async (orgId, shiftId, staffId) => {
   const { data: shift } = await supabase
     .from('shifts')
     .select('id, status, staff_id, actual_start')
     .eq('id', shiftId)
+    .eq('org_id', orgId)
     .single();
 
   if (!shift) throw new AppError('Shift not found.', 404);
@@ -224,6 +235,7 @@ export const clockOut = async (shiftId, staffId) => {
       hours_worked: hoursWorked,
     })
     .eq('id', shiftId)
+    .eq('org_id', orgId)
     .select()
     .single();
 
@@ -233,7 +245,7 @@ export const clockOut = async (shiftId, staffId) => {
 
 // ─── Leave Requests ───────────────────────────────────────
 
-export const getLeaveRequests = async (filters = {}, page = 1, limit = 20) => {
+export const getLeaveRequests = async (orgId, filters = {}, page = 1, limit = 20) => {
   const from = (page - 1) * limit;
   const to   = from + limit - 1;
 
@@ -244,6 +256,7 @@ export const getLeaveRequests = async (filters = {}, page = 1, limit = 20) => {
       reviewed_at, review_notes, created_at,
       staff ( id, full_name, job_title )
     `, { count: 'exact' })
+    .eq('org_id', orgId)
     .order('created_at', { ascending: false });
 
   if (filters.status)   query = query.eq('status', filters.status);
@@ -254,12 +267,13 @@ export const getLeaveRequests = async (filters = {}, page = 1, limit = 20) => {
   return { data, total: count };
 };
 
-export const createLeaveRequest = async (payload, staffId) => {
+export const createLeaveRequest = async (orgId, payload, staffId) => {
   const { leave_type, start_date, end_date, reason } = payload;
 
   const { data, error } = await supabase
     .from('leave_requests')
     .insert({
+      org_id: orgId,
       staff_id: staffId,
       leave_type,
       start_date,
@@ -274,11 +288,12 @@ export const createLeaveRequest = async (payload, staffId) => {
   return data;
 };
 
-export const reviewLeaveRequest = async (id, status, reviewNotes, reviewedBy) => {
+export const reviewLeaveRequest = async (orgId, id, status, reviewNotes, reviewedBy) => {
   const { data: existing } = await supabase
     .from('leave_requests')
     .select('id, status')
     .eq('id', id)
+    .eq('org_id', orgId)
     .single();
 
   if (!existing) throw new AppError('Leave request not found.', 404);
@@ -293,6 +308,7 @@ export const reviewLeaveRequest = async (id, status, reviewNotes, reviewedBy) =>
       review_notes: reviewNotes || null,
     })
     .eq('id', id)
+    .eq('org_id', orgId)
     .select()
     .single();
 

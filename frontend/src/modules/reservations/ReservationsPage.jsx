@@ -2,46 +2,42 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 import * as resApi from '../../lib/api/reservationApi';
-import PageHeader     from '../../components/shared/PageHeader';
-import DataTable      from '../../components/shared/DataTable';
-import StatusBadge    from '../../components/shared/StatusBadge';
-import Modal          from '../../components/shared/Modal';
-import ConfirmDialog  from '../../components/shared/ConfirmDialog';
+import PageHeader      from '../../components/shared/PageHeader';
+import DataTable       from '../../components/shared/DataTable';
+import StatusBadge     from '../../components/shared/StatusBadge';
+import Modal           from '../../components/shared/Modal';
+import ConfirmDialog   from '../../components/shared/ConfirmDialog';
 import ReservationForm from './components/ReservationForm';
-import CheckInForm    from './components/CheckInForm';
-import CheckOutForm   from './components/CheckOutForm';
+import CheckInForm     from './components/CheckInForm';
+import CheckOutForm    from './components/CheckOutForm';
 import { formatDate, formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
 
 const STATUS_TABS = [
-  { label: 'All',       value: ''            },
-  { label: 'Confirmed', value: 'confirmed'   },
-  { label: 'In House',  value: 'checked_in'  },
+  { label: 'All',         value: ''            },
+  { label: 'Confirmed',   value: 'confirmed'   },
+  { label: 'In House',    value: 'checked_in'  },
   { label: 'Checked Out', value: 'checked_out' },
-  { label: 'Cancelled', value: 'cancelled'   },
+  { label: 'Cancelled',   value: 'cancelled'   },
 ];
 
 export default function ReservationsPage() {
   const qc = useQueryClient();
   const [status,   setStatus]   = useState('');
   const [search,   setSearch]   = useState('');
+  const [page,     setPage]     = useState(1);
   const [showNew,  setShowNew]  = useState(false);
   const [checkIn,  setCheckIn]  = useState(null);
   const [checkOut, setCheckOut] = useState(null);
   const [cancel,   setCancel]   = useState(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['reservations', status],
-    queryFn:  () => resApi.getReservations(status ? { status } : {}).then(r => r.data.data),
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['reservations', status, page],
+    // r.data = { success, message, data: [...], meta: { total, page, ... } }
+    queryFn:  () => resApi.getReservations({ status: status || undefined, page, limit: 20 }).then(r => r.data),
   });
 
-  const doCancel = useMutation({
-    mutationFn: ({ id, reason }) => resApi.cancelReservation(id, { reason }),
-    onSuccess: () => { toast.success('Reservation cancelled'); setCancel(null); qc.invalidateQueries(['reservations']); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
-  });
-
-  const reservations = (data || []).filter(r => {
+  const reservations = (response?.data || []).filter(r => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -51,17 +47,28 @@ export default function ReservationsPage() {
     );
   });
 
+  const meta  = response?.meta  || {};
+  const total = meta.total || 0;
+
+  const doCancel = useMutation({
+    mutationFn: ({ id, reason }) => resApi.cancelReservation(id, { reason }),
+    onSuccess: () => { toast.success('Reservation cancelled'); setCancel(null); qc.invalidateQueries(['reservations']); },
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
+  });
+
   const columns = [
     { key: 'reservation_no', label: 'Ref',
       render: r => <span className="font-mono text-xs font-medium" style={{ color: 'var(--brand)' }}>{r.reservation_no}</span> },
     { key: 'guest', label: 'Guest',
       render: r => <span style={{ color: 'var(--text-base)' }}>{r.guests?.full_name || '—'}</span> },
     { key: 'room', label: 'Room',
-      render: r => r.rooms?.number ? <span className="font-medium" style={{ color: 'var(--text-base)' }}>Room {r.rooms.number}</span> : <span style={{ color: 'var(--text-muted)' }}>Unassigned</span> },
+      render: r => r.rooms?.number
+        ? <span className="font-medium" style={{ color: 'var(--text-base)' }}>Room {r.rooms.number}</span>
+        : <span style={{ color: 'var(--text-muted)' }}>Unassigned</span> },
     { key: 'check_in_date',  label: 'Check-in',  render: r => formatDate(r.check_in_date)  },
     { key: 'check_out_date', label: 'Check-out', render: r => formatDate(r.check_out_date) },
     { key: 'total_amount',   label: 'Amount',    render: r => formatCurrency(r.total_amount) },
-    { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
+    { key: 'status',         label: 'Status',    render: r => <StatusBadge status={r.status} /> },
     { key: 'actions', label: '', width: '120px',
       render: r => (
         <div className="flex gap-1.5 justify-end flex-wrap">
@@ -85,7 +92,6 @@ export default function ReservationsPage() {
     },
   ];
 
-  // Mobile card
   const MobileCard = ({ row: r }) => (
     <div className="card p-4 space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -122,7 +128,7 @@ export default function ReservationsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        subtitle={`${reservations.length} records`}
+        subtitle={`${total} records`}
         action={
           <button onClick={() => setShowNew(true)} className="btn-primary text-xs">
             <Plus size={14} /> New
@@ -130,22 +136,17 @@ export default function ReservationsPage() {
         }
       />
 
-      {/* Search + tabs */}
       <div className="space-y-3">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-          <input
-            className="input pl-8 text-sm"
-            placeholder="Search name, room, ref…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <input className="input pl-8 text-sm" placeholder="Search name, room, ref…"
+            value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
         <div className="overflow-x-auto pb-1">
           <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
             {STATUS_TABS.map(t => (
-              <button key={t.value} onClick={() => setStatus(t.value)}
+              <button key={t.value} onClick={() => { setStatus(t.value); setPage(1); }}
                 className="px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
                 style={{
                   backgroundColor: status === t.value ? 'var(--bg-surface)' : 'transparent',
@@ -159,7 +160,22 @@ export default function ReservationsPage() {
         </div>
       </div>
 
-      <DataTable columns={columns} data={reservations} loading={isLoading} emptyTitle="No reservations found" mobileCard={MobileCard} />
+      <DataTable columns={columns} data={reservations} loading={isLoading}
+        emptyTitle="No reservations found" mobileCard={MobileCard} />
+
+      {total > 20 && (
+        <div className="hidden md:flex items-center justify-between">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Page {meta.page} of {meta.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => p - 1)} disabled={!meta.hasPrev}
+              className="btn-secondary text-xs px-3">Prev</button>
+            <button onClick={() => setPage(p => p + 1)} disabled={!meta.hasNext}
+              className="btn-secondary text-xs px-3">Next</button>
+          </div>
+        </div>
+      )}
 
       <Modal open={showNew} onClose={() => setShowNew(false)} title="New Reservation" size="lg">
         <ReservationForm onSuccess={() => { setShowNew(false); qc.invalidateQueries(['reservations']); }} />
@@ -173,7 +189,8 @@ export default function ReservationsPage() {
       <ConfirmDialog
         open={!!cancel} onClose={() => setCancel(null)}
         onConfirm={() => doCancel.mutate({ id: cancel?.id, reason: 'Cancelled by staff' })}
-        title="Cancel Reservation" message={`Cancel reservation for ${cancel?.guests?.full_name}?`}
+        title="Cancel Reservation"
+        message={`Cancel reservation for ${cancel?.guests?.full_name}?`}
         confirmLabel="Yes, Cancel" danger
       />
     </div>

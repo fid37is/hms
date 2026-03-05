@@ -13,9 +13,7 @@ import publicRoutes      from './routes/publicRoutes.js';
 
 const app = express();
 
-// ── 1. CORS — must be first ───────────────────────────────────────────────────
-// FRONTEND_URL and WEBSITE_URL can each be comma-separated for multiple origins
-// e.g. FRONTEND_URL="https://hms-67e.pages.dev,http://localhost:5173"
+// ── 1. CORS ───────────────────────────────────────────────────────────────────
 const parseOrigins = (val, fallback) =>
   (val || fallback).split(',').map(o => o.trim()).filter(Boolean);
 
@@ -24,22 +22,30 @@ const allowedOrigins = [
   ...parseOrigins(env.WEBSITE_URL,  'http://localhost:5174'),
 ];
 
+const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'miravance.io';
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow no-origin requests (curl, Render health checks, mobile apps)
     if (!origin) return callback(null, true);
-    // In dev, allow any localhost port automatically
+
+    // Allow any subdomain of our base domain (*.miravance.io)
+    if (origin.endsWith(`.${WEBSITE_BASE_DOMAIN}`)) return callback(null, true);
+
+    // Dev: allow any localhost port
     if (env.isDev && /^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+
+    // Explicit allow list (HMS dashboard + known website URLs)
     if (allowedOrigins.includes(origin)) return callback(null, true);
+
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials:          true,
   methods:              ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders:       ['Content-Type', 'Authorization'],
+  allowedHeaders:       ['Content-Type', 'Authorization', 'X-API-Key'],  // ✅ API key header exposed
   optionsSuccessStatus: 200,
 };
 
-app.options('*', cors(corsOptions)); // explicit preflight handler for all routes
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 // ── 2. Security & parsing ─────────────────────────────────────────────────────

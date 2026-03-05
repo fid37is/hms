@@ -7,6 +7,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   changePasswordSchema,
+  registerOrgSchema,
 } from '../validators/authValidator.js';
 import {
   loginController,
@@ -15,26 +16,30 @@ import {
   changePasswordController,
   logoutController,
   forgotPasswordController,
+  registerOrgController,
+  generateApiKeyController,
+  listApiKeysController,
+  revokeApiKeyController,
 } from '../controllers/authController.js';
 
 const router = Router();
 
-// POST /api/v1/auth/login
-router.post('/login', validate(loginSchema), loginController);
+// ─── Public ───────────────────────────────────────────────
+router.post('/login',           validate(loginSchema),         loginController);
+router.post('/refresh',         validate(refreshTokenSchema),  refreshTokenController);
+router.post('/forgot-password',                                forgotPasswordController);
 
-// POST /api/v1/auth/refresh
-router.post('/refresh', validate(refreshTokenSchema), refreshTokenController);
+// SaaS signup — public, no auth required
+router.post('/register-org',    validate(registerOrgSchema),   registerOrgController);
 
-// POST /api/v1/auth/logout
-router.post('/logout', authenticate, logoutController);
-
-// GET  /api/v1/auth/me
-router.get('/me', authenticate, getProfileController);
-
-// PATCH /api/v1/auth/change-password
+// ─── Authenticated ────────────────────────────────────────
+router.post('/logout',          authenticate, logoutController);
+router.get('/me',               authenticate, getProfileController);
 router.patch('/change-password', authenticate, validate(changePasswordSchema), changePasswordController);
 
-// POST /api/v1/auth/forgot-password
-router.post('/forgot-password', forgotPasswordController);
+// ─── API Keys (requires JWT auth) ─────────────────────────
+router.get('/api-keys',         authenticate, listApiKeysController);
+router.post('/api-keys',        authenticate, generateApiKeyController);
+router.delete('/api-keys/:id',  authenticate, revokeApiKeyController);
 
 export default router;

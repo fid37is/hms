@@ -1,255 +1,257 @@
 // src/services/authService.js
 
 import jwt          from 'jsonwebtoken';
+import bcrypt       from 'bcryptjs';
+import crypto       from 'crypto';
 import { supabase } from '../config/supabase.js';
 import { env }      from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
 
-const generateAccessToken = (payload) => {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
-};
+const generateAccessToken  = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+const generateRefreshToken = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
 
-const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
-};
+// ─── Login ────────────────────────────────────────────────
 
 export const login = async (email, password) => {
-  // 1. Sign in via Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+  if (authError || !authData.user) throw new AppError('Invalid email or password.', 401);
 
-  if (authError || !authData.user) {
-    throw new AppError('Invalid email or password.', 401);
-  }
-
-  // 2. Fetch user profile
   const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', authData.user.id)
-    .single();
+    .from('users').select('*').eq('id', authData.user.id).single();
 
-  if (userError || !user) {
-    throw new AppError('User profile not found. Contact administrator.', 404);
-  }
+  if (userError || !user)  throw new AppError('User profile not found. Contact administrator.', 404);
+  if (!user.is_active)     throw new AppError('Your account has been deactivated. Contact administrator.', 403);
+  if (!user.role_id)       throw new AppError('User role not assigned. Contact administrator.', 403);
+  if (!user.org_id)        throw new AppError('No organization assigned. Contact administrator.', 403);
 
-  if (!user.is_active) {
-    throw new AppError('Your account has been deactivated. Contact administrator.', 403);
-  }
+  // Debug: log the raw org_id to see its type
+  console.log('[LOGIN DEBUG] user.org_id:', JSON.stringify(user.org_id), 'type:', typeof user.org_id);
 
-  if (!user.role_id) {
-    throw new AppError('User role not assigned. Contact administrator.', 403);
-  }
+  // Ensure org_id is a plain string UUID
+  const orgId = typeof user.org_id === 'string' ? user.org_id : String(user.org_id?.id ?? user.org_id);
 
-  // 3. Fetch role separately
-  const { data: role, error: roleError } = await supabase
-    .from('roles')
-    .select('*')
-    .eq('id', user.role_id)
-    .single();
-
-  if (roleError || !role) {
-    throw new AppError('User role not found. Contact administrator.', 404);
-  }
-
-  // 4. Fetch permissions for this role
-  //    Admin gets all permissions without a DB lookup
-  let permissions = [];
-
-  if (role.name.toLowerCase() === 'admin') {
-    permissions = ['*']; // wildcard — frontend checks this
-  } else {
-    const { data: rolePermissions, error: permError } = await supabase
-      .from('role_permissions')
-      .select('permission_id')
-      .eq('role_id', role.id);
-
-    if (permError) {
-      throw new AppError('Failed to load user permissions.', 500);
-    }
-
-    if (rolePermissions && rolePermissions.length > 0) {
-      const permissionIds = rolePermissions.map((rp) => rp.permission_id);
-
-      const { data: permissionData } = await supabase
-        .from('permissions')
-        .select('module, action')
-        .in('id', permissionIds);
-
-      permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
-    }
-  }
-
-  // 5. Update last_login
-  await supabase
-    .from('users')
-    .update({ last_login: new Date().toISOString() })
-    .eq('id', user.id);
-
-  // 6. Generate tokens
-  const tokenPayload = {
-    sub:         user.id,
-    email:       user.email,
-    full_name:   user.full_name,
-    role:        role.name,
-    department:  user.department,
-    permissions,
-  };
-
-  const accessToken  = generateAccessToken(tokenPayload);
-  const refreshToken = generateRefreshToken({ sub: user.id });
-
-  return {
-    access_token:  accessToken,
-    refresh_token: refreshToken,
-    expires_in:    env.JWT_EXPIRES_IN,
-    must_change_password: user.must_change_password || false,
-    user: {
-      id:                  user.id,
-      full_name:           user.full_name,
-      email:               user.email,
-      phone:               user.phone,
-      department:          user.department,
-      role:                role.name,
-      must_change_password: user.must_change_password || false,
-      permissions,
-    },
-  };
-};
-
-export const refreshToken = async (token) => {
-  let decoded;
-
-  try {
-    decoded = jwt.verify(token, env.JWT_SECRET);
-  } catch {
-    throw new AppError('Invalid or expired refresh token.', 401);
-  }
-
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', decoded.sub)
-    .single();
-
-  if (error || !user) {
-    throw new AppError('User not found.', 404);
-  }
-
-  if (!user.is_active) {
-    throw new AppError('Account deactivated.', 403);
-  }
-
-  const { data: role } = await supabase
-    .from('roles')
-    .select('*')
-    .eq('id', user.role_id)
-    .single();
+  const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
+  if (!role) throw new AppError('User role not found. Contact administrator.', 404);
 
   let permissions = [];
-
   if (role.name.toLowerCase() === 'admin') {
     permissions = ['*'];
   } else {
     const { data: rolePermissions } = await supabase
-      .from('role_permissions')
-      .select('permission_id')
-      .eq('role_id', role.id);
+      .from('role_permissions').select('permission_id').eq('role_id', role.id);
 
-    if (rolePermissions && rolePermissions.length > 0) {
-      const permissionIds = rolePermissions.map((rp) => rp.permission_id);
-      const { data: permissionData } = await supabase
-        .from('permissions')
-        .select('module, action')
-        .in('id', permissionIds);
+    if (rolePermissions?.length) {
+      const ids = rolePermissions.map(rp => rp.permission_id);
+      const { data: permData } = await supabase.from('permissions').select('module, action').in('id', ids);
+      permissions = (permData || []).map(p => `${p.module}:${p.action}`);
+    }
+  }
 
-      permissions = (permissionData || []).map((p) => `${p.module}:${p.action}`);
+  await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.id);
+
+  const tokenPayload = {
+    sub:        user.id,
+    org_id:     orgId,
+    email:      user.email,
+    full_name:  user.full_name,
+    role:       role.name,
+    department: user.department,
+    permissions,
+  };
+
+  return {
+    access_token:  generateAccessToken(tokenPayload),
+    refresh_token: generateRefreshToken({ sub: user.id, org_id: orgId }),
+    expires_in:    env.JWT_EXPIRES_IN,
+    must_change_password: user.must_change_password || false,
+    user: {
+      id:          user.id,
+      org_id:      orgId,
+      full_name:   user.full_name,
+      email:       user.email,
+      role:        role.name,
+      department:  user.department,
+      permissions,
+      must_change_password: user.must_change_password || false,
+    },
+  };
+};
+
+// ─── Refresh Token ────────────────────────────────────────
+
+export const refreshToken = async (token) => {
+  let decoded;
+  try { decoded = jwt.verify(token, env.JWT_SECRET); }
+  catch { throw new AppError('Invalid or expired refresh token.', 401); }
+
+  const { data: user } = await supabase.from('users').select('*').eq('id', decoded.sub).single();
+  if (!user)         throw new AppError('User not found.', 404);
+  if (!user.is_active) throw new AppError('Account deactivated.', 403);
+
+  const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
+  let permissions = [];
+  if (role?.name.toLowerCase() === 'admin') {
+    permissions = ['*'];
+  } else if (role) {
+    const { data: rp } = await supabase.from('role_permissions').select('permission_id').eq('role_id', role.id);
+    if (rp?.length) {
+      const ids = rp.map(r => r.permission_id);
+      const { data: pd } = await supabase.from('permissions').select('module, action').in('id', ids);
+      permissions = (pd || []).map(p => `${p.module}:${p.action}`);
     }
   }
 
   const tokenPayload = {
-    sub:         user.id,
-    email:       user.email,
-    full_name:   user.full_name,
-    role:        role.name,
-    department:  user.department,
-    permissions,
+    sub: user.id, org_id: user.org_id, email: user.email,
+    full_name: user.full_name, role: role?.name, department: user.department, permissions,
   };
 
-  const accessToken = generateAccessToken(tokenPayload);
-
-  return {
-    access_token: accessToken,
-    expires_in:   env.JWT_EXPIRES_IN,
-  };
+  return { access_token: generateAccessToken(tokenPayload), expires_in: env.JWT_EXPIRES_IN };
 };
 
-export const getProfile = async (userId) => {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
+// ─── Register Organization (SaaS signup) ─────────────────
 
-  if (error || !user) {
-    throw new AppError('User not found.', 404);
+export const registerOrg = async ({ org_name, admin_email, admin_password, admin_name }) => {
+  // 1. Check email not already taken
+  const { data: existingUser } = await supabase
+    .from('users').select('id').eq('email', admin_email).maybeSingle();
+  if (existingUser) throw new AppError('An account with this email already exists.', 409);
+
+  // 2. Generate slug from org name
+  const slug = org_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const { data: existingSlug } = await supabase
+    .from('organizations').select('id').eq('slug', slug).maybeSingle();
+  if (existingSlug) throw new AppError('Organization name already taken.', 409);
+
+  // 3. Create organization
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .insert({ name: org_name, slug, plan: 'trial', status: 'active' })
+    .select().single();
+  if (orgError) throw new AppError('Failed to create organization.', 500);
+
+  // 4. Create Supabase Auth user
+  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    email: admin_email, password: admin_password, email_confirm: true,
+  });
+  if (authError) {
+    await supabase.from('organizations').delete().eq('id', org.id);
+    throw new AppError(`Failed to create user account: ${authError.message}`, 500);
   }
 
-  const { data: role } = await supabase
-    .from('roles')
-    .select('id, name, description')
-    .eq('id', user.role_id)
-    .single();
+  // 5. Fetch the Admin role
+  const { data: adminRole } = await supabase
+    .from('roles').select('id').ilike('name', 'admin').maybeSingle();
 
+  // 6. Create user profile
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .insert({
+      id:        authUser.user.id,
+      org_id:    org.id,
+      email:     admin_email,
+      full_name: admin_name,
+      role_id:   adminRole?.id || null,
+      is_active: true,
+      must_change_password: false,
+    })
+    .select().single();
+
+  if (userError) {
+    await supabase.auth.admin.deleteUser(authUser.user.id);
+    await supabase.from('organizations').delete().eq('id', org.id);
+    throw new AppError('Failed to create user profile.', 500);
+  }
+
+  // 7. Seed hotel_config for this org
+  const { error: configError } = await supabase.from('hotel_config').insert({
+    org_id:          org.id,
+    hotel_name:      org_name,
+    currency:        'NGN',
+    currency_symbol: '₦',
+    tax_rate:        7.5,
+    service_charge:  10,
+    timezone:        'Africa/Lagos',
+    check_in_time:   '14:00',
+    check_out_time:  '11:00',
+  });
+  if (configError) console.error('hotel_config seed failed:', configError.message);
+
+  return { org, user: { id: user.id, email: user.email, full_name: user.full_name, org_id: org.id } };
+};
+
+// ─── Generate API Key (for guest website) ────────────────
+
+export const generateApiKey = async (orgId, label, createdBy) => {
+  // Generate a secure random key
+  const rawKey  = `pk_live_${crypto.randomBytes(24).toString('hex')}`;
+  const prefix  = rawKey.slice(0, 15);
+  const keyHash = await bcrypt.hash(rawKey, 10);
+
+  const { data, error } = await supabase
+    .from('api_keys')
+    .insert({ org_id: orgId, key_hash: keyHash, key_prefix: prefix, label, created_by: createdBy })
+    .select('id, key_prefix, label, created_at').single();
+
+  if (error) throw new AppError('Failed to generate API key.', 500);
+
+  // Return the raw key ONCE — it cannot be retrieved again
+  return { ...data, key: rawKey };
+};
+
+export const listApiKeys = async (orgId) => {
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, key_prefix, label, is_active, last_used_at, expires_at, created_at')
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new AppError('Failed to fetch API keys.', 500);
+  return data;
+};
+
+export const revokeApiKey = async (orgId, keyId) => {
+  const { error } = await supabase
+    .from('api_keys').update({ is_active: false }).eq('id', keyId).eq('org_id', orgId);
+  if (error) throw new AppError('Failed to revoke API key.', 500);
+  return { message: 'API key revoked.' };
+};
+
+// ─── Profile / Password ───────────────────────────────────
+
+export const getProfile = async (userId) => {
+  const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
+  if (!user) throw new AppError('User not found.', 404);
+  const { data: role } = await supabase.from('roles').select('id, name, description').eq('id', user.role_id).single();
   return { ...user, role };
 };
 
 export const changePassword = async (userId, currentPassword, newPassword, forceChange = false) => {
-  const { data: userData } = await supabase
-    .from('users')
-    .select('email')
-    .eq('id', userId)
-    .single();
-
+  const { data: userData } = await supabase.from('users').select('email').eq('id', userId).single();
   if (!userData) throw new AppError('User not found.', 404);
 
-  // Skip current password check on force-change (temp password flow)
   if (!forceChange) {
-    const { error: verifyError } = await supabase.auth.signInWithPassword({
-      email:    userData.email,
-      password: currentPassword,
-    });
-    if (verifyError) throw new AppError('Current password is incorrect.', 401);
+    const { error } = await supabase.auth.signInWithPassword({ email: userData.email, password: currentPassword });
+    if (error) throw new AppError('Current password is incorrect.', 401);
   }
 
-  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-    password: newPassword,
-  });
+  const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
+  if (error) throw new AppError('Failed to update password.', 500);
 
-  if (updateError) throw new AppError('Failed to update password.', 500);
-
-  // Always clear the force-change flag
   await supabase.from('users').update({ must_change_password: false }).eq('id', userId);
-
   return { message: 'Password updated successfully.' };
 };
 
 export const forgotPassword = async (email) => {
-  // Supabase sends the reset email automatically
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
   });
-  // Always return success to prevent email enumeration
   if (error) console.error('Password reset error:', error.message);
   return { message: 'If that email exists, a reset link has been sent.' };
 };
 
 export const adminResetPassword = async (userId, newPassword) => {
-  const { error } = await supabase.auth.admin.updateUserById(userId, {
-    password: newPassword,
-  });
+  const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
   if (error) throw new AppError(`Failed to reset password: ${error.message}`, 500);
   return { message: 'Password reset successfully.' };
 };

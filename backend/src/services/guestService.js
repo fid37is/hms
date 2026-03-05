@@ -2,15 +2,15 @@
 
 import { supabase }      from '../config/supabase.js';
 import { AppError }      from '../middleware/errorHandler.js';
-import { GUEST_CATEGORY } from '../config/constants.js';
 
-export const getAllGuests = async (filters = {}, page = 1, limit = 20) => {
+export const getAllGuests = async (orgId, filters = {}, page = 1, limit = 20) => {
   const from = (page - 1) * limit;
   const to   = from + limit - 1;
 
   let query = supabase
     .from('guests')
     .select('*', { count: 'exact' })
+    .eq('org_id', orgId)
     .eq('is_deleted', false)
     .order('full_name');
 
@@ -25,15 +25,15 @@ export const getAllGuests = async (filters = {}, page = 1, limit = 20) => {
   }
 
   const { data, error, count } = await query.range(from, to);
-
   if (error) throw new AppError('Failed to fetch guests.', 500);
   return { data, total: count };
 };
 
-export const getGuestById = async (id) => {
+export const getGuestById = async (orgId, id) => {
   const { data, error } = await supabase
     .from('guests')
     .select('*')
+    .eq('org_id', orgId)
     .eq('id', id)
     .eq('is_deleted', false)
     .single();
@@ -42,10 +42,11 @@ export const getGuestById = async (id) => {
   return data;
 };
 
-export const searchGuests = async (query) => {
+export const searchGuests = async (orgId, query) => {
   const { data, error } = await supabase
     .from('guests')
     .select('id, full_name, email, phone, category, loyalty_points')
+    .eq('org_id', orgId)
     .eq('is_deleted', false)
     .or(
       `full_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`
@@ -56,24 +57,22 @@ export const searchGuests = async (query) => {
   return data;
 };
 
-export const createGuest = async (payload) => {
-  // Check for duplicate email if provided
+export const createGuest = async (orgId, payload) => {
   if (payload.email) {
     const { data: existing } = await supabase
       .from('guests')
       .select('id')
+      .eq('org_id', orgId)
       .eq('email', payload.email)
       .eq('is_deleted', false)
       .single();
 
-    if (existing) {
-      throw new AppError('A guest with this email already exists.', 409);
-    }
+    if (existing) throw new AppError('A guest with this email already exists.', 409);
   }
 
   const { data, error } = await supabase
     .from('guests')
-    .insert(payload)
+    .insert({ ...payload, org_id: orgId })
     .select()
     .single();
 
@@ -81,26 +80,26 @@ export const createGuest = async (payload) => {
   return data;
 };
 
-export const updateGuest = async (id, payload) => {
-  await getGuestById(id);
+export const updateGuest = async (orgId, id, payload) => {
+  await getGuestById(orgId, id);
 
   if (payload.email) {
     const { data: existing } = await supabase
       .from('guests')
       .select('id')
+      .eq('org_id', orgId)
       .eq('email', payload.email)
       .neq('id', id)
       .eq('is_deleted', false)
       .single();
 
-    if (existing) {
-      throw new AppError('A guest with this email already exists.', 409);
-    }
+    if (existing) throw new AppError('A guest with this email already exists.', 409);
   }
 
   const { data, error } = await supabase
     .from('guests')
     .update(payload)
+    .eq('org_id', orgId)
     .eq('id', id)
     .select()
     .single();
@@ -109,32 +108,32 @@ export const updateGuest = async (id, payload) => {
   return data;
 };
 
-export const deleteGuest = async (id) => {
-  await getGuestById(id);
+export const deleteGuest = async (orgId, id) => {
+  await getGuestById(orgId, id);
 
-  // Check if guest has active reservations
   const { data: active } = await supabase
     .from('reservations')
     .select('id')
+    .eq('org_id', orgId)
     .eq('guest_id', id)
     .in('status', ['confirmed', 'checked_in'])
     .limit(1);
 
-  if (active && active.length > 0) {
+  if (active && active.length > 0)
     throw new AppError('Cannot delete a guest with active reservations.', 409);
-  }
 
   const { error } = await supabase
     .from('guests')
     .update({ is_deleted: true })
+    .eq('org_id', orgId)
     .eq('id', id);
 
   if (error) throw new AppError('Failed to delete guest.', 500);
   return { message: 'Guest deleted successfully.' };
 };
 
-export const getGuestStayHistory = async (guestId, page = 1, limit = 10) => {
-  await getGuestById(guestId);
+export const getGuestStayHistory = async (orgId, guestId, page = 1, limit = 10) => {
+  await getGuestById(orgId, guestId);
 
   const from = (page - 1) * limit;
   const to   = from + limit - 1;
@@ -142,22 +141,12 @@ export const getGuestStayHistory = async (guestId, page = 1, limit = 10) => {
   const { data, error, count } = await supabase
     .from('reservations')
     .select(`
-      id,
-      reservation_no,
-      check_in_date,
-      check_out_date,
-      actual_check_in,
-      actual_check_out,
-      status,
-      rate_per_night,
-      total_amount,
-      booking_source,
-      rooms (
-        id,
-        number,
-        room_types ( name )
-      )
+      id, reservation_no, check_in_date, check_out_date,
+      actual_check_in, actual_check_out, status,
+      rate_per_night, total_amount, booking_source,
+      rooms ( id, number, room_types ( name ) )
     `, { count: 'exact' })
+    .eq('org_id', orgId)
     .eq('guest_id', guestId)
     .order('check_in_date', { ascending: false })
     .range(from, to);
@@ -166,8 +155,8 @@ export const getGuestStayHistory = async (guestId, page = 1, limit = 10) => {
   return { data, total: count };
 };
 
-export const updateLoyaltyPoints = async (guestId, points, operation = 'add') => {
-  const guest = await getGuestById(guestId);
+export const updateLoyaltyPoints = async (orgId, guestId, points, operation = 'add') => {
+  const guest = await getGuestById(orgId, guestId);
 
   const newPoints = operation === 'add'
     ? guest.loyalty_points + points
@@ -176,6 +165,7 @@ export const updateLoyaltyPoints = async (guestId, points, operation = 'add') =>
   const { data, error } = await supabase
     .from('guests')
     .update({ loyalty_points: newPoints })
+    .eq('org_id', orgId)
     .eq('id', guestId)
     .select()
     .single();
@@ -184,8 +174,8 @@ export const updateLoyaltyPoints = async (guestId, points, operation = 'add') =>
   return data;
 };
 
-export const flagGuest = async (guestId, category, notes = null) => {
-  await getGuestById(guestId);
+export const flagGuest = async (orgId, guestId, category, notes = null) => {
+  await getGuestById(orgId, guestId);
 
   const payload = { category };
   if (notes) payload.notes = notes;
@@ -193,6 +183,7 @@ export const flagGuest = async (guestId, category, notes = null) => {
   const { data, error } = await supabase
     .from('guests')
     .update(payload)
+    .eq('org_id', orgId)
     .eq('id', guestId)
     .select()
     .single();

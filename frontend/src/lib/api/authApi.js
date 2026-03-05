@@ -1,7 +1,14 @@
 import api from '../axios';
-export const login         = (data)  => api.post('/auth/login', data);
-export const logout        = ()      => api.post('/auth/logout');
-export const getProfile    = ()      => api.get('/auth/profile');
-export const changePassword = (data) => api.patch('/auth/change-password', data);
-export const forgotPassword  = (data) => api.post('/auth/forgot-password', data);
+
+export const login            = (data)  => api.post('/auth/login', data);
+export const logout           = ()      => api.post('/auth/logout');
+export const getProfile       = ()      => api.get('/auth/me');
+export const changePassword   = (data)  => api.patch('/auth/change-password', data);
+export const forgotPassword   = (data)  => api.post('/auth/forgot-password', data);
+export const registerOrg      = (data)  => api.post('/auth/register-org', data);
 export const adminResetPassword = (userId, data) => api.patch(`/users/${userId}/reset-password`, data);
+
+// API key management
+export const listApiKeys  = ()        => api.get('/auth/api-keys');
+export const generateApiKey = (data)  => api.post('/auth/api-keys', data);
+export const revokeApiKey = (id)      => api.delete(`/auth/api-keys/${id}`);

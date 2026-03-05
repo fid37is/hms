@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as guestApi  from '../../lib/api/guestApi';
@@ -9,7 +9,6 @@ import StatusBadge     from '../../components/shared/StatusBadge';
 import Modal           from '../../components/shared/Modal';
 import GuestForm       from './components/GuestForm';
 import { formatDate }  from '../../utils/format';
-import toast from 'react-hot-toast';
 
 export default function GuestsPage() {
   const qc = useQueryClient();
@@ -21,16 +20,19 @@ export default function GuestsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['guests', page],
-    queryFn:  () => guestApi.getGuests({ page, limit: 25 }).then(r => r.data),
+    // r.data = { success, message, data: { data: [...], total: N } }
+    queryFn:  () => guestApi.getGuests({ page, limit: 25 }).then(r => r.data.data),
   });
 
-  const { data: searchData } = useQuery({
+  const { data: searchResults } = useQuery({
     queryKey: ['guest-search', search],
+    // r.data = { success, message, data: [...] }
     queryFn:  () => guestApi.searchGuests(search).then(r => r.data.data),
     enabled:  search.length >= 2,
   });
 
-  const guests = search.length >= 2 ? (searchData || []) : (data?.data || []);
+  const guests = search.length >= 2 ? (searchResults || []) : (data?.data || []);
+  const total  = data?.total || 0;
 
   const columns = [
     { key: 'full_name', label: 'Name',
@@ -41,11 +43,11 @@ export default function GuestsPage() {
         </div>
       )
     },
-    { key: 'phone',       label: 'Phone',       render: r => r.phone || '—' },
-    { key: 'nationality', label: 'Nationality',  render: r => r.nationality || '—' },
-    { key: 'category',    label: 'Category',     render: r => <StatusBadge status={r.category || 'regular'} /> },
-    { key: 'visits',      label: 'Visits',       render: r => <span className="font-mono text-xs">{r.total_visits || 0}</span> },
-    { key: 'created_at',  label: 'Since',        render: r => formatDate(r.created_at) },
+    { key: 'phone',       label: 'Phone',      render: r => r.phone || '—' },
+    { key: 'nationality', label: 'Nationality', render: r => r.nationality || '—' },
+    { key: 'category',    label: 'Category',    render: r => <StatusBadge status={r.category || 'regular'} /> },
+    { key: 'visits',      label: 'Visits',      render: r => <span className="font-mono text-xs">{r.total_visits || 0}</span> },
+    { key: 'created_at',  label: 'Since',       render: r => formatDate(r.created_at) },
     { key: 'actions',     label: '', width: '80px',
       render: r => (
         <button
@@ -70,9 +72,7 @@ export default function GuestsPage() {
         </div>
         <button
           onClick={() => { setEditGuest(r); setShowForm(true); }}
-          className="btn-ghost text-xs px-2 py-1 flex-shrink-0">
-          Edit
-        </button>
+          className="btn-ghost text-xs px-2 py-1 flex-shrink-0">Edit</button>
       </div>
     </div>
   );
@@ -80,7 +80,7 @@ export default function GuestsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        subtitle={`${data?.meta?.total || 0} total`}
+        subtitle={`${total} total`}
         action={
           <button onClick={() => { setEditGuest(null); setShowForm(true); }} className="btn-primary text-xs">
             <Plus size={14} /> Add
@@ -94,7 +94,7 @@ export default function GuestsPage() {
           className="input pl-8 text-sm"
           placeholder="Search name, phone, email…"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
         />
       </div>
 
@@ -107,21 +107,26 @@ export default function GuestsPage() {
         mobileCard={MobileCard}
       />
 
-      {/* Pagination (desktop only - mobile just scrolls) */}
-      {!search && data?.meta && data.meta.total > 25 && (
+      {!search && total > 25 && (
         <div className="hidden md:flex items-center justify-between">
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Page {page} of {Math.ceil(data.meta.total / 25)}
+            Page {page} of {Math.ceil(total / 25)}
           </p>
           <div className="flex gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary text-xs px-3">Prev</button>
-            <button onClick={() => setPage(p => p + 1)} disabled={page * 25 >= data.meta.total} className="btn-secondary text-xs px-3">Next</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="btn-secondary text-xs px-3">Prev</button>
+            <button onClick={() => setPage(p => p + 1)} disabled={page * 25 >= total}
+              className="btn-secondary text-xs px-3">Next</button>
           </div>
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title={editGuest ? 'Edit Guest' : 'Add Guest'}>
-        <GuestForm guest={editGuest} onSuccess={() => { setShowForm(false); qc.invalidateQueries(['guests']); }} />
+      <Modal open={showForm} onClose={() => setShowForm(false)}
+        title={editGuest ? 'Edit Guest' : 'Add Guest'}>
+        <GuestForm
+          guest={editGuest}
+          onSuccess={() => { setShowForm(false); qc.invalidateQueries(['guests']); }}
+        />
       </Modal>
     </div>
   );

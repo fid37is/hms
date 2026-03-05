@@ -3,39 +3,51 @@
 // Handles guest-facing reservation actions from the public website.
 // Key difference from staff controller: guest may or may not have an account.
 // We create/find a guest record first, then create the reservation.
+//
+// Org context is always available via:
+//   - req.orgId       → set by authenticateApiKey middleware (open routes)
+//   - req.guest.org_id → set by verifyGuestToken middleware (authenticated routes)
 
-import { supabase }           from '../config/supabase.js';
-import * as reservationService from '../services/reservationService.js';
-import { AppError }           from '../middleware/errorHandler.js';
+import { supabase }                  from '../config/supabase.js';
+import * as reservationService        from '../services/reservationService.js';
+import { AppError }                  from '../middleware/errorHandler.js';
 import { sendCreated, sendSuccess }  from '../utils/response.js';
 import * as emailService             from '../services/emailService.js';
 
+// ─── Resolve orgId ────────────────────────────────────────────────────────────
+// authenticateApiKey sets req.orgId on open routes.
+// verifyGuestToken sets req.guest.org_id on authenticated routes.
+const resolveOrgId = (req) => {
+  const orgId = req.orgId || req.guest?.org_id;
+  if (!orgId) throw new AppError('Organization could not be determined.', 400);
+  return orgId;
+};
+
 // ─── Helper: find or create guest record ─────────────────────────────────────
-// For logged-in guests  → use their existing guest_id from JWT
-// For unregistered guests → create a minimal guest record from form data
-const resolveGuestId = async (req) => {
-  // 1. Logged-in guest account
+const resolveGuestId = async (req, orgId) => {
+  // 1. Logged-in guest account — guest JWT sub is the guest id
   if (req.guest?.sub) return req.guest.sub;
 
   // 2. Unregistered — create a guest record on the fly
   const { first_name, last_name, email, phone } = req.body.guest || {};
   if (!email) throw new AppError('Guest email is required.', 422);
 
-  // Check if a guest with this email already exists (returning guest, not web account)
+  // Check if a guest with this email already exists under this org
   const { data: existing } = await supabase
     .from('guests')
-    .select('id, is_deleted')
+    .select('id')
+    .eq('org_id', orgId)
     .eq('email', email)
     .eq('is_deleted', false)
-    .limit(1)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing.id;
 
-  // Create new guest record
+  // Create new guest record scoped to this org
   const { data: newGuest, error } = await supabase
     .from('guests')
     .insert({
+      org_id:         orgId,
       full_name:      `${first_name || ''} ${last_name || ''}`.trim(),
       email,
       phone:          phone || null,
@@ -52,7 +64,8 @@ const resolveGuestId = async (req) => {
 // ─── POST /api/v1/public/reservations ────────────────────────────────────────
 export const publicCreateReservation = async (req, res, next) => {
   try {
-    const guest_id = await resolveGuestId(req);
+    const orgId    = resolveOrgId(req);
+    const guest_id = await resolveGuestId(req, orgId);
 
     const {
       check_in, check_out,
@@ -63,7 +76,6 @@ export const publicCreateReservation = async (req, res, next) => {
       rate_per_night,
     } = req.body;
 
-    // Support both date field naming conventions
     const checkIn  = check_in_date  || check_in;
     const checkOut = check_out_date || check_out;
 
@@ -71,62 +83,61 @@ export const publicCreateReservation = async (req, res, next) => {
       throw new AppError('Check-in and check-out dates are required.', 422);
     }
 
-    // Get rate per night from rate plan if not provided directly
+    // Get rate per night — frontend should always send this, but fall back gracefully
     let nightRate = rate_per_night;
+
     if (!nightRate && rate_plan_id) {
       const { data: ratePlan } = await supabase
         .from('rate_plans')
         .select('base_rate')
         .eq('id', rate_plan_id)
+        .eq('org_id', orgId)
         .single();
       if (ratePlan) nightRate = ratePlan.base_rate;
     }
 
-    // Fall back to room type base_rate
     if (!nightRate && room_type_id) {
       const { data: roomType } = await supabase
         .from('room_types')
         .select('base_rate')
         .eq('id', room_type_id)
+        .eq('org_id', orgId)
         .single();
       if (roomType) nightRate = roomType.base_rate;
     }
 
     if (!nightRate) throw new AppError('Could not determine room rate.', 422);
 
-    const data = await reservationService.createReservation({
+    const data = await reservationService.createReservation(orgId, {
       guest_id,
-      room_id:         null,          // room assigned at check-in by staff
+      room_id:          null,
       room_type_id,
-      check_in_date:   checkIn,
-      check_out_date:  checkOut,
-      adults:          adults  || 1,
-      children:        children || 0,
-      booking_source:  'online',
-      rate_per_night:  nightRate,
-      deposit_amount:  0,
+      check_in_date:    checkIn,
+      check_out_date:   checkOut,
+      adults:           adults   || 1,
+      children:         children || 0,
+      booking_source:   'online',
+      rate_per_night:   nightRate,
+      deposit_amount:   0,
       special_requests: special_requests || null,
     }, null);
 
-    // Send confirmation email (non-blocking — don't fail booking if email fails)
+    // Send confirmation email (non-blocking)
     try {
       const { data: guestData } = await supabase
-        .from('guests')
-        .select('full_name, email')
-        .eq('id', guest_id)
-        .single();
+        .from('guests').select('full_name, email').eq('id', guest_id).single();
 
-      const { data: roomTypeData } = room_type_id ? await supabase
-        .from('room_types').select('name').eq('id', room_type_id).single()
+      const { data: roomTypeData } = room_type_id
+        ? await supabase.from('room_types').select('name').eq('id', room_type_id).single()
         : { data: null };
 
-      const { data: ratePlanData } = rate_plan_id ? await supabase
-        .from('rate_plans').select('name').eq('id', rate_plan_id).single()
+      const { data: ratePlanData } = rate_plan_id
+        ? await supabase.from('rate_plans').select('name').eq('id', rate_plan_id).single()
         : { data: null };
 
       if (guestData?.email) {
         emailService.sendBookingConfirmation({
-          reservation: data,
+          reservation:  data,
           guest:        guestData,
           roomTypeName: roomTypeData?.name,
           ratePlanName: ratePlanData?.name,
@@ -136,20 +147,18 @@ export const publicCreateReservation = async (req, res, next) => {
       console.error('[email] pre-send lookup failed:', e);
     }
 
-    return sendCreated(res, {
-      reservation: data,
-      guest_id,
-    }, 'Your booking is confirmed!');
+    return sendCreated(res, { reservation: data, guest_id }, 'Your booking is confirmed!');
   } catch (err) { next(err); }
 };
 
 // ─── PATCH /api/v1/public/reservations/:id/cancel ────────────────────────────
 export const publicCancelReservation = async (req, res, next) => {
   try {
-    const data = await reservationService.cancelReservation(
+    const orgId = resolveOrgId(req);
+    const data  = await reservationService.cancelReservation(
+      orgId,
       req.params.id,
-      req.body.reason || 'Cancelled by guest via website.',
-      null
+      req.body.reason || 'Cancelled by guest via website.'
     );
     return sendSuccess(res, data, 'Your reservation has been cancelled.');
   } catch (err) { next(err); }

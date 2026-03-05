@@ -53,3 +53,10 @@ export const changePasswordSchema = Joi.object({
       'any.required': 'Please confirm your new password.',
     }),
 });
+
+export const registerOrgSchema = Joi.object({
+  org_name:       Joi.string().trim().min(2).max(100).required(),
+  admin_name:     Joi.string().trim().min(2).max(100).required(),
+  admin_email:    Joi.string().email().required(),
+  admin_password: Joi.string().min(8).required(),
+});

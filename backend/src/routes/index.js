@@ -13,20 +13,22 @@ import staffRoutes        from './staffRoutes.js';
 import reportRoutes       from './reportRoutes.js';
 import configRoutes       from './configRoutes.js';
 import userRoutes         from './userRoutes.js';
+import conversationRoutes from './conversationRoutes.js';
 
 const router = Router();
 
-router.use('/auth',         authRoutes);
-router.use('/rooms',        roomRoutes);
-router.use('/guests',       guestRoutes);
-router.use('/reservations', reservationRoutes);
-router.use('/folio',        folioRoutes);
-router.use('/housekeeping', housekeepingRoutes);
-router.use('/maintenance',  maintenanceRoutes);
-router.use('/inventory',    inventoryRoutes);
-router.use('/staff',        staffRoutes);
-router.use('/reports',      reportRoutes);
-router.use('/config',       configRoutes);
-router.use('/users',        userRoutes);
+router.use('/auth',          authRoutes);
+router.use('/rooms',         roomRoutes);
+router.use('/guests',        guestRoutes);
+router.use('/reservations',  reservationRoutes);
+router.use('/folio',         folioRoutes);
+router.use('/housekeeping',  housekeepingRoutes);
+router.use('/maintenance',   maintenanceRoutes);
+router.use('/inventory',     inventoryRoutes);
+router.use('/staff',         staffRoutes);
+router.use('/reports',       reportRoutes);
+router.use('/config',        configRoutes);
+router.use('/users',         userRoutes);
+router.use('/conversations', conversationRoutes);
 
 export default router;
