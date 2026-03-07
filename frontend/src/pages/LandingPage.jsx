@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import Logo from '../components/brand/logo';
+import Logo from '../components/brand/Logo';
 
 /* ─── Palette ───────────────────────────────────────────────── */
 const ink    = '#0D1A13';
@@ -254,7 +254,7 @@ function DashMockup() {
         {/* Sidebar — dark, brand */}
         <div style={{ background: '#0D2018', display: 'flex', flexDirection: 'column', padding: '16px 0' }}>
           <div style={{ padding: '0 14px 16px', borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 6 }}>
-            <Logo theme="light" noLink />
+            <Logo size="sm" theme="light" noLink />
           </div>
           {NAV.map(item => {
             const active = item === SLIDES[slide];
@@ -298,6 +298,160 @@ function Icon({ d, size = 20 }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d={d} />
     </svg>
+  );
+}
+
+/* ─── PricingCard ───────────────────────────────────────── */
+
+const PRICES = {
+  NGN: { symbol: '₦', monthly: 50000,  annual: 480000,  locale: 'en-NG' },
+  USD: { symbol: '$', monthly: 29,      annual: 279,     locale: 'en-US' },
+  GBP: { symbol: '£', monthly: 23,      annual: 220,     locale: 'en-GB' },
+  EUR: { symbol: '€', monthly: 27,      annual: 259,     locale: 'en-DE' },
+  GHS: { symbol: '₵', monthly: 450,     annual: 4320,    locale: 'en-GH' },
+  KES: { symbol: 'KSh', monthly: 3800,  annual: 36500,   locale: 'en-KE' },
+};
+
+function useCurrency() {
+  const [currency, setCurrency] = useState('USD');
+  useEffect(() => {
+    fetch('https://ipapi.co/json/')
+      .then(r => r.json())
+      .then(d => {
+        const map = { NG:'NGN', US:'USD', GB:'GBP', DE:'EUR', FR:'EUR', GH:'GHS', KE:'KES' };
+        const c = map[d.country_code];
+        if (c && PRICES[c]) setCurrency(c);
+      })
+      .catch(() => {});
+  }, []);
+  return currency;
+}
+
+function fmt(amount, locale) {
+  return amount.toLocaleString(locale, { maximumFractionDigits: 0 });
+}
+
+function PricingCard({ serif, sans, ink, sub, muted, border, surface, white, green, greenL, faint }) {
+  const [annual, setAnnual] = useState(false);
+  const currency = useCurrency();
+  const p = PRICES[currency];
+
+  const monthlyDisplay  = annual ? Math.round(p.annual / 12) : p.monthly;
+  const annualDisplay   = p.annual;
+  const saving          = p.monthly * 12 - p.annual;
+
+  const feats = [
+    { cat: 'Operations',  items: ['Reservations & check-in/out', 'Room management & rate plans', 'Billing, folios & payments', 'Housekeeping task management'] },
+    { cat: 'Back office', items: ['Inventory & purchase orders', 'Maintenance & asset register', 'Staff, shifts & leave requests', 'Reports & revenue analytics'] },
+    { cat: 'Guest-facing',items: ['Booking website included', 'Guest profiles & stay history', 'Real-time availability sync', 'Custom domain support'] },
+    { cat: 'Platform',    items: ['Unlimited rooms & staff', 'Role-based access control', 'Fully isolated workspace', 'All future modules included'] },
+  ];
+
+  return (
+    <Reveal>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', maxWidth: 1100, margin: '0 auto' }}>
+
+        {/* ── LEFT: what's included ── */}
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: green, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>
+            Everything. One plan.
+          </p>
+          <h3 style={{ fontFamily: serif, fontSize: 'clamp(28px,3vw,40px)', fontWeight: 400, letterSpacing: '-.02em', color: ink, lineHeight: 1.1, marginBottom: 12 }}>
+            Every module included<br /><em style={{ fontStyle: 'italic' }}>from day one.</em>
+          </h3>
+          <p style={{ fontSize: 16, color: sub, lineHeight: 1.72, marginBottom: 40, maxWidth: 400 }}>
+            No starter tiers. No feature walls. No surprise add-ons. The full platform — yours for one flat monthly fee.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px 32px' }}>
+            {feats.map(({ cat, items }) => (
+              <div key={cat}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: muted, marginBottom: 12 }}>{cat}</p>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {items.map(f => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 13.5, color: sub, lineHeight: 1.45 }}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={ink} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><polyline points="3,8 6,11 13,5"/></svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── RIGHT: price card ── */}
+        <div style={{ background: ink, borderRadius: 20, padding: '48px 44px', boxShadow: '0 24px 80px rgba(13,26,19,.2)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: .03, backgroundImage: 'linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px)', backgroundSize: '32px 32px' }} />
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* Trial badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(22,101,52,.35)', border: '1px solid rgba(22,101,52,.5)', borderRadius: 100, padding: '5px 14px', marginBottom: 32 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: green, animation: 'mvpulse 2s infinite' }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#86efac', letterSpacing: '.06em', textTransform: 'uppercase' }}>14-day free trial</span>
+            </div>
+
+            {/* Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+              <button onClick={() => setAnnual(false)}
+                style={{ fontSize: 13, fontWeight: !annual ? 600 : 400, color: !annual ? white : 'rgba(255,255,255,.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: sans }}>
+                Monthly
+              </button>
+              <button onClick={() => setAnnual(a => !a)}
+                style={{ width: 44, height: 24, borderRadius: 100, border: 'none', cursor: 'pointer', position: 'relative', background: annual ? green : 'rgba(255,255,255,.15)', transition: 'background .2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: annual ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: white, transition: 'left .2s' }} />
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => setAnnual(true)}
+                  style={{ fontSize: 13, fontWeight: annual ? 600 : 400, color: annual ? white : 'rgba(255,255,255,.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: sans }}>
+                  Annual
+                </button>
+                {annual && (
+                  <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(22,101,52,.3)', color: '#86efac', padding: '2px 9px', borderRadius: 100 }}>
+                    2 months free
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Price */}
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, lineHeight: 1 }}>
+                <span style={{ fontFamily: serif, fontSize: 76, fontWeight: 400, letterSpacing: '-.03em', color: white }}>
+                  {p.symbol}{fmt(monthlyDisplay, p.locale)}
+                </span>
+                <span style={{ fontSize: 14, color: 'rgba(255,255,255,.35)', paddingBottom: 14 }}>/mo</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 36 }}>
+              {annual
+                ? `Billed ${p.symbol}${fmt(annualDisplay, p.locale)} annually`
+                : `Or ${p.symbol}${fmt(Math.round(p.annual / 12), p.locale)}/mo billed annually — save ${p.symbol}${fmt(saving, p.locale)}`}
+            </p>
+
+            <div style={{ height: 1, background: 'rgba(255,255,255,.1)', marginBottom: 32 }} />
+
+            {/* What you get summary */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 36 }}>
+              {['All 10 modules, nothing locked', 'Unlimited rooms & staff accounts', 'Guest booking website included', 'No setup fees, cancel any time'].map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={green} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><polyline points="3,8 6,11 13,5"/></svg>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,.72)' }}>{f}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <Link to="/register" className="mv-cta" style={{ background: white, color: ink, fontSize: 16, padding: '14px', borderRadius: 10, display: 'flex', justifyContent: 'center', fontFamily: sans, fontWeight: 500 }}>
+              Start free trial
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8 }}><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg>
+            </Link>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,.2)', marginTop: 12 }}>No credit card required</p>
+          </div>
+        </div>
+
+      </div>
+    </Reveal>
   );
 }
 
@@ -346,7 +500,7 @@ export default function LandingPage() {
       {/* ── NAV ─────────────────────────────────────────────── */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(255,255,255,.96)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${scrolled ? border : 'transparent'}`, transition: 'border-color .3s' }}>
         <Container style={{ height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Logo size="xl" theme="dark" />
+          <Logo size="md" theme="dark" />
           <div style={{ display: 'flex', gap: 36 }}>
             {[['#features','Features'],['#modules','Modules'],['#saas','For Hotels'],['#pricing','Pricing']].map(([h,l]) => (
               <a key={h} href={h} className="mv-nav-link">{l}</a>
@@ -512,7 +666,7 @@ export default function LandingPage() {
               { i:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', n:'Maintenance', d:'Work orders, assets.' },
               { i:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', n:'Staff & HR', d:'Team, shifts, leave.' },
               { i:'M22 12h-4l-3 9L9 3l-3 9H2', n:'Reports', d:'Revenue, analytics.' },
-              { i:'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4', n:'Settings', d:'Config, users, API keys.' },
+              { i:'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4', n:'Settings', d:'Config, users, roles & access.' },
             ].map((m, i) => (
               <Reveal key={i} delay={(i % 5) * .06}>
                 <div className="mv-mod-card">
@@ -544,7 +698,7 @@ export default function LandingPage() {
                 { n:'2', t:'Set up hotel details', d:'Add your name, contact info, currency, check-in times, and tax rates.' },
                 { n:'3', t:'Add room types and rooms', d:'Create categories with rates and amenities, then add individual rooms with photos.' },
                 { n:'4', t:'Invite your team', d:'Add staff, assign departments, and set access levels — front desk, housekeeping, manager.' },
-                { n:'5', t:'Connect your website', d:"Generate an API key and add it to your guest-facing website. Availability syncs automatically." },
+                { n:'5', t:'Connect your guest website', d:'Your booking website is automatically linked to your hotel via your unique subdomain. No API keys or technical setup needed.' },
               ].map((s, i) => (
                 <Reveal key={i} delay={i * .07}>
                   <div style={{ display: 'flex', gap: 24, padding: '24px 0', borderBottom: i < 4 ? `1px solid ${border}` : 'none' }}>
@@ -594,7 +748,7 @@ export default function LandingPage() {
               </Reveal>
               {[
                 { icon:'M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4', t:'Fully isolated workspace', d:"Your organisation's data is private at every level. No cross-contamination between properties." },
-                { icon:'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7', t:'Connect your booking website', d:'Generate an API key and add it to your site. Rates and availability sync automatically.' },
+                { icon:'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7', t:'Connect your booking website', d:'Your guest website is automatically linked via your unique subdomain. No API keys, no configuration — it works the moment you sign up.' },
                 { icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', t:'Granular access control', d:'10 built-in roles from Front Desk to GM. Each staff member sees only what they need.' },
               ].map((f, i) => (
                 <Reveal key={i} delay={i * .08}>
@@ -611,19 +765,40 @@ export default function LandingPage() {
               ))}
             </div>
             <Reveal delay={.15}>
-              <div style={{ background: '#0D2018', borderRadius: 16, padding: '36px 40px', fontFamily: "'SF Mono','Fira Code',monospace", fontSize: 13.5, lineHeight: 2.1 }}>
-                <div style={{ color: '#3d6b51' }}>// Your guest website .env</div>
-                <div style={{ marginTop: 14 }}><span style={{ color: '#68d391' }}>VITE_MIRAVANCE_KEY</span><span style={{ color: '#3d6b51' }}> = </span><span style={{ color: '#90cdf4' }}>pk_live_a3f9c2…</span></div>
-                <div><span style={{ color: '#68d391' }}>VITE_MIRAVANCE_URL</span><span style={{ color: '#3d6b51' }}> = </span><span style={{ color: '#90cdf4' }}>https://api.miravance.io</span></div>
-                <div style={{ marginTop: 20, color: '#3d6b51' }}>// Fetch live availability</div>
-                <div style={{ marginTop: 6 }}><span style={{ color: '#b794f4' }}>GET</span><span style={{ color: '#90cdf4' }}> /public/rooms/availability</span></div>
-                <div style={{ color: '#3d6b51', fontSize: 12, paddingLeft: 16, lineHeight: 2 }}>X-Miravance-Key: pk_live_…<br/>↳ scoped to your hotel only</div>
-                <div style={{ marginTop: 16, color: '#3d6b51' }}>// Response</div>
-                <div style={{ marginTop: 6, lineHeight: 2 }}>
-                  <span style={{ color: '#3d6b51' }}>{'{'}</span><br/>
-                  <span style={{ paddingLeft: 20 }}><span style={{ color: '#68d391' }}>"available"</span><span style={{ color: '#3d6b51' }}>: </span><span style={{ color: '#fbd38d' }}>14</span><span style={{ color: '#3d6b51' }}>,</span></span><br/>
-                  <span style={{ paddingLeft: 20 }}><span style={{ color: '#68d391' }}>"rooms"</span><span style={{ color: '#3d6b51' }}>: [</span><span style={{ color: '#90cdf4' }}>"Deluxe"</span><span style={{ color: '#3d6b51' }}>, </span><span style={{ color: '#fbd38d' }}>45000</span><span style={{ color: '#3d6b51' }}>]</span></span><br/>
-                  <span style={{ color: '#3d6b51' }}>{'}'}</span>
+              <div style={{ background: '#0D2018', borderRadius: 16, padding: '36px 40px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 24 }}>Your hotel, instantly online</div>
+
+                {/* Subdomain pill */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 10, padding: '14px 18px', marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: green, flexShrink: 0, animation: 'mvpulse 2s infinite' }} />
+                  <span style={{ fontFamily: "'SF Mono','Fira Code',monospace", fontSize: 14, color: '#90cdf4' }}>amarahotel.miravance.io</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(255,255,255,.25)' }}>Live</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, padding: '0 4px' }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)' }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,.2)' }}>auto-connected</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.08)' }} />
+                </div>
+
+                {/* What syncs */}
+                {[
+                  ['Room availability', 'Real-time'],
+                  ['Room photos & rates', 'Always current'],
+                  ['Guest bookings', 'Instant'],
+                  ['Hotel config & branding', 'Automatic'],
+                ].map(([label, tag], i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,.06)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={green} strokeWidth="2.5" strokeLinecap="round"><polyline points="3,8 6,11 13,5"/></svg>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)' }}>{label}</span>
+                    </div>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,.25)' }}>{tag}</span>
+                  </div>
+                ))}
+
+                <div style={{ marginTop: 24, padding: '14px 16px', background: 'rgba(255,255,255,.04)', borderRadius: 8, fontSize: 12, color: 'rgba(255,255,255,.3)', fontStyle: 'italic', lineHeight: 1.6 }}>
+                  No API keys. No environment variables.<br />Register → your website is live.
                 </div>
               </div>
             </Reveal>
@@ -646,7 +821,7 @@ export default function LandingPage() {
             {[
               { q:"Check-in used to take 10 minutes of fumbling through spreadsheets. Now it's 90 seconds. The folio handles everything our accountants need at month end.", n:'Amara Okonkwo', r:'GM, Grand Palms Hotel', i:'AO' },
               { q:"The housekeeping module alone was worth it. Tasks are assigned the moment a room becomes free, and we haven't lost a single item from lost & found since we started.", n:'Kofi Boateng', r:'Operations Director, Accra Suites', i:'KB' },
-              { q:"Our booking website now shows live availability automatically. Guests see real room photos and rates. The API connection took about an hour to set up.", n:'Fatima Ibrahim', r:'Owner, Heritage Boutique Hotel', i:'FI' },
+              { q:"Our booking website shows live availability and real room photos automatically. Guests can browse and book directly — it all just works, no technical setup on our end.", n:'Fatima Ibrahim', r:'Owner, Heritage Boutique Hotel', i:'FI' },
             ].map((t, i) => (
               <Reveal key={i} delay={i * .1}>
                 <div className="mv-testi">
@@ -672,40 +847,14 @@ export default function LandingPage() {
               <h2 style={{ fontFamily: serif, fontSize: 'clamp(38px,4vw,58px)', fontWeight: 400, letterSpacing: '-.025em', color: ink, lineHeight: 1.06 }}>
                 Simple, honest <em style={{ fontStyle: 'italic' }}>pricing</em>
               </h2>
-              <p style={{ fontSize: 17, color: sub, maxWidth: 440, margin: '16px auto 0', lineHeight: 1.7 }}>Every plan includes all 10 modules. No feature walls, no hidden extras.</p>
+              <p style={{ fontSize: 17, color: sub, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>
+                One plan. Every module. No add-ons, no upgrade walls, no surprises.
+              </p>
             </div>
           </Reveal>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20, maxWidth: 960, margin: '0 auto' }}>
-            {[
-              { plan:'Starter', price:'Free', period:'Up to 20 rooms — forever free', dark:false,
-                feats:['Up to 20 rooms','Unlimited staff accounts','All 10 modules','Booking website API'], cta:'Get started free', href:'/register' },
-              { plan:'Growth', price:'$79', period:'per property / month', dark:true,
-                feats:['Up to 100 rooms','Unlimited staff accounts','All 10 modules','Booking website integration','Priority support','Advanced reports'], cta:'Start 14-day free trial', href:'/register' },
-              { plan:'Enterprise', price:'Custom', period:'For groups & multi-property chains', dark:false,
-                feats:['Unlimited properties','Unlimited rooms','Dedicated onboarding','SLA guarantee','Custom integrations','Branded white-label'], cta:'Contact sales', href:'mailto:hello@miravance.io' },
-            ].map((p, i) => (
-              <Reveal key={i} delay={i * .09}>
-                <div style={{ background: p.dark ? ink : white, border: `1px solid ${p.dark ? ink : border}`, borderRadius: 16, padding: '40px 36px', position: 'relative', boxShadow: p.dark ? '0 16px 56px rgba(13,26,19,.2)' : 'none' }}>
-                  {p.dark && <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: green, color: white, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', padding: '4px 18px', borderRadius: 100 }}>MOST POPULAR</div>}
-                  <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: p.dark ? 'rgba(255,255,255,.4)' : muted, marginBottom: 14 }}>{p.plan}</p>
-                  <div style={{ fontFamily: serif, fontSize: 60, fontWeight: 400, letterSpacing: '-.02em', color: p.dark ? white : ink, lineHeight: 1, marginBottom: 6 }}>{p.price}</div>
-                  <p style={{ fontSize: 14, color: p.dark ? 'rgba(255,255,255,.4)' : muted, marginBottom: 28 }}>{p.period}</p>
-                  <div style={{ borderTop: `1px solid ${p.dark ? 'rgba(255,255,255,.12)' : border}`, marginBottom: 28 }} />
-                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 13, marginBottom: 34 }}>
-                    {p.feats.map(f => (
-                      <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 11, fontSize: 15, color: p.dark ? 'rgba(255,255,255,.85)' : ink }}>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke={p.dark ? 'rgba(255,255,255,.5)' : ink} strokeWidth="2.5" strokeLinecap="round"><polyline points="3,8 6,11 13,5"/></svg>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to={p.href} style={{ display: 'flex', justifyContent: 'center', padding: '13px', borderRadius: 9, fontSize: 15, fontWeight: 500, textDecoration: 'none', background: p.dark ? white : 'transparent', color: p.dark ? ink : ink, border: p.dark ? 'none' : `1.5px solid ${border}`, transition: 'border-color .15s' }}>
-                    {p.cta}
-                  </Link>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+
+          {/* Billing toggle + card */}
+          <PricingCard serif={serif} sans={sans} ink={ink} sub={sub} muted={muted} border={border} surface={surface} white={white} green={green} greenL={greenL} faint={faint} />
         </Container>
       </div>
 
@@ -740,7 +889,7 @@ export default function LandingPage() {
       <footer style={{ borderTop: `1px solid ${border}` }}>
         <Container style={{ padding: '64px 48px 48px', display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr', gap: 52 }}>
           <div>
-            <Logo size="xl" theme="dark" noLink style={{ marginBottom: 16 }} />
+            <Logo size="md" theme="dark" noLink style={{ marginBottom: 16 }} />
             <p style={{ fontSize: 14, color: muted, lineHeight: 1.76, maxWidth: 240, marginTop: 16 }}>The modern hotel management platform for independent properties and growing groups.</p>
             <p style={{ fontSize: 13, color: faint, marginTop: 14, fontStyle: 'italic' }}>Advance Every Stay</p>
           </div>

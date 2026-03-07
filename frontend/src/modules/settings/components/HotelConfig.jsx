@@ -1,3 +1,5 @@
+// hms/frontend/src/modules/settings/components/HotelConfig.jsx
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import * as configApi from '../../../lib/api/configApi';
@@ -6,7 +8,9 @@ import toast from 'react-hot-toast';
 
 const BLANK = {
   // Identity
-  hotel_name: '', tagline: '', description: '', logo_url: '', primary_color: '#1F4E8C',
+  hotel_name: '', tagline: '', description: '', logo_url: '',
+  // Branding
+  primary_color: '#1F4E8C', secondary_color: '#c9a96e',
   // Location
   address: '', city: '', state: '', country: 'Nigeria', google_maps_url: '',
   // Contact
@@ -43,6 +47,30 @@ function Field({ label, children }) {
   );
 }
 
+function ColorField({ label, name, value, onChange }) {
+  return (
+    <Field label={label}>
+      <div className="flex gap-2 items-center">
+        <input
+          name={name}
+          type="color"
+          className="w-10 h-9 rounded cursor-pointer border p-0.5"
+          style={{ borderColor: 'var(--border-base)' }}
+          value={value}
+          onChange={onChange}
+        />
+        <input
+          name={name}
+          className="input font-mono"
+          placeholder="#000000"
+          value={value}
+          onChange={onChange}
+        />
+      </div>
+    </Field>
+  );
+}
+
 export default function HotelConfig() {
   const { data, isLoading } = useQuery({
     queryKey: ['hotel-config'],
@@ -59,6 +87,7 @@ export default function HotelConfig() {
       description:         data.description         ?? '',
       logo_url:            data.logo_url            ?? '',
       primary_color:       data.primary_color       ?? '#1F4E8C',
+      secondary_color:     data.secondary_color     ?? '#c9a96e',
       address:             data.address             ?? '',
       city:                data.city                ?? '',
       state:               data.state               ?? '',
@@ -72,8 +101,8 @@ export default function HotelConfig() {
       twitter_url:         data.twitter_url         ?? '',
       currency:            data.currency            ?? 'NGN',
       currency_symbol:     data.currency_symbol     ?? '₦',
-      tax_rate:            data.tax_rate   != null  ? String(data.tax_rate)        : '7.5',
-      service_charge:      data.service_charge != null ? String(data.service_charge) : '10',
+      tax_rate:            data.tax_rate   != null  ? String(data.tax_rate)            : '7.5',
+      service_charge:      data.service_charge != null ? String(data.service_charge)   : '10',
       timezone:            data.timezone            ?? 'Africa/Lagos',
       check_in_time:       (data.check_in_time  ?? '14:00').slice(0, 5),
       check_out_time:      (data.check_out_time ?? '11:00').slice(0, 5),
@@ -97,7 +126,6 @@ export default function HotelConfig() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Strip seconds from time fields (Postgres TIME returns HH:MM:SS)
     const stripSeconds = (t) => t ? t.slice(0, 5) : t;
     save.mutate({
       ...form,
@@ -128,19 +156,38 @@ export default function HotelConfig() {
               placeholder="Short description shown on the website homepage…"
               value={form.description} onChange={handleChange} />
           </Field>
-          <Field label="Brand Color">
-            <div className="flex gap-2 items-center">
-              <input name="primary_color" type="color" className="w-10 h-9 rounded cursor-pointer border p-0.5"
-                style={{ borderColor: 'var(--border-base)' }}
-                value={form.primary_color} onChange={handleChange} />
-              <input name="primary_color" className="input font-mono" placeholder="#1F4E8C"
-                value={form.primary_color} onChange={handleChange} />
-            </div>
-          </Field>
           <Field label="Logo URL">
             <input name="logo_url" className="input" placeholder="https://…"
               value={form.logo_url} onChange={handleChange} />
           </Field>
+
+          {/* Brand Colors — primary + secondary side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <ColorField
+              label="Primary Color"
+              name="primary_color"
+              value={form.primary_color}
+              onChange={handleChange}
+            />
+            <ColorField
+              label="Accent Color"
+              name="secondary_color"
+              value={form.secondary_color}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Live preview swatch */}
+          <div className="flex gap-3 pt-1">
+            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
+              style={{ backgroundColor: form.primary_color }}>
+              Primary
+            </div>
+            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
+              style={{ backgroundColor: form.secondary_color }}>
+              Accent
+            </div>
+          </div>
         </Section>
 
         <Section title="Location">
@@ -262,17 +309,17 @@ export default function HotelConfig() {
       <Section title="Policies">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Cancellation Policy">
-            <textarea name="cancellation_policy" rows={3} className="input"
+            <textarea name="cancellation_policy" rows={4} className="input"
               placeholder="e.g. Free cancellation up to 24 hours before check-in…"
               value={form.cancellation_policy} onChange={handleChange} />
           </Field>
           <Field label="Pets Policy">
-            <textarea name="pets_policy" rows={3} className="input"
+            <textarea name="pets_policy" rows={4} className="input"
               placeholder="e.g. Pets are not allowed on the premises…"
               value={form.pets_policy} onChange={handleChange} />
           </Field>
           <Field label="Smoking Policy">
-            <textarea name="smoking_policy" rows={3} className="input"
+            <textarea name="smoking_policy" rows={4} className="input"
               placeholder="e.g. No smoking on premises…"
               value={form.smoking_policy} onChange={handleChange} />
           </Field>

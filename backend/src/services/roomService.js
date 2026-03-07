@@ -20,7 +20,6 @@ export const getAllRoomTypes = async (orgId) => {
     .from('rooms')
     .select('id, number, floor, type_id, media')
     .eq('org_id', orgId)
-    
     .eq('is_blocked', false)
     .not('media', 'is', null);
 
@@ -52,7 +51,6 @@ export const getRoomTypeById = async (orgId, id) => {
     .select('id, number, floor, status, media')
     .eq('org_id', orgId)
     .eq('type_id', id)
-    
     .eq('is_blocked', false)
     .order('number');
 
@@ -100,7 +98,6 @@ export const deleteRoomType = async (orgId, id) => {
     .select('id')
     .eq('org_id', orgId)
     .eq('type_id', id)
-    
     .limit(1);
 
   if (rooms?.length > 0) throw new AppError('Cannot delete a room type that has rooms assigned.', 409);
@@ -173,7 +170,6 @@ export const getAllRooms = async (orgId, filters = {}) => {
     .select(`id, number, floor, status, is_blocked, block_reason, notes, type_id, media,
       room_types ( id, name, base_rate, max_occupancy, amenities )`)
     .eq('org_id', orgId)
-    
     .order('number');
 
   if (filters.status) {
@@ -195,7 +191,6 @@ export const getRoomById = async (orgId, id) => {
       room_types ( id, name, base_rate, max_occupancy, amenities )`)
     .eq('org_id', orgId)
     .eq('id', id)
-    
     .single();
 
   if (error || !data) throw new AppError('Room not found.', 404);
@@ -208,7 +203,6 @@ export const createRoom = async (orgId, payload) => {
     .select('id')
     .eq('org_id', orgId)
     .eq('number', payload.number)
-    
     .single();
 
   if (existing) throw new AppError(`Room number ${payload.number} already exists.`, 409);
@@ -233,7 +227,6 @@ export const updateRoom = async (orgId, id, payload) => {
       .eq('org_id', orgId)
       .eq('number', payload.number)
       .neq('id', id)
-      
       .single();
 
     if (existing) throw new AppError(`Room number ${payload.number} already exists.`, 409);
@@ -315,29 +308,47 @@ export const deleteRoom = async (orgId, id) => {
   return { message: 'Room deleted.' };
 };
 
+// ─── Availability ─────────────────────────────────────────
+//
+// Bookable statuses: everything EXCEPT out_of_order and maintenance.
+// Dirty and ready rooms will be cleaned before guest check-in.
+// Occupied rooms are excluded via the reservation conflict query, not by status —
+// a room's status may lag behind actual reservation state during a busy shift.
+//
+// Overlap condition: existing.check_in_date < newCheckOut AND existing.check_out_date > newCheckIn
+// This is a half-open interval [checkIn, checkOut) so checkout-day re-booking is valid:
+// a guest checking out March 10 frees the room for a new guest checking in March 10.
+
+// Hard-excluded statuses — rooms that cannot physically be used
+const UNBOOKABLE_STATUSES = ['out_of_order', 'maintenance'];
+
 export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null, withMedia = false) => {
-  const { data: occupied } = await supabase
+  // Step 1: rooms with confirmed/checked-in reservations overlapping the dates
+  const { data: conflicting } = await supabase
     .from('reservations')
     .select('room_id')
     .eq('org_id', orgId)
     .in('status', ['confirmed', 'checked_in'])
     .lt('check_in_date', checkOut)
-    .gt('check_out_date', checkIn);
+    .gt('check_out_date', checkIn)
+    .not('room_id', 'is', null);
 
-  const occupiedIds = (occupied || []).map(r => r.room_id).filter(Boolean);
+  const conflictingIds = (conflicting || []).map(r => r.room_id).filter(Boolean);
 
+  // Step 2: all non-blocked, physically usable rooms of this org/type
   let query = supabase
     .from('rooms')
     .select(`id, number, floor, status, type_id,
       ${withMedia ? 'media,' : ''}
       room_types ( id, name, base_rate, max_occupancy, amenities )`)
     .eq('org_id', orgId)
-    
     .eq('is_blocked', false)
-    .in('status', [ROOM_STATUS.AVAILABLE, ROOM_STATUS.CLEAN])
+    .not('status', 'in', `(${UNBOOKABLE_STATUSES.map(s => `"${s}"`).join(',')})`)
     .order('number');
 
-  if (occupiedIds.length > 0) query = query.not('id', 'in', `(${occupiedIds.join(',')})`);
+  if (conflictingIds.length > 0) {
+    query = query.not('id', 'in', `(${conflictingIds.join(',')})`);
+  }
   if (typeId) query = query.eq('type_id', typeId);
 
   const { data, error } = await query;
@@ -353,7 +364,7 @@ export const uploadRoomMedia = async (orgId, roomId, file) => {
 
   const isVideo = file.mimetype.startsWith('video/');
   const limit   = isVideo ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
-  if (file.size > limit) throw new AppError(`File too large.`, 400);
+  if (file.size > limit) throw new AppError('File too large.', 400);
 
   const room = await getRoomById(orgId, roomId);
   const currentMedia = room.media || [];

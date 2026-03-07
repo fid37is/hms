@@ -133,7 +133,7 @@ export const deleteRoom = async (req, res, next) => {
 export const getAvailableRooms = async (req, res, next) => {
   try {
     const { check_in, check_out, type_id } = req.query;
-    const data = await roomService.getAvailableRooms(req.orgId, check_in, check_out, type_id);
+    const data = await roomService.getAvailableRooms(req.orgId, check_in, check_out, type_id, true);
     return sendSuccess(res, data, 'Available rooms retrieved.');
   } catch (err) { next(err); }
 };
