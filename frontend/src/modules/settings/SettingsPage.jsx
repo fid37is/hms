@@ -3,17 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 import HotelConfig    from './components/HotelConfig';
 import UserManagement from './components/UserManagement';
 import RoleManager    from './components/RoleManager';
-import ApiKeysPanel   from './components/ApiKeysPanel';
 import WebsitePanel   from './components/WebsitePanel';
 import PageHeader     from '../../components/shared/PageHeader';
-import { Settings, Users, Shield, Key, Globe } from 'lucide-react';
+import { Settings, Users, Shield, Globe } from 'lucide-react';
 
 const TABS = [
-  { key: 'hotel',    label: 'Hotel Config', icon: Settings },
-  { key: 'website',  label: 'Website',      icon: Globe    },
-  { key: 'users',    label: 'Users',        icon: Users    },
-  { key: 'roles',    label: 'Roles',        icon: Shield   },
-  { key: 'api-keys', label: 'API Keys',     icon: Key      },
+  { key: 'hotel',   label: 'Hotel Config', icon: Settings },
+  { key: 'website', label: 'Website',      icon: Globe    },
+  { key: 'users',   label: 'Users',        icon: Users    },
+  { key: 'roles',   label: 'Roles',        icon: Shield   },
 ];
 
 export default function SettingsPage() {
@@ -75,11 +73,10 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {tab === 'hotel'    && <HotelConfig />}
-          {tab === 'website'  && <WebsitePanel />}
-          {tab === 'users'    && <UserManagement />}
-          {tab === 'roles'    && <RoleManager />}
-          {tab === 'api-keys' && <ApiKeysPanel />}
+          {tab === 'hotel'   && <HotelConfig />}
+          {tab === 'website' && <WebsitePanel />}
+          {tab === 'users'   && <UserManagement />}
+          {tab === 'roles'   && <RoleManager />}
         </div>
       </div>
     </div>

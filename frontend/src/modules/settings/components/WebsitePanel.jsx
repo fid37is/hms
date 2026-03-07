@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Globe, Copy, CheckCircle2, ExternalLink, AlertTriangle,
-  Loader2, Link2, Link2Off, RefreshCw, ArrowRight, Info,
+  Loader2, Link2, Link2Off, RefreshCw, Info,
 } from 'lucide-react';
 import * as authApi from '../../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
-const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'miravance.io';
+const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'hms-67e.pages.dev';
 const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 function CopyButton({ text, size = 'sm' }) {
@@ -336,7 +336,7 @@ export default function WebsitePanel() {
         <UrlRow
           label="Public API Base"
           url={publicApiUrl}
-          hint="Used in your website's VITE_HMS_API_URL environment variable"
+          hint="Your website's API base URL — configured automatically via subdomain"
         />
         {org.custom_domain && (
           <UrlRow
@@ -364,21 +364,6 @@ export default function WebsitePanel() {
           Custom Domain
         </h3>
         <CustomDomainSection org={org} />
-      </div>
-
-      {/* Link to API keys */}
-      <div className="rounded-xl p-4 flex items-center justify-between gap-4"
-        style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-        <div>
-          <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>API Key required</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Your website also needs an API key set in its environment variables.
-          </p>
-        </div>
-        <a href="/settings?tab=api-keys"
-          className="btn-secondary text-xs gap-1.5 flex-shrink-0 flex items-center">
-          Manage keys <ArrowRight size={12} />
-        </a>
       </div>
 
     </div>

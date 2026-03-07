@@ -15,7 +15,7 @@ import bcrypt from 'bcryptjs';
 
 // Extract the root domain from env so we know what counts as "our" subdomain.
 // e.g. WEBSITE_BASE_DOMAIN=miravance.io  →  amarahotel.miravance.io is a subdomain
-const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'miravance.io';
+const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'hms-67e.pages.dev';
 
 console.log('resolveOrg: setting orgId to', env.DEV_ORG_ID);
 
