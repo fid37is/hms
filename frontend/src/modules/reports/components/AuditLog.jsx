@@ -54,7 +54,7 @@ export default function AuditLog() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="overflow-hidden">
         <DataTable columns={columns} data={data?.data || []} loading={isLoading} emptyTitle="No audit logs" />
       </div>
 

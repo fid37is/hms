@@ -12,3 +12,7 @@ export const adminResetPassword = (userId, data) => api.patch(`/users/${userId}/
 export const listApiKeys  = ()        => api.get('/auth/api-keys');
 export const generateApiKey = (data)  => api.post('/auth/api-keys', data);
 export const revokeApiKey = (id)      => api.delete(`/auth/api-keys/${id}`);
+
+// Organisation profile (slug, custom domain)
+export const getOrg    = ()      => api.get('/auth/org');
+export const updateOrg = (data)  => api.patch('/auth/org', data);

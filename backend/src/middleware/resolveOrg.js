@@ -17,7 +17,7 @@ import bcrypt from 'bcryptjs';
 // e.g. WEBSITE_BASE_DOMAIN=miravance.io  →  amarahotel.miravance.io is a subdomain
 const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'miravance.io';
 
-
+console.log('resolveOrg: setting orgId to', env.DEV_ORG_ID);
 
 export const resolveOrg = async (req, res, next) => {
     console.log('DEV_ORG_ID:', env.DEV_ORG_ID);  // ADD THIS

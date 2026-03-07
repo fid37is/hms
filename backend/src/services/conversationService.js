@@ -17,13 +17,30 @@ export const getOrCreateConversation = async (orgId, reservationId, guestId, dep
   if (reservation.status !== 'checked_in')
     throw new AppError('Chat is only available during your stay.', 403);
 
+  // Return existing open conversation if one exists
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('*, chat_departments(id, name, icon)')
+    .eq('org_id', orgId)
+    .eq('reservation_id', reservationId)
+    .eq('department_id', departmentId)
+    .eq('guest_id', guestId)
+    .eq('status', 'open')
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  // No open conversation — always insert a fresh one
   const { data, error } = await supabase
     .from('conversations')
-    .upsert(
-      { org_id: orgId, reservation_id: reservationId, guest_id: guestId, department_id: departmentId },
-      { onConflict: 'reservation_id,department_id', ignoreDuplicates: false }
-    )
-    .select(`*, chat_departments(id, name, icon)`)
+    .insert({
+      org_id: orgId,
+      reservation_id: reservationId,
+      guest_id: guestId,
+      department_id: departmentId,
+      status: 'open',
+    })
+    .select('*, chat_departments(id, name, icon)')
     .single();
 
   if (error) throw new AppError(`Failed to start conversation: ${error.message}`, 500);
@@ -122,7 +139,7 @@ export const getDepartmentConversations = async (orgId, departmentId) => {
       *,
       guests(id, full_name, email),
       reservations(id, reservation_no, check_in_date, check_out_date, room_id,
-        rooms(room_number)
+        rooms(number)
       ),
       messages(id, content, sender_type, created_at, read_at)
     `)
@@ -141,7 +158,7 @@ export const getAllConversations = async (orgId) => {
       *,
       chat_departments(id, name, icon),
       guests(id, full_name, email),
-      reservations(id, reservation_no, rooms(room_number)),
+      reservations(id, reservation_no, rooms(number)),
       messages(id, content, sender_type, created_at, read_at)
     `)
     .eq('org_id', orgId)

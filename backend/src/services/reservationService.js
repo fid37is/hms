@@ -175,7 +175,10 @@ export const updateReservation = async (orgId, id, payload) => {
   return data;
 };
 
-export const checkIn = async (orgId, id, checkedInBy) => {
+// ── Check-in ─────────────────────────────────────────────────────────────────
+// payment_mode: 'full' | 'partial' | 'pay_later'
+// paid_amount:  amount collected at check-in (for full or partial)
+export const checkIn = async (orgId, id, checkedInBy, { payment_mode = 'pay_later', paid_amount = 0, payment_method = 'cash', payment_notes = '' } = {}) => {
   const reservation = await getReservationById(orgId, id);
 
   if (reservation.status !== RESERVATION_STATUS.CONFIRMED)
@@ -183,6 +186,13 @@ export const checkIn = async (orgId, id, checkedInBy) => {
   if (!reservation.rooms?.id)
     throw new AppError('No room assigned. Assign a room before check-in.', 409);
 
+  const nights     = getNightCount(reservation.check_in_date, reservation.check_out_date);
+  const totalDue   = reservation.rate_per_night * nights;
+
+  if (payment_mode === 'full' && paid_amount < totalDue)
+    throw new AppError(`Full payment requires ${totalDue}. Received ${paid_amount}.`, 400);
+
+  // Update reservation status
   const { data, error } = await supabase
     .from('reservations')
     .update({ status: RESERVATION_STATUS.CHECKED_IN, actual_check_in: new Date().toISOString() })
@@ -190,9 +200,11 @@ export const checkIn = async (orgId, id, checkedInBy) => {
 
   if (error) throw new AppError('Failed to process check-in.', 500);
 
+  // Mark room occupied
   await supabase.from('rooms').update({ status: ROOM_STATUS.OCCUPIED })
     .eq('org_id', orgId).eq('id', reservation.rooms.id);
 
+  // Create folio
   const { data: folio, error: folioErr } = await supabase
     .from('folios')
     .insert({ org_id: orgId, reservation_id: id, guest_id: reservation.guests.id, status: 'open' })
@@ -200,17 +212,15 @@ export const checkIn = async (orgId, id, checkedInBy) => {
 
   if (folioErr) throw new AppError('Check-in succeeded but failed to create folio.', 500);
 
-  const nights     = getNightCount(reservation.check_in_date, reservation.check_out_date);
-  const roomAmount = reservation.rate_per_night * nights;
-
+  // Post room charge for full stay
   await supabase.from('folio_items').insert({
     org_id:      orgId,
     folio_id:    folio.id,
     department:  'room',
-    description: `Room charge - ${reservation.rooms.number} (${nights} night${nights > 1 ? 's' : ''})`,
+    description: `Room ${reservation.rooms.number} — ${nights} night${nights > 1 ? 's' : ''} @ ${reservation.rate_per_night}`,
     quantity:    nights,
     unit_price:  reservation.rate_per_night,
-    amount:      roomAmount,
+    amount:      totalDue,
     tax_amount:  0,
     is_voided:   false,
     posted_by:   checkedInBy,
@@ -218,7 +228,102 @@ export const checkIn = async (orgId, id, checkedInBy) => {
     reference_id: id,
   });
 
-  return data;
+  // Record deposit if one was paid at booking
+  if (reservation.deposit_paid && reservation.deposit_amount > 0) {
+    await supabase.from('payments').insert({
+      org_id: orgId, folio_id: folio.id,
+      amount: reservation.deposit_amount,
+      method: 'other',
+      status: 'completed',
+      notes:  'Deposit paid at booking',
+      received_by: checkedInBy,
+      received_at: new Date().toISOString(),
+    });
+  }
+
+  // Record check-in payment if collected now
+  if ((payment_mode === 'full' || payment_mode === 'partial') && paid_amount > 0) {
+    await supabase.from('payments').insert({
+      org_id: orgId, folio_id: folio.id,
+      amount: paid_amount,
+      method: payment_method,
+      status: 'completed',
+      notes:  payment_notes || `Payment at check-in (${payment_mode})`,
+      received_by: checkedInBy,
+      received_at: new Date().toISOString(),
+    });
+  }
+
+  return { ...data, folio_id: folio.id };
+};
+
+// ── Extend Stay ───────────────────────────────────────────────────────────────
+// Moves checkout date forward, adds extra night charges to the folio,
+// optionally records an additional payment collected for the extension.
+export const extendStay = async (orgId, id, { new_check_out_date, paid_amount = 0, payment_method = 'cash', payment_notes = '' }, staffId) => {
+  const reservation = await getReservationById(orgId, id);
+
+  if (reservation.status !== RESERVATION_STATUS.CHECKED_IN)
+    throw new AppError('Can only extend a checked-in reservation.', 409);
+
+  const oldCheckOut = reservation.check_out_date;
+  if (new Date(new_check_out_date) <= new Date(oldCheckOut))
+    throw new AppError('New check-out date must be after current check-out date.', 400);
+
+  // Check room availability for the extension period
+  const available = await checkRoomAvailability(orgId, reservation.rooms.id, oldCheckOut, new_check_out_date, id);
+  if (!available) throw new AppError('Room not available for the extension period.', 409);
+
+  const extraNights  = getNightCount(oldCheckOut, new_check_out_date);
+  const extraAmount  = extraNights * reservation.rate_per_night;
+  const newTotal     = reservation.total_amount + extraAmount;
+
+  // Update reservation dates and total
+  const { data, error } = await supabase
+    .from('reservations')
+    .update({ check_out_date: new_check_out_date, total_amount: newTotal })
+    .eq('org_id', orgId).eq('id', id).select().single();
+
+  if (error) throw new AppError('Failed to extend stay.', 500);
+
+  // Find the open folio and add extra room charge
+  const { data: folio } = await supabase
+    .from('folios').select('id').eq('org_id', orgId).eq('reservation_id', id).eq('status', 'open').single();
+
+  if (folio) {
+    await supabase.from('folio_items').insert({
+      org_id:      orgId,
+      folio_id:    folio.id,
+      department:  'room',
+      description: `Stay extension — ${extraNights} night${extraNights > 1 ? 's' : ''} @ ${reservation.rate_per_night}`,
+      quantity:    extraNights,
+      unit_price:  reservation.rate_per_night,
+      amount:      extraAmount,
+      tax_amount:  0,
+      is_voided:   false,
+      posted_by:   staffId,
+      posted_at:   new Date().toISOString(),
+      reference_id: id,
+    });
+
+    // Record payment for extension if collected
+    if (paid_amount > 0) {
+      await supabase.from('payments').insert({
+        org_id: orgId, folio_id: folio.id,
+        amount: paid_amount,
+        method: payment_method,
+        status: 'completed',
+        notes:  payment_notes || `Payment for ${extraNights}-night extension`,
+        received_by: staffId,
+        received_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  return {
+    ...data,
+    extension: { extra_nights: extraNights, extra_amount: extraAmount, paid_amount },
+  };
 };
 
 export const checkOut = async (orgId, id, checkedOutBy) => {
@@ -232,7 +337,7 @@ export const checkOut = async (orgId, id, checkedOutBy) => {
     .eq('org_id', orgId).eq('reservation_id', id).eq('status', 'open').single();
 
   if (folio?.balance > 0)
-    throw new AppError(`Outstanding balance must be settled before check-out.`, 409);
+    throw new AppError(`Outstanding balance of ${folio.balance} must be settled before check-out.`, 409);
 
   const { data, error } = await supabase
     .from('reservations')

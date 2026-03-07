@@ -1,271 +1,232 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import * as configApi from '../../../lib/api/userApi';
 import LoadingSpinner from '../../../components/shared/LoadingSpinner';
-import Modal          from '../../../components/shared/Modal';
+import ConfirmDialog  from '../../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 const ALL_PERMISSIONS = [
-  { group: 'Rooms',        perms: ['rooms:read','rooms:write','rooms:manage'] },
-  { group: 'Reservations', perms: ['reservations:read','reservations:write','reservations:manage'] },
-  { group: 'Guests',       perms: ['guests:read','guests:write'] },
-  { group: 'Billing',      perms: ['billing:read','billing:write','billing:void'] },
-  { group: 'Housekeeping', perms: ['housekeeping:read','housekeeping:write'] },
-  { group: 'Inventory',    perms: ['inventory:read','inventory:write','inventory:approve'] },
-  { group: 'Maintenance',  perms: ['maintenance:read','maintenance:write'] },
-  { group: 'Staff',        perms: ['staff:read','staff:write','staff:manage'] },
-  { group: 'Reports',      perms: ['reports:read','reports:export'] },
-  { group: 'Settings',     perms: ['settings:read','settings:write'] },
+  { group: 'Rooms',        perms: ['rooms:read','rooms:update','rooms:status'] },
+  { group: 'Reservations', perms: ['reservations:read','reservations:create','reservations:update','reservations:checkin','reservations:checkout'] },
+  { group: 'Guests',       perms: ['guests:read','guests:create','guests:update'] },
+  { group: 'Billing',      perms: ['billing:read','billing:charge','billing:payment','billing:void','billing:discount','billing:approve'] },
+  { group: 'Housekeeping', perms: ['housekeeping:read','housekeeping:update','housekeeping:assign'] },
+  { group: 'Inventory',    perms: ['inventory:read','inventory:update','inventory:orders'] },
+  { group: 'Maintenance',  perms: ['maintenance:read','maintenance:create','maintenance:update'] },
+  { group: 'Staff',        perms: ['staff:read','staff:manage','staff:payroll'] },
+  { group: 'Reports',      perms: ['reports:basic','reports:financial','reports:audit'] },
+  { group: 'Settings',     perms: ['settings:read','settings:update'] },
 ];
 
-function PermissionsPanel({ role }) {
-  const groupedPerms = ALL_PERMISSIONS
-    .map(({ group, perms }) => ({
-      group,
-      assigned: perms.filter(p => (role.permissions || []).includes(p)),
-    }))
-    .filter(g => g.assigned.length > 0);
+// Shared permission picker used in both create and edit forms
+function PermissionPicker({ selectedPerms, setSelectedPerms }) {
+  const toggle = (perm) =>
+    setSelectedPerms(prev => prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]);
+
+  const toggleGroup = (perms) => {
+    const allSelected = perms.every(p => selectedPerms.includes(p));
+    if (allSelected) setSelectedPerms(prev => prev.filter(p => !perms.includes(p)));
+    else             setSelectedPerms(prev => [...new Set([...prev, ...perms])]);
+  };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-          {role.name}
-        </h3>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {(role.permissions || []).length} permissions across {groupedPerms.length} module{groupedPerms.length !== 1 ? 's' : ''}
-        </p>
+    <div className="space-y-3">
+      {ALL_PERMISSIONS.map(({ group, perms }) => {
+        const allSelected = perms.every(p => selectedPerms.includes(p));
+        return (
+          <div key={group}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <input type="checkbox" id={`group-${group}`} checked={allSelected}
+                onChange={() => toggleGroup(perms)} className="rounded"
+                style={{ accentColor: 'var(--brand)' }} />
+              <label htmlFor={`group-${group}`}
+                className="text-xs font-semibold uppercase tracking-wider cursor-pointer"
+                style={{ color: 'var(--text-sub)' }}>
+                {group}
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2 pl-5">
+              {perms.map(p => (
+                <label key={p} className="flex items-center gap-1.5 text-xs cursor-pointer"
+                  style={{ color: 'var(--text-muted)' }}>
+                  <input type="checkbox" checked={selectedPerms.includes(p)}
+                    onChange={() => toggle(p)} style={{ accentColor: 'var(--brand)' }} />
+                  <span className="capitalize">{p.split(':')[1]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoleCard({ role, onEdit, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+  const perms = role.permissions || [];
+  const isSystem = ['admin'].includes(role.name?.toLowerCase());
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center">
+        <button type="button" onClick={() => setExpanded(e => !e)}
+          className="flex-1 flex items-center justify-between px-4 py-3 text-left transition-colors"
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{role.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {perms.length} permission{perms.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          {expanded
+            ? <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronRight size={15} style={{ color: 'var(--text-muted)' }} />}
+        </button>
+        {!isSystem && (
+          <div className="flex gap-1 pr-3">
+            <button onClick={() => onEdit(role)} className="btn-ghost p-1.5 rounded-md">
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => onDelete(role)} className="btn-ghost p-1.5 rounded-md"
+              style={{ color: 'var(--s-red-text)' }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {groupedPerms.length > 0 ? (
-        <div className="space-y-4">
-          {groupedPerms.map(({ group, assigned }) => (
-            <div key={group}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2"
-                style={{ color: 'var(--text-muted)' }}>
-                {group}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {assigned.map(p => (
-                  <span key={p} className="badge badge-blue font-mono text-xs">{p}</span>
-                ))}
-              </div>
-            </div>
-          ))}
+      {expanded && (
+        <div className="px-4 pb-4 pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
+          <div className="flex flex-wrap gap-1.5">
+            {perms.length ? perms.map(p => (
+              <span key={p} className="badge badge-blue text-xs font-mono">{p}</span>
+            )) : (
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No permissions assigned</p>
+            )}
+          </div>
         </div>
-      ) : (
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          No permissions assigned to this role.
-        </p>
       )}
     </div>
   );
 }
 
-function CreateRoleForm({ onSuccess }) {
-  const [name,          setName]          = useState('');
-  const [selectedPerms, setSelectedPerms] = useState([]);
+function RoleForm({ role, onSuccess, onCancel }) {
+  const isEdit = !!role;
+  const [name, setName] = useState(role?.name || '');
+  const [selectedPerms, setSelectedPerms] = useState(role?.permissions || []);
+  const qc = useQueryClient();
 
   const save = useMutation({
-    mutationFn: (d) => configApi.createRole(d),
-    onSuccess: () => { toast.success('Role created'); onSuccess(); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
+    mutationFn: (d) => isEdit
+      ? configApi.updateRole(role.id, d)
+      : configApi.createRole(d),
+    onSuccess: () => {
+      toast.success(isEdit ? 'Role updated' : 'Role created');
+      qc.invalidateQueries(['roles']);
+      onSuccess();
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
-  const toggle = (perm) => {
-    setSelectedPerms(prev => prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]);
-  };
-
-  const toggleGroup = (perms) => {
-    const allSelected = perms.every(p => selectedPerms.includes(p));
-    setSelectedPerms(prev =>
-      allSelected ? prev.filter(p => !perms.includes(p)) : [...new Set([...prev, ...perms])]
-    );
-  };
-
   return (
-    <form onSubmit={e => { e.preventDefault(); save.mutate({ name, permissions: selectedPerms }); }} className="space-y-5">
-      <div className="form-group">
-        <label className="label" htmlFor="role-name">Role Name *</label>
-        <input id="role-name" className="input max-w-xs" required
-          placeholder="e.g. Front Desk Manager"
-          value={name} onChange={e => setName(e.target.value)} />
-      </div>
-
-      <div>
-        <p className="label mb-3">Permissions</p>
-        <div className="space-y-4">
-          {ALL_PERMISSIONS.map(({ group, perms }) => {
-            const allSelected = perms.every(p => selectedPerms.includes(p));
-            return (
-              <div key={group}>
-                <div className="flex items-center gap-2 mb-2">
-                  <input type="checkbox" id={`group-${group}`} checked={allSelected}
-                    onChange={() => toggleGroup(perms)}
-                    style={{ accentColor: 'var(--brand)' }} />
-                  <label htmlFor={`group-${group}`}
-                    className="text-xs font-semibold uppercase tracking-wider cursor-pointer"
-                    style={{ color: 'var(--text-sub)' }}>
-                    {group}
-                  </label>
-                </div>
-                <div className="flex flex-wrap gap-3 pl-5">
-                  {perms.map(p => (
-                    <label key={p} className="flex items-center gap-1.5 text-xs cursor-pointer"
-                      style={{ color: 'var(--text-muted)' }}>
-                      <input type="checkbox" checked={selectedPerms.includes(p)}
-                        onChange={() => toggle(p)} style={{ accentColor: 'var(--brand)' }} />
-                      <span className="capitalize">{p.split(':')[1]}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+    <div className="card p-5">
+      <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-base)' }}>
+        {isEdit ? `Edit Role: ${role.name}` : 'New Role'}
+      </h3>
+      <form onSubmit={e => { e.preventDefault(); save.mutate({ name, permissions: selectedPerms }); }}
+        className="space-y-5">
+        <div className="form-group">
+          <label className="label" htmlFor="role-name">Role Name *</label>
+          <input id="role-name" className="input max-w-xs" required
+            placeholder="e.g. Front Desk Manager"
+            value={name} onChange={e => setName(e.target.value)} />
         </div>
-      </div>
-
-      <div className="flex justify-end pt-1">
-        <button type="submit" disabled={save.isPending} className="btn-primary">
-          {save.isPending ? 'Creating…' : 'Create Role'}
-        </button>
-      </div>
-    </form>
+        <div>
+          <p className="label mb-3">Permissions</p>
+          <PermissionPicker selectedPerms={selectedPerms} setSelectedPerms={setSelectedPerms} />
+        </div>
+        <div className="flex gap-2">
+          <button type="submit" disabled={save.isPending} className="btn-primary">
+            {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Role'}
+          </button>
+          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
-export default function RoleManager({ openForm, onFormClose }) {
+export default function RoleManager() {
   const qc = useQueryClient();
-  const [showForm,   setShowForm]   = useState(false);
-  const [activeRole, setActiveRole] = useState(null);
-  // Mobile accordion — which role is expanded inline
-  const [expandedId, setExpandedId] = useState(null);
-  const detailRef = useRef(null);
-
-  useEffect(() => { if (openForm) setShowForm(true); }, [openForm]);
-  const handleClose = () => { setShowForm(false); onFormClose?.(); };
+  const [showForm,     setShowForm]     = useState(false);
+  const [editingRole,  setEditingRole]  = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: roles, isLoading } = useQuery({
     queryKey: ['roles'],
     queryFn:  () => configApi.getRoles().then(r => r.data.data),
   });
 
-  if (isLoading) return <LoadingSpinner center />;
+  const doDelete = useMutation({
+    mutationFn: (id) => configApi.deleteRole(id),
+    onSuccess:  () => { toast.success('Role deleted'); qc.invalidateQueries(['roles']); setDeleteTarget(null); },
+    onError:    (e) => toast.error(e.response?.data?.message || 'Failed'),
+  });
 
-  const handleRoleClick = (role) => {
-    // Desktop: set active role for right panel
-    setActiveRole(role);
-    // Mobile: toggle accordion
-    setExpandedId(prev => prev === role.id ? null : role.id);
+  const handleEdit = (role) => {
+    setShowForm(false);
+    setEditingRole(role);
   };
 
+  const handleClose = () => {
+    setShowForm(false);
+    setEditingRole(null);
+  };
+
+  if (isLoading) return <LoadingSpinner center />;
+
   return (
-    <>
-      {/* ── Mobile: accordion list ── */}
-      <div className="md:hidden space-y-1.5">
-        {(roles || []).map(role => {
-          const isExpanded = expandedId === role.id;
-          return (
-            <div key={role.id} className="card overflow-hidden">
-              <button
-                onClick={() => handleRoleClick(role)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left"
-                style={{
-                  backgroundColor: isExpanded ? 'var(--brand-subtle)' : 'transparent',
-                }}
-              >
-                <div>
-                  <p className="text-sm font-medium"
-                    style={{ color: isExpanded ? 'var(--brand)' : 'var(--text-base)' }}>
-                    {role.name}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {(role.permissions || []).length} permission{(role.permissions || []).length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <ChevronDown
-                  size={15}
-                  style={{
-                    color: 'var(--text-muted)',
-                    transform: isExpanded ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.2s',
-                    flexShrink: 0,
-                  }}
-                />
-              </button>
-              {isExpanded && (
-                <div className="px-4 pb-4 pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                  <PermissionsPanel role={role} />
-                </div>
-              )}
-            </div>
-          );
-        })}
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => { setEditingRole(null); setShowForm(s => !s); }} className="btn-primary text-xs">
+          <Plus size={14} /> {showForm ? 'Cancel' : 'New Role'}
+        </button>
+      </div>
+
+      {showForm && !editingRole && (
+        <RoleForm onSuccess={handleClose} onCancel={handleClose} />
+      )}
+
+      {editingRole && (
+        <RoleForm role={editingRole} onSuccess={handleClose} onCancel={handleClose} />
+      )}
+
+      <div className="space-y-2">
+        {(roles || []).map(role => (
+          <RoleCard
+            key={role.id}
+            role={role}
+            onEdit={handleEdit}
+            onDelete={setDeleteTarget}
+          />
+        ))}
         {!roles?.length && (
-          <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>No roles defined yet.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No roles defined</p>
         )}
       </div>
 
-      {/* ── Desktop: master-detail ── */}
-      <div className="hidden md:grid md:grid-cols-5 gap-4" style={{ minHeight: '420px' }}>
-
-        {/* Left — role list */}
-        <div className="col-span-2 space-y-1.5">
-          {(roles || []).map(role => {
-            const isActive = activeRole?.id === role.id;
-            return (
-              <button key={role.id} onClick={() => setActiveRole(role)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all"
-                style={{
-                  backgroundColor: isActive ? 'var(--brand-subtle)' : 'var(--bg-surface)',
-                  border: `1px solid ${isActive ? 'var(--brand)' : 'var(--border-soft)'}`,
-                }}>
-                <div>
-                  <p className="text-sm font-medium"
-                    style={{ color: isActive ? 'var(--brand)' : 'var(--text-base)' }}>
-                    {role.name}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {(role.permissions || []).length} permission{(role.permissions || []).length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                  style={{ color: isActive ? 'var(--brand)' : 'var(--text-muted)', flexShrink: 0 }}>
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            );
-          })}
-          {!roles?.length && (
-            <p className="text-sm p-4" style={{ color: 'var(--text-muted)' }}>No roles defined yet.</p>
-          )}
-        </div>
-
-        {/* Right — permissions detail */}
-        <div className="col-span-3 card p-5">
-          {!activeRole ? (
-            <div className="h-full flex flex-col items-center justify-center text-center py-12 gap-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                <Shield size={22} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>
-                Select a role to inspect
-              </p>
-              <p className="text-xs max-w-xs" style={{ color: 'var(--text-muted)' }}>
-                Pick any role on the left to see exactly what its holders can see and do across HMS.
-              </p>
-            </div>
-          ) : (
-            <PermissionsPanel role={activeRole} />
-          )}
-        </div>
-      </div>
-
-      <Modal open={showForm} onClose={handleClose} title="New Role" size="lg">
-        <CreateRoleForm onSuccess={() => { handleClose(); qc.invalidateQueries(['roles']); }} />
-      </Modal>
-    </>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Role"
+        message={`Delete "${deleteTarget?.name}"? Users with this role will lose access.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => doDelete.mutate(deleteTarget.id)}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </div>
   );
 }

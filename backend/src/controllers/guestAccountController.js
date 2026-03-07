@@ -46,6 +46,7 @@ export const getMe = async (req, res, next) => {
 // PATCH /api/v1/public/auth/me — update own profile
 export const updateMe = async (req, res, next) => {
   try {
+    console.log('getMe sub:', req.guest.sub);
     const {
       full_name, phone, address,
       nationality, id_type, id_number,

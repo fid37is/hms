@@ -2,6 +2,7 @@ import api from '../axios';
 export const getSuppliers     = ()       => api.get('/inventory/suppliers');
 export const createSupplier   = (data)   => api.post('/inventory/suppliers', data);
 export const updateSupplier   = (id, d)  => api.patch(`/inventory/suppliers/${id}`, d);
+export const deleteSupplier   = (id)     => api.delete(`/inventory/suppliers/${id}`);
 export const getItems         = (params) => api.get('/inventory/items', { params });
 export const getItemById      = (id)     => api.get(`/inventory/items/${id}`);
 export const getLowStock      = ()       => api.get('/inventory/items/low-stock');

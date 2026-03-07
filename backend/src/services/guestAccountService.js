@@ -129,10 +129,6 @@ export const login = async ({ email, password }) => {
 
   const tokenPayload = { sub: guest.id, email: guest.email, full_name: guest.full_name };
 
-  // Send welcome email (non-blocking)
-  emailService.sendWelcome({ email: guest.email, fullName: guest.full_name })
-    .catch(e => console.error('[email] welcome failed:', e));
-
   return {
     access_token:  generateGuestAccessToken(tokenPayload),
     refresh_token: generateGuestRefreshToken(guest.id),
@@ -220,7 +216,8 @@ export const refreshGuestToken = async (token) => {
   const tokenPayload = { sub: guest.id, email: guest.email, full_name: guest.full_name };
 
   return {
-    access_token: generateGuestAccessToken(tokenPayload),
+    access_token:  generateGuestAccessToken(tokenPayload),
+    refresh_token: generateGuestRefreshToken(guest.id), // ← FIX: rotate refresh token
   };
 };
 

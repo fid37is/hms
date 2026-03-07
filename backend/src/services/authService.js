@@ -17,18 +17,17 @@ export const login = async (email, password) => {
   if (authError || !authData.user) throw new AppError('Invalid email or password.', 401);
 
   const { data: user, error: userError } = await supabase
-    .from('users').select('*').eq('id', authData.user.id).single();
+    .from('users')
+    .select('id, org_id, email, full_name, department, role_id, is_active, must_change_password')
+    .eq('id', authData.user.id).single();
 
   if (userError || !user)  throw new AppError('User profile not found. Contact administrator.', 404);
   if (!user.is_active)     throw new AppError('Your account has been deactivated. Contact administrator.', 403);
   if (!user.role_id)       throw new AppError('User role not assigned. Contact administrator.', 403);
   if (!user.org_id)        throw new AppError('No organization assigned. Contact administrator.', 403);
 
-  // Debug: log the raw org_id to see its type
-  console.log('[LOGIN DEBUG] user.org_id:', JSON.stringify(user.org_id), 'type:', typeof user.org_id);
-
-  // Ensure org_id is a plain string UUID
-  const orgId = typeof user.org_id === 'string' ? user.org_id : String(user.org_id?.id ?? user.org_id);
+  // org_id must be a plain UUID string — explicit select prevents FK auto-expansion
+  const orgId = String(user.org_id);
 
   const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
   if (!role) throw new AppError('User role not found. Contact administrator.', 404);
@@ -84,7 +83,7 @@ export const refreshToken = async (token) => {
   try { decoded = jwt.verify(token, env.JWT_SECRET); }
   catch { throw new AppError('Invalid or expired refresh token.', 401); }
 
-  const { data: user } = await supabase.from('users').select('*').eq('id', decoded.sub).single();
+  const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password').eq('id', decoded.sub).single();
   if (!user)         throw new AppError('User not found.', 404);
   if (!user.is_active) throw new AppError('Account deactivated.', 403);
 
@@ -220,7 +219,7 @@ export const revokeApiKey = async (orgId, keyId) => {
 // ─── Profile / Password ───────────────────────────────────
 
 export const getProfile = async (userId) => {
-  const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
+  const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password, last_login').eq('id', userId).single();
   if (!user) throw new AppError('User not found.', 404);
   const { data: role } = await supabase.from('roles').select('id, name, description').eq('id', user.role_id).single();
   return { ...user, role };
@@ -254,4 +253,43 @@ export const adminResetPassword = async (userId, newPassword) => {
   const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
   if (error) throw new AppError(`Failed to reset password: ${error.message}`, 500);
   return { message: 'Password reset successfully.' };
+};
+
+// ─── Org profile (slug, custom domain, plan) ─────────────────────────────────
+export const getOrgProfile = async (orgId) => {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id, name, slug, custom_domain, plan, status, created_at')
+    .eq('id', orgId)
+    .single();
+  if (error) throw new AppError('Failed to fetch organisation profile.', 500);
+  return data;
+};
+
+export const updateOrgProfile = async (orgId, { custom_domain }) => {
+  // Normalise: strip protocol, trailing slashes, lowercase
+  const domain = custom_domain
+    ? custom_domain.replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase()
+    : null;
+
+  // Check no other org already owns this domain
+  if (domain) {
+    const { data: existing } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('custom_domain', domain)
+      .neq('id', orgId)
+      .maybeSingle();
+    if (existing) throw new AppError('This domain is already linked to another account.', 409);
+  }
+
+  const { data, error } = await supabase
+    .from('organizations')
+    .update({ custom_domain: domain })
+    .eq('id', orgId)
+    .select('id, name, slug, custom_domain, plan, status')
+    .single();
+
+  if (error) throw new AppError('Failed to update organisation profile.', 500);
+  return data;
 };

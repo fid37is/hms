@@ -20,6 +20,8 @@ import {
   generateApiKeyController,
   listApiKeysController,
   revokeApiKeyController,
+  getOrgController,
+  updateOrgController,
 } from '../controllers/authController.js';
 
 const router = Router();
@@ -41,5 +43,9 @@ router.patch('/change-password', authenticate, validate(changePasswordSchema), c
 router.get('/api-keys',         authenticate, listApiKeysController);
 router.post('/api-keys',        authenticate, generateApiKeyController);
 router.delete('/api-keys/:id',  authenticate, revokeApiKeyController);
+
+// ─── Organisation profile (slug, custom domain) ───────────
+router.get('/org',              authenticate, getOrgController);
+router.patch('/org',            authenticate, updateOrgController);
 
 export default router;

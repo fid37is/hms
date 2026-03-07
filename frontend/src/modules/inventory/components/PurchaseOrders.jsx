@@ -4,7 +4,7 @@ import * as invApi   from '../../../lib/api/inventoryApi';
 import DataTable     from '../../../components/shared/DataTable';
 import StatusBadge   from '../../../components/shared/StatusBadge';
 import Modal         from '../../../components/shared/Modal';
-import POLineItem    from './POLineitem';
+import POLineItem    from './POLineItem';
 import { formatDate, formatCurrency } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
@@ -14,13 +14,15 @@ const BLANK_LINE = () => ({ item_id: '', quantity: '1', unit_cost: '' });
 export default function PurchaseOrders({ openForm, onFormClose }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form,     setForm]     = useState(BLANK_FORM());
+  const [form,     setForm]     = useState(BLANK_FORM);
   const [lines,    setLines]    = useState([BLANK_LINE()]);
 
-  // Sync external open trigger
   useEffect(() => { if (openForm) setShowForm(true); }, [openForm]);
 
-  const handleClose = () => { setShowForm(false); onFormClose?.(); };
+  const handleClose = () => {
+    setShowForm(false);
+    onFormClose?.();
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['purchase-orders'],
@@ -91,8 +93,7 @@ export default function PurchaseOrders({ openForm, onFormClose }) {
 
   const columns = [
     { key: 'po_no', label: 'PO Number',
-      render: r => <span className="font-mono text-xs font-medium" style={{ color: 'var(--brand)' }}>{r.po_no}</span>
-    },
+      render: r => <span className="font-mono text-xs font-medium" style={{ color: 'var(--brand)' }}>{r.po_no}</span> },
     { key: 'supplier',      label: 'Supplier', render: r => r.suppliers?.name || '—' },
     { key: 'total_amount',  label: 'Amount',   render: r => formatCurrency(r.total_amount || 0) },
     { key: 'expected_date', label: 'Expected', render: r => formatDate(r.expected_date) },
@@ -121,9 +122,7 @@ export default function PurchaseOrders({ openForm, onFormClose }) {
 
   return (
     <>
-      <div className="card overflow-hidden">
-        <DataTable columns={columns} data={data || []} loading={isLoading} emptyTitle="No purchase orders" />
-      </div>
+      <DataTable columns={columns} data={data || []} loading={isLoading} emptyTitle="No purchase orders" />
 
       <Modal open={showForm} onClose={handleClose} title="New Purchase Order" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">

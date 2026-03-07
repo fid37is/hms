@@ -19,7 +19,7 @@ export function useStaffChat() {
   const queryClient       = useQueryClient();
 
   const isAdmin           = user?.role?.toLowerCase() === 'admin';
-  const staffDeptName     = user?.department || null;  // e.g. "Housekeeping"
+  const staffDeptName     = user?.department || null;
 
   const [socket,          setSocket]          = useState(null);
   const [connected,       setConnected]       = useState(false);
@@ -27,17 +27,16 @@ export function useStaffChat() {
   const [conversations,   setConversations]   = useState([]);
   const [activeDeptId,    setActiveDeptId]    = useState(null);
   const [activeConv,      setActiveConv]      = useState(null);
-  const [messages,        setMessages]        = useState({});   // { [convId]: Message[] }
+  const [messages,        setMessages]        = useState({});
   const [isLoading,       setIsLoading]       = useState(true);
-  const [isTyping,        setIsTyping]        = useState({});   // { [convId]: bool }
+  const [isTyping,        setIsTyping]        = useState({});
   const typingTimers      = useRef({});
 
-  // ── Load departments ────────────────────────────────────────────────────
+  // ── Load departments ─────────────────────────────────────────────────────
   useEffect(() => {
     departmentApi.getAllDepartments()
       .then(res => {
         const all = res.data.data || [];
-        // If staff has a department, only show that tab
         if (staffDeptName && !isAdmin) {
           const matched = all.filter(d =>
             d.name.toLowerCase() === staffDeptName.toLowerCase()
@@ -92,6 +91,8 @@ export function useStaffChat() {
   }, [activeConv]);
 
   // ── Socket connection ────────────────────────────────────────────────────
+  // NOTE: do NOT join rooms inside s.on('connect') — departments is still []
+  // at that point due to the async fetch. Room joining is handled separately below.
   useEffect(() => {
     if (!token) return;
 
@@ -101,33 +102,20 @@ export function useStaffChat() {
       reconnectionDelay: 1000,
     });
 
-    s.on('connect', () => {
-      setConnected(true);
-      // Join department room(s)
-      if (activeDeptId) {
-        s.emit('join_department', { departmentId: activeDeptId });
-      } else {
-        departments.forEach(d => s.emit('join_department', { departmentId: d.id }));
-      }
-    });
-
+    s.on('connect',    () => setConnected(true));
     s.on('disconnect', () => setConnected(false));
 
     s.on('new_message', ({ conversationId, message }) => {
-      // Append to messages if thread is open
       setMessages(prev => {
         if (!prev[conversationId]) return prev;
         const exists = prev[conversationId].some(m => m.id === message.id);
         if (exists) return prev;
         return { ...prev, [conversationId]: [...prev[conversationId], message] };
       });
-      // Update conversation preview
       setConversations(prev => prev.map(c =>
         c.id === conversationId ? { ...c, last_message_at: message.created_at } : c
       ));
-      // Reload list to update unread badges
       loadConversations();
-      // Toast only for guest messages
       if (message.sender_type === 'guest') {
         toast('💬 New guest message', { duration: 3000, id: `msg-${message.id}` });
       }
@@ -155,11 +143,20 @@ export function useStaffChat() {
     return () => s.disconnect();
   }, [token]);
 
-  // Re-join rooms when active dept changes
+  // ── Join socket rooms ────────────────────────────────────────────────────
+  // Runs whenever socket, connection state, activeDeptId, OR departments changes.
+  // This fixes the race condition: when the socket first connects, departments is
+  // still [] (the API call hasn't resolved yet). This effect fires again once
+  // departments loads, ensuring staff always join their correct room(s).
   useEffect(() => {
     if (!socket || !connected) return;
-    if (activeDeptId) socket.emit('join_department', { departmentId: activeDeptId });
-  }, [socket, connected, activeDeptId]);
+
+    if (activeDeptId) {
+      socket.emit('join_department', { departmentId: activeDeptId });
+    } else {
+      departments.forEach(d => socket.emit('join_department', { departmentId: d.id }));
+    }
+  }, [socket, connected, activeDeptId, departments]);
 
   const emitTyping     = (convId) => socket?.emit('typing',      { conversationId: convId });
   const emitStopTyping = (convId) => socket?.emit('stop_typing', { conversationId: convId });

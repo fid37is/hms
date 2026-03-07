@@ -76,7 +76,7 @@ export default function StaffPage() {
   ];
 
   const MobileCard = ({ row: r }) => (
-    <div className="card p-4 active:opacity-80">
+    <div className="p-4 active:opacity-80">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold uppercase flex-shrink-0"
           style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}>

@@ -3,7 +3,8 @@ export const getReservations  = (params) => api.get('/reservations', { params })
 export const getReservationById = (id)   => api.get(`/reservations/${id}`);
 export const createReservation = (data)  => api.post('/reservations', data);
 export const updateReservation = (id, d) => api.patch(`/reservations/${id}`, d);
-export const checkIn          = (id)     => api.patch(`/reservations/${id}/check-in`);
+export const checkIn          = (id, d)  => api.patch(`/reservations/${id}/check-in`, d);
+export const extendStay       = (id, d)  => api.patch(`/reservations/${id}/extend`, d);
 export const checkOut         = (id)     => api.patch(`/reservations/${id}/check-out`);
 export const cancelReservation = (id, d) => api.patch(`/reservations/${id}/cancel`, d);
 export const assignRoom       = (id, d)  => api.patch(`/reservations/${id}/assign-room`, d);

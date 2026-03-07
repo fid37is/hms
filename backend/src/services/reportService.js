@@ -86,6 +86,43 @@ export const getDashboardStats = async (orgId) => {
   const lowStockFiltered = (lowStock.data || []).filter(
     i => Number(i.current_stock) <= Number(i.reorder_level));
 
+  // ── Critical alerts ───────────────────────────────────────
+  const yesterday = toDate(new Date(now.getTime() - 86400000));
+  const tomorrow  = toDate(new Date(now.getTime() + 86400000));
+
+  const [overdueCheckouts, outstandingFolios, checkoutsToday, checkinsToday] = await Promise.all([
+    // Guests still checked_in past their checkout date
+    supabase.from('reservations')
+      .select('id, reservation_no, check_out_date, guests(full_name), rooms(number)')
+      .eq('org_id', orgId).eq('status', 'checked_in')
+      .lt('check_out_date', today)
+      .order('check_out_date'),
+
+    // Checked-in guests with outstanding folio balance
+    supabase.from('folios')
+      .select('id, balance, reservation_id, reservations(reservation_no, guests(full_name), rooms(number))')
+      .eq('org_id', orgId).eq('status', 'open').gt('balance', 0),
+
+    // Checkouts due today not yet done
+    supabase.from('reservations')
+      .select('id, reservation_no, check_out_date, guests(full_name), rooms(number)')
+      .eq('org_id', orgId).eq('status', 'checked_in').eq('check_out_date', today)
+      .order('check_out_date'),
+
+    // Confirmed arrivals today not yet checked in
+    supabase.from('reservations')
+      .select('id, reservation_no, check_in_date, guests(full_name), rooms(number)')
+      .eq('org_id', orgId).eq('status', 'confirmed').eq('check_in_date', today)
+      .order('check_in_date'),
+  ]);
+
+  const criticalAlerts = {
+    overdue_checkouts:   overdueCheckouts.data  || [],
+    outstanding_balances: (outstandingFolios.data || []).filter(f => f.reservations),
+    checkouts_due_today: checkoutsToday.data    || [],
+    checkins_due_today:  checkinsToday.data     || [],
+  };
+
   return {
     rooms:       { total: totalRooms, breakdown: roomBreakdown, occupancy_rate: `${occupancyRate}%` },
     today:       { arrivals: todayArrivals.count || 0, departures: todayDepartures.count || 0, in_house: inHouse.count || 0 },
@@ -96,6 +133,7 @@ export const getDashboardStats = async (orgId) => {
     recent_reservations: recentRes.data   || [],
     upcoming_arrivals:   upcomingArrivals.data || [],
     low_stock_alerts:    lowStockFiltered,
+    critical_alerts:     criticalAlerts,
   };
 };
 
@@ -197,7 +235,7 @@ export const getHousekeepingReport = async (orgId, dateFrom, dateTo) => {
   const { data, error } = await supabase
     .from('housekeeping_tasks')
     .select(`id, task_type, priority, status, started_at, completed_at,
-      rooms ( number, floor ), assigned:assigned_to ( full_name )`)
+      rooms!room_id ( number, floor ), assigned:assigned_to!assigned_to ( full_name )`)
     .eq('org_id', orgId)
     .gte('created_at', dateFrom).lte('created_at', dateTo + 'T23:59:59')
     .order('created_at', { ascending: false });

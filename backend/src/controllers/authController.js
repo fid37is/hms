@@ -60,21 +60,35 @@ export const registerOrgController = async (req, res, next) => {
 export const generateApiKeyController = async (req, res, next) => {
   try {
     const { label } = req.body;
-    const result = await authService.generateApiKey(req.user.org_id, label, req.user.sub); // ✅ was req.orgId
+    const result = await authService.generateApiKey(req.orgId, label, req.user.sub);
     return sendCreated(res, result, 'API key generated. Save this key — it will not be shown again.');
   } catch (err) { next(err); }
 };
 
 export const listApiKeysController = async (req, res, next) => {
   try {
-    const data = await authService.listApiKeys(req.user.org_id); // ✅ was req.orgId
+    const data = await authService.listApiKeys(req.orgId);
     return sendSuccess(res, data, 'API keys retrieved.');
   } catch (err) { next(err); }
 };
 
 export const revokeApiKeyController = async (req, res, next) => {
   try {
-    const data = await authService.revokeApiKey(req.user.org_id, req.params.id); // ✅ was req.orgId
+    const data = await authService.revokeApiKey(req.orgId, req.params.id);
     return sendSuccess(res, data, 'API key revoked.');
+  } catch (err) { next(err); }
+};
+
+export const getOrgController = async (req, res, next) => {
+  try {
+    const data = await authService.getOrgProfile(req.orgId);
+    return sendSuccess(res, data, 'Organisation profile retrieved.');
+  } catch (err) { next(err); }
+};
+
+export const updateOrgController = async (req, res, next) => {
+  try {
+    const data = await authService.updateOrgProfile(req.orgId, req.body);
+    return sendSuccess(res, data, 'Organisation profile updated.');
   } catch (err) { next(err); }
 };

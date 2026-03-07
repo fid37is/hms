@@ -4,6 +4,33 @@
 import { supabase } from '../config/supabase.js';
 import { AppError } from '../middleware/errorHandler.js';
 
+// ─── Seed all permission rows on startup ─────────────────────────────────────
+const ALL_PERMISSION_STRINGS = [
+  'billing:approve','billing:charge','billing:discount','billing:payment','billing:read','billing:void',
+  'guests:create','guests:read','guests:update',
+  'housekeeping:assign','housekeeping:read','housekeeping:update',
+  'inventory:orders','inventory:read','inventory:update',
+  'maintenance:create','maintenance:read','maintenance:update',
+  'reports:audit','reports:basic','reports:financial',
+  'reservations:checkin','reservations:checkout','reservations:create',
+  'reservations:delete','reservations:read','reservations:update',
+  'rooms:read','rooms:status','rooms:update',
+  'settings:read','settings:update',
+  'staff:manage','staff:payroll','staff:read',
+];
+
+export const seedPermissions = async () => {
+  const rows = ALL_PERMISSION_STRINGS.map(p => {
+    const [module, action] = p.split(':');
+    return { module, action };
+  });
+  const { error } = await supabase
+    .from('permissions')
+    .upsert(rows, { onConflict: 'module,action', ignoreDuplicates: true });
+  if (error) throw new Error(`seedPermissions: ${error.message}`);
+};
+
+
 // ─── Users ────────────────────────────────────────────────
 
 export const getAllUsers = async (orgId) => {
@@ -171,6 +198,27 @@ export const createRole = async ({ name, description, permissions = [] }) => {
   }
 
   return getAllRoles().then(roles => roles.find(r => r.id === role.id));
+};
+
+
+export const updateRole = async (id, { name, description, permissions = [] }) => {
+  // Update role name/description
+  const { error } = await supabase.from('roles').update({ name, description }).eq('id', id);
+  if (error) throw new AppError(`Failed to update role: ${error.message}`, 500);
+
+  // Replace all permissions: delete existing, insert new ones
+  await supabase.from('role_permissions').delete().eq('role_id', id);
+
+  if (permissions.length) {
+    const permPairs = permissions.map(p => { const [module, action] = p.split(':'); return { module, action }; });
+    const { data: permRecords } = await supabase.from('permissions').select('id, module, action');
+    const permIds = (permRecords || [])
+      .filter(pr => permPairs.some(pp => pp.module === pr.module && pp.action === pr.action))
+      .map(pr => ({ role_id: id, permission_id: pr.id }));
+    if (permIds.length) await supabase.from('role_permissions').insert(permIds);
+  }
+
+  return getAllRoles().then(roles => roles.find(r => r.id === id));
 };
 
 export const deleteRole = async (id) => {
