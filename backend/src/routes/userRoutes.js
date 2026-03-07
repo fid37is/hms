@@ -14,6 +14,7 @@ const { CONFIG: SETTINGS } = PERMISSIONS;
 // ─── Roles (MUST be before /:id to avoid wildcard capture) ──
 router.get('/roles',           requirePermission(SETTINGS.READ),   ctrl.getRoles);
 router.post('/roles',          requirePermission(SETTINGS.UPDATE), ctrl.createRole);
+router.patch('/roles/:id',     requirePermission(SETTINGS.UPDATE), ctrl.updateRoleCtrl);
 router.delete('/roles/:id',    requirePermission(SETTINGS.UPDATE), ctrl.deleteRole);
 
 // ─── Staff access ────────────────────────────────────────────

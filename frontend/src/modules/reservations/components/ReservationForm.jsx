@@ -84,7 +84,13 @@ export default function ReservationForm({ onSuccess }) {
   return (
     <form onSubmit={e => {
       e.preventDefault();
-      create.mutate({ ...form, adults: Number(form.adults), children: Number(form.children) });
+      const rate = selectedRoom?.room_types?.base_rate || 0;
+      create.mutate({
+        ...form,
+        adults:         Number(form.adults),
+        children:       Number(form.children),
+        rate_per_night: rate,
+      });
     }} className="space-y-4">
 
       {/* Guest */}
@@ -245,7 +251,7 @@ export default function ReservationForm({ onSuccess }) {
       <button
         type="submit"
         disabled={create.isPending || !form.guest_id || !form.room_id || !form.check_in_date || !form.check_out_date}
-        className="btn-primary w-full justify-center py-2.5"
+        className="btn-primary ml-auto block"
       >
         {create.isPending ? 'Creating…' : 'Create Reservation'}
       </button>

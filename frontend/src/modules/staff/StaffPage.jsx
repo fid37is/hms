@@ -16,17 +16,23 @@ const TABS = ['Staff', 'Leave Requests'];
 
 export default function StaffPage() {
   const qc = useQueryClient();
-  const [tab,            setTab]            = useState('Staff');
-  const [showForm,       setShowForm]       = useState(false);
-  const [editStaff,      setEditStaff]      = useState(null);
-  const [deleteTarget,   setDeleteTarget]   = useState(null);
-  const [selected,       setSelected]       = useState(null);
-  const [showLeaveForm,  setShowLeaveForm]  = useState(false);
+  const [tab,          setTab]          = useState('Staff');
+  const [showForm,     setShowForm]     = useState(false);
+  const [editStaff,    setEditStaff]    = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selected,     setSelected]     = useState(null);
+  const [showLeaveForm,setShowLeaveForm]= useState(false);
+  const [page,         setPage]         = useState(1);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['staff'],
-    queryFn:  () => staffApi.getStaff({}).then(r => r.data.data),
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['staff', page],
+    // r.data = { success, message, data: [...], meta: { total, page, ... } }
+    queryFn:  () => staffApi.getStaff({ page, limit: 20 }).then(r => r.data),
   });
+
+  const staff = response?.data || [];
+  console.log('staff response:', response, 'staff:', staff);
+  const meta  = response?.meta || {};
 
   const del = useMutation({
     mutationFn: (id) => staffApi.deleteStaff(id),
@@ -70,7 +76,7 @@ export default function StaffPage() {
   ];
 
   const MobileCard = ({ row: r }) => (
-    <div className="card p-4 active:opacity-80">
+    <div className="p-4 active:opacity-80">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold uppercase flex-shrink-0"
           style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}>
@@ -100,8 +106,6 @@ export default function StaffPage() {
 
   return (
     <div className="space-y-4">
-
-      {/* Tabs + action button on same row */}
       <div className="flex items-center justify-between gap-3">
         <div className="overflow-x-auto pb-1">
           <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
@@ -118,34 +122,34 @@ export default function StaffPage() {
             ))}
           </div>
         </div>
-
         {tab === 'Staff' && (
-          <button
-            onClick={() => { setEditStaff(null); setShowForm(true); }}
-            className="btn-primary text-xs flex-shrink-0"
-          >
+          <button onClick={() => { setEditStaff(null); setShowForm(true); }} className="btn-primary text-xs flex-shrink-0">
             <Plus size={14} /> Add
           </button>
         )}
         {tab === 'Leave Requests' && (
-          <button
-            onClick={() => setShowLeaveForm(true)}
-            className="btn-primary text-xs flex-shrink-0"
-          >
+          <button onClick={() => setShowLeaveForm(true)} className="btn-primary text-xs flex-shrink-0">
             <Plus size={14} /> Request Leave
           </button>
         )}
       </div>
 
       {tab === 'Staff' && (
-        <DataTable
-          columns={columns}
-          data={data || []}
-          loading={isLoading}
-          emptyTitle="No staff found"
-          onRowClick={r => setSelected(r)}
-          mobileCard={MobileCard}
-        />
+        <>
+          <DataTable columns={columns} data={staff} loading={isLoading}
+            emptyTitle="No staff found" onRowClick={r => setSelected(r)} mobileCard={MobileCard} />
+          {meta.total > 20 && (
+            <div className="hidden md:flex items-center justify-between">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Page {meta.page} of {meta.totalPages}
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => p - 1)} disabled={!meta.hasPrev} className="btn-secondary text-xs px-3">Prev</button>
+                <button onClick={() => setPage(p => p + 1)} disabled={!meta.hasNext} className="btn-secondary text-xs px-3">Next</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
       {tab === 'Leave Requests' && (
         <LeaveRequests openForm={showLeaveForm} onFormClose={() => setShowLeaveForm(false)} />

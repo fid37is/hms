@@ -1,11 +1,24 @@
 // src/server.js
 
-import app        from './app.js';
-import { env }    from './config/env.js';
+import { createServer } from 'http';
+import { seedPermissions } from './services/userService.js';
+import app     from './app.js';
+import { env } from './config/env.js';
+import { initSocket } from './socket.js';
 
 const PORT = env.PORT;
 
-const server = app.listen(PORT, () => {
+const httpServer = createServer(app);
+
+// Init socket.io
+initSocket(httpServer, app);
+
+// Seed permissions table on startup
+seedPermissions()
+  .then(() => console.log('Permissions seeded.'))
+  .catch(e  => console.error('Permission seed error:', e.message));
+
+httpServer.listen(PORT, () => {
   console.log('--------------------------------------------------');
   console.log('HMS Backend API');
   console.log('--------------------------------------------------');
@@ -18,7 +31,7 @@ const server = app.listen(PORT, () => {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully.');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('Server closed.');
     process.exit(0);
   });
@@ -26,5 +39,5 @@ process.on('SIGTERM', () => {
 
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Promise Rejection:', err.message);
-  server.close(() => process.exit(1));
+  httpServer.close(() => process.exit(1));
 });

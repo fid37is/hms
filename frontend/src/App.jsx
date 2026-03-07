@@ -4,42 +4,54 @@ import { useAuthStore } from './store/authStore';
 import AppShell from './components/layout/AppShell';
 
 // Pages
-import LoginPage              from './pages/LoginPage';
-import ForgotPasswordPage     from './pages/ForgotPasswordPage';
-import ResetPasswordPage      from './pages/ResetPasswordPage';
+import LandingPage             from './pages/LandingPage';
+import LoginPage               from './pages/LoginPage';
+import RegisterPage            from './pages/RegisterPage';
+import ForgotPasswordPage      from './pages/ForgotPasswordPage';
+import ResetPasswordPage       from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
-import DashboardPage          from './pages/DashboardPage';
-import NotFoundPage           from './pages/NotFoundPage';
+import OnboardingPage          from './pages/OnboardingPage';
+import DashboardPage           from './pages/DashboardPage';
+import NotFoundPage            from './pages/NotFoundPage';
 
 // Modules
-import RoomsPage          from './modules/rooms/RoomsPage';
-import ReservationsPage   from './modules/reservations/ReservationsPage';
-import GuestsPage         from './modules/guests/GuestsPage';
-import GuestProfilePage   from './modules/guests/GuestProfilePage';
-import FolioPage          from './modules/billing/FolioPage';
-import HousekeepingPage   from './modules/housekeeping/HousekeepingPage';
-import InventoryPage      from './modules/inventory/InventoryPage';
-import MaintenancePage    from './modules/maintenance/MaintenancePage';
-import StaffPage          from './modules/staff/StaffPage';
-import ReportsPage        from './modules/reports/ReportsPage';
-import SettingsPage       from './modules/settings/SettingsPage';
+import RoomsPage         from './modules/rooms/RoomsPage';
+import ReservationsPage  from './modules/reservations/ReservationsPage';
+import GuestsPage        from './modules/guests/GuestsPage';
+import GuestProfilePage  from './modules/guests/GuestProfilePage';
+import FolioPage         from './modules/billing/FolioPage';
+import HousekeepingPage  from './modules/housekeeping/HousekeepingPage';
+import InventoryPage     from './modules/inventory/InventoryPage';
+import MaintenancePage   from './modules/maintenance/MaintenancePage';
+import StaffPage         from './modules/staff/StaffPage';
+import ReportsPage       from './modules/reports/ReportsPage';
+import SettingsPage      from './modules/settings/SettingsPage';
+import ChatPage          from './modules/chat/ChatPage';
 
-// Guard: logged in but must change password → force change screen
+// Guard: blocked if not logged in, or if must change password
 function Guard({ children }) {
   const token              = useAuthStore(s => s.token);
   const mustChangePassword = useAuthStore(s => s.mustChangePassword);
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token)             return <Navigate to="/login" replace />;
   if (mustChangePassword) return <Navigate to="/change-password" replace />;
   return children;
 }
 
+// Public only — redirect to dashboard if already logged in
 function PublicRoute({ children }) {
   const token = useAuthStore(s => s.token);
   return token ? <Navigate to="/dashboard" replace /> : children;
 }
 
-// Special route: accessible when logged in but must_change_password is true
+// Accessible when logged in but must_change_password = true
 function ChangePasswordRoute({ children }) {
+  const token = useAuthStore(s => s.token);
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
+// Accessible once logged in (onboarding can be skipped)
+function AuthRoute({ children }) {
   const token = useAuthStore(s => s.token);
   if (!token) return <Navigate to="/login" replace />;
   return children;
@@ -60,19 +72,27 @@ export default function App() {
         }}
       />
       <Routes>
-        {/* Public */}
+        {/* Landing — root route, visible to everyone */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* Auth */}
         <Route path="/login"           element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register"        element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-        {/* Force password change — user is authenticated but blocked */}
+        {/* Force password change */}
         <Route path="/change-password" element={
           <ChangePasswordRoute><ForceChangePasswordPage /></ChangePasswordRoute>
         } />
 
-        {/* Protected app — blocked if must_change_password */}
+        {/* Onboarding — shown after org signup, skippable */}
+        <Route path="/onboarding" element={
+          <AuthRoute><OnboardingPage /></AuthRoute>
+        } />
+
+        {/* Protected app */}
         <Route element={<Guard><AppShell /></Guard>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"    element={<DashboardPage />} />
           <Route path="/rooms"        element={<RoomsPage />} />
           <Route path="/reservations" element={<ReservationsPage />} />
@@ -85,8 +105,10 @@ export default function App() {
           <Route path="/staff"        element={<StaffPage />} />
           <Route path="/reports"      element={<ReportsPage />} />
           <Route path="/settings"     element={<SettingsPage />} />
-          <Route path="*"             element={<NotFoundPage />} />
+          <Route path="/chat"         element={<ChatPage />} />
         </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

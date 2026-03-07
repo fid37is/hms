@@ -74,7 +74,7 @@ export default function LostFoundPanel({ openForm, onFormClose }) {
 
   return (
     <>
-      <div className="card overflow-hidden">
+      <div className="overflow-hidden">
         <DataTable
           columns={columns}
           data={data || []}

@@ -76,7 +76,7 @@ export default function LeaveRequests({ openForm, onFormClose }) {
 
   return (
     <>
-      <div className="card overflow-hidden">
+      <div className="overflow-hidden">
         <DataTable columns={columns} data={data || []} loading={isLoading} emptyTitle="No leave requests" />
       </div>
 

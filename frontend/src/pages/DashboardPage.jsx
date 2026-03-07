@@ -2,12 +2,165 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BedDouble, Users, CalendarCheck, TrendingUp, ArrowRight,
   Sparkles, Clock, CheckCircle, Wrench, UserPlus, AlertTriangle,
-  Package,
+  Package, LogOut, LogIn, Wallet, XCircle,
 } from 'lucide-react';
 import { getDashboard } from '../lib/api/reportApi';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatDate } from '../utils/format';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
+
+// ── Critical Alerts Banner ────────────────────────────────
+function CriticalAlertsBanner({ alerts }) {
+  const navigate = useNavigate();
+
+  const overdue   = alerts?.overdue_checkouts    || [];
+  const balances  = alerts?.outstanding_balances || [];
+  const dueOut    = alerts?.checkouts_due_today  || [];
+  const dueIn     = alerts?.checkins_due_today   || [];
+
+  const sections = [
+    {
+      key:    'overdue',
+      icon:   XCircle,
+      label:  'Overdue Check-outs',
+      accent: '#dc2626',
+      pill:   { bg: '#fef2f2', color: '#dc2626' },
+      items:  overdue,
+      render: r => ({
+        title: r.guests?.full_name || 'Guest',
+        sub:   `Room ${r.rooms?.number} · Due ${formatDate(r.check_out_date)}`,
+        tag:   'Overdue',
+      }),
+    },
+    {
+      key:    'balances',
+      icon:   Wallet,
+      label:  'Outstanding Balances',
+      accent: '#b45309',
+      pill:   { bg: '#fffbeb', color: '#b45309' },
+      items:  balances,
+      render: f => ({
+        title: f.reservations?.guests?.full_name || 'Guest',
+        sub:   `Room ${f.reservations?.rooms?.number} · ${f.reservations?.reservation_no}`,
+        tag:   formatCurrency(f.balance),
+      }),
+    },
+    {
+      key:    'dueOut',
+      icon:   LogOut,
+      label:  'Checking Out Today',
+      accent: '#1d4ed8',
+      pill:   { bg: '#eff6ff', color: '#1d4ed8' },
+      items:  dueOut,
+      render: r => ({
+        title: r.guests?.full_name || 'Guest',
+        sub:   `Room ${r.rooms?.number} · ${r.reservation_no}`,
+        tag:   'Today',
+      }),
+    },
+    {
+      key:    'dueIn',
+      icon:   LogIn,
+      label:  'Arriving Today',
+      accent: '#15803d',
+      pill:   { bg: '#f0fdf4', color: '#15803d' },
+      items:  dueIn,
+      render: r => ({
+        title: r.guests?.full_name || 'Guest',
+        sub:   `${r.reservation_no}${r.rooms?.number ? ` · Room ${r.rooms.number}` : ' · Unassigned'}`,
+        tag:   'Today',
+      }),
+    },
+  ].filter(s => s.items.length > 0);
+
+  if (sections.length === 0) return (
+    <div className="card flex flex-col items-center justify-center gap-2 py-8 text-center">
+      <CheckCircle size={22} style={{ color: 'var(--s-green-text)' }} />
+      <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>All clear</p>
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No critical actions right now</p>
+    </div>
+  );
+
+  return (
+    <div className="card overflow-hidden">
+      {/* Header — matches card-header style */}
+      <div className="card-header">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={13} style={{ color: 'var(--s-yellow-text)' }} />
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
+            Requires Attention
+          </span>
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+          style={{ backgroundColor: 'var(--s-red-bg)', color: 'var(--s-red-text)' }}>
+          {sections.reduce((s, sec) => s + sec.items.length, 0)} items
+        </span>
+      </div>
+
+      {/* Alert sections */}
+      <div className="divide-y" style={{ borderColor: 'var(--border-soft)' }}>
+        {sections.map(section => {
+          const Icon = section.icon;
+          return (
+            <div key={section.key} className="px-5 py-3">
+              {/* Section label */}
+              <div className="flex items-center gap-2 mb-2">
+                <Icon size={12} style={{ color: section.accent, flexShrink: 0 }} />
+                <span className="text-xs font-semibold" style={{ color: section.accent }}>
+                  {section.label}
+                </span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                  style={{ backgroundColor: section.pill.bg, color: section.pill.color }}>
+                  {section.items.length}
+                </span>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-1.5">
+                {section.items.slice(0, 3).map((item, i) => {
+                  const r = section.render(item);
+                  return (
+                    <div key={item.id || i}
+                      className="flex items-center justify-between gap-3 cursor-pointer group"
+                      onClick={() => navigate('/reservations')}>
+                      <div className="min-w-0 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: section.accent, opacity: 0.5 }} />
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>
+                            {r.title}
+                          </span>
+                          <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
+                            {r.sub}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded"
+                          style={{ backgroundColor: section.pill.bg, color: section.pill.color }}>
+                          {r.tag}
+                        </span>
+                        <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: 'var(--text-muted)' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {section.items.length > 3 && (
+                  <button onClick={() => navigate('/reservations')}
+                    className="text-xs ml-3.5 transition-opacity"
+                    style={{ color: 'var(--text-muted)' }}>
+                    +{section.items.length - 3} more
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Stat card ─────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, accent }) {
@@ -30,34 +183,59 @@ function StatCard({ icon: Icon, label, value, sub, accent }) {
 
 // ── Revenue bar chart (last 7 days) ───────────────────────
 function RevenueChart({ data = [] }) {
-  const max = Math.max(...data.map(d => d.amount), 1);
+  const max  = Math.max(...data.map(d => d.amount), 1);
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const total = data.reduce((s, d) => s + d.amount, 0);
 
   return (
     <div className="card">
       <div className="card-header">
         <span className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>Revenue — Last 7 Days</span>
         <span className="text-xs font-semibold" style={{ color: 'var(--brand)' }}>
-          {formatCurrency(data.reduce((s, d) => s + d.amount, 0))}
+          {formatCurrency(total)}
         </span>
       </div>
       <div className="card-body">
-        <div className="flex items-end gap-1.5 h-24">
-          {data.map((d, i) => {
-            const pct = (d.amount / max) * 100;
+        {/* Amount labels row */}
+        <div className="flex gap-1.5 mb-1">
+          {data.map((d) => (
+            <div key={d.date} className="flex-1 text-center">
+              {d.amount > 0 && (
+                <span className="text-xs font-medium" style={{ color: 'var(--brand)' }}>
+                  {formatCurrency(d.amount)}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Bars */}
+        <div className="flex items-end gap-1.5" style={{ height: 64 }}>
+          {data.map((d) => {
+            const pct = max > 0 ? (d.amount / max) * 100 : 0;
             const date = new Date(d.date + 'T12:00:00');
             return (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group">
-                <div className="w-full rounded-t-sm transition-all relative"
-                  style={{ height: `${Math.max(pct, 4)}%`, backgroundColor: pct > 0 ? 'var(--brand)' : 'var(--bg-muted)', opacity: pct > 0 ? 1 : 0.4 }}>
-                  {d.amount > 0 && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs whitespace-nowrap px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      style={{ backgroundColor: 'var(--text-base)', color: 'var(--bg-surface)' }}>
-                      {formatCurrency(d.amount)}
-                    </div>
-                  )}
-                </div>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{days[date.getDay()]}</span>
+              <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1" style={{ height: '100%' }}>
+                <div
+                  className="w-full rounded-t-sm transition-all duration-700"
+                  style={{
+                    height:          `${pct > 0 ? Math.max(pct, 8) : 3}%`,
+                    backgroundColor: pct > 0 ? 'var(--brand)' : 'var(--bg-muted)',
+                    opacity:         pct > 0 ? 1 : 0.35,
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        {/* Day labels */}
+        <div className="flex gap-1.5 mt-1.5">
+          {data.map((d) => {
+            const date = new Date(d.date + 'T12:00:00');
+            return (
+              <div key={d.date} className="flex-1 text-center">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {days[date.getDay()]}
+                </span>
               </div>
             );
           })}
@@ -300,6 +478,7 @@ export default function DashboardPage() {
   const recentRes   = stats.recent_reservations || [];
   const upcoming    = stats.upcoming_arrivals   || [];
   const lowStock    = stats.low_stock_alerts    || [];
+  const alerts      = stats.critical_alerts     || {};
 
   return (
     <div className="space-y-4">
@@ -328,17 +507,22 @@ export default function DashboardPage() {
         <RoomStatus rooms={rooms} />
       </div>
 
-      {/* Middle row */}
+      {/* Middle row — Critical alerts + Upcoming + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TodayActivity today={today} hk={hk} maintenance={maintenance} />
+        <CriticalAlertsBanner alerts={alerts} />
         <UpcomingArrivals arrivals={upcoming} />
         <QuickActions />
       </div>
 
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <RecentReservations reservations={recentRes} />
-        {lowStock.length > 0 && <LowStockAlerts items={lowStock} />}
+      {/* Bottom row — Recent reservations + Today's activity + Low stock */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RecentReservations reservations={recentRes} />
+        </div>
+        <div className="space-y-4">
+          <TodayActivity today={today} hk={hk} maintenance={maintenance} />
+          {lowStock.length > 0 && <LowStockAlerts items={lowStock} />}
+        </div>
       </div>
 
     </div>

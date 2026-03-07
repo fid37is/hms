@@ -14,6 +14,7 @@ import * as emailService             from '../services/emailService.js';
 // For logged-in guests  → use their existing guest_id from JWT
 // For unregistered guests → create a minimal guest record from form data
 const resolveGuestId = async (req) => {
+  // req.orgId set by resolveOrg middleware
   // 1. Logged-in guest account
   if (req.guest?.sub) return req.guest.sub;
 
@@ -21,10 +22,13 @@ const resolveGuestId = async (req) => {
   const { first_name, last_name, email, phone } = req.body.guest || {};
   if (!email) throw new AppError('Guest email is required.', 422);
 
-  // Check if a guest with this email already exists (returning guest, not web account)
+  const orgId = req.orgId;
+
+  // Guests are org-scoped — same email can exist across different hotels
   const { data: existing } = await supabase
     .from('guests')
     .select('id, is_deleted')
+    .eq('org_id', orgId)
     .eq('email', email)
     .eq('is_deleted', false)
     .limit(1)
@@ -32,15 +36,16 @@ const resolveGuestId = async (req) => {
 
   if (existing) return existing.id;
 
-  // Create new guest record
+  // Create new guest scoped to this org
   const { data: newGuest, error } = await supabase
     .from('guests')
     .insert({
+      org_id:         orgId,
       full_name:      `${first_name || ''} ${last_name || ''}`.trim(),
       email,
       phone:          phone || null,
       category:       'regular',
-      is_web_account: false,
+      is_web_account: true,
     })
     .select('id')
     .single();
@@ -71,6 +76,51 @@ export const publicCreateReservation = async (req, res, next) => {
       throw new AppError('Check-in and check-out dates are required.', 422);
     }
 
+    // ── Re-validate availability at submission time (prevent double-booking) ──
+    if (room_type_id) {
+      // Count total rooms of this type
+      const { data: totalRooms } = await supabase
+        .from('rooms')
+        .select('id', { count: 'exact' })
+        .eq('org_id', req.orgId)
+        .eq('type_id', room_type_id)
+        .eq('is_active', true)
+        .eq('is_blocked', false);
+
+      const totalCount = totalRooms?.length || 0;
+
+      // Count confirmed/checked-in reservations overlapping these dates
+      const { data: overlapping } = await supabase
+        .from('reservations')
+        .select('id', { count: 'exact' })
+        .eq('org_id', req.orgId)
+        .eq('room_type_id', room_type_id)
+        .in('status', ['confirmed', 'checked_in'])
+        .lt('check_in_date', checkOut)
+        .gt('check_out_date', checkIn);
+
+      const bookedCount = overlapping?.length || 0;
+
+      if (bookedCount >= totalCount) {
+        throw new AppError('Sorry, no rooms of this type are available for your selected dates.', 409);
+      }
+    }
+
+    // ── Validate guest count against room type capacity ──
+    if (room_type_id && adults) {
+      const { data: roomType } = await supabase
+        .from('room_types')
+        .select('max_occupancy')
+        .eq('id', room_type_id)
+        .single();
+
+      if (roomType?.max_occupancy && (adults + (children || 0)) > roomType.max_occupancy) {
+        throw new AppError(
+          `This room type accommodates a maximum of ${roomType.max_occupancy} guests.`, 422
+        );
+      }
+    }
+
     // Get rate per night from rate plan if not provided directly
     let nightRate = rate_per_night;
     if (!nightRate && rate_plan_id) {
@@ -94,7 +144,7 @@ export const publicCreateReservation = async (req, res, next) => {
 
     if (!nightRate) throw new AppError('Could not determine room rate.', 422);
 
-    const data = await reservationService.createReservation({
+    const data = await reservationService.createReservation(req.orgId, {
       guest_id,
       room_id:         null,          // room assigned at check-in by staff
       room_type_id,
@@ -146,10 +196,21 @@ export const publicCreateReservation = async (req, res, next) => {
 // ─── PATCH /api/v1/public/reservations/:id/cancel ────────────────────────────
 export const publicCancelReservation = async (req, res, next) => {
   try {
+    // Verify the reservation belongs to this guest
+    const { data: reservation } = await supabase
+      .from('reservations')
+      .select('id, guest_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!reservation) throw new AppError('Reservation not found.', 404);
+    if (reservation.guest_id !== req.guest.sub)
+      throw new AppError('You are not authorised to cancel this reservation.', 403);
+
     const data = await reservationService.cancelReservation(
+      req.orgId,
       req.params.id,
-      req.body.reason || 'Cancelled by guest via website.',
-      null
+      req.body.reason || 'Cancelled by guest via website.'
     );
     return sendSuccess(res, data, 'Your reservation has been cancelled.');
   } catch (err) { next(err); }

@@ -2,25 +2,25 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, AlertTriangle } from 'lucide-react';
 import * as invApi    from '../../lib/api/inventoryApi';
-import DataTable      from '../../components/shared/DataTable';
-import Modal          from '../../components/shared/Modal';
-import StatusBadge    from '../../components/shared/StatusBadge';
-import ItemForm       from './components/ItemForm';
-import MovementForm   from './components/MovementForm';
-import PurchaseOrders from './components/PurchaseOrders';
-import toast from 'react-hot-toast';
+import DataTable       from '../../components/shared/DataTable';
+import Modal           from '../../components/shared/Modal';
+import ItemForm        from './components/ItemForm';
+import MovementForm    from './components/MovementForm';
+import PurchaseOrders  from './components/PurchaseOrders';
+import Suppliers       from './components/Suppliers';
 
-const TABS = ['Stock', 'Purchase Orders'];
+const TABS = ['Stock', 'Purchase Orders', 'Suppliers'];
 
 export default function InventoryPage() {
   const qc = useQueryClient();
-  const [tab,      setTab]      = useState('Stock');
-  const [showItem, setShowItem] = useState(false);
-  const [showMove, setShowMove] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [moveItem, setMoveItem] = useState(null);
-  const [showLow,  setShowLow]  = useState(false);
-  const [showPO,   setShowPO]   = useState(false);
+  const [tab,          setTab]          = useState('Stock');
+  const [showItem,     setShowItem]     = useState(false);
+  const [showMove,     setShowMove]     = useState(false);
+  const [showPO,       setShowPO]       = useState(false);
+  const [showSupplier, setShowSupplier] = useState(false);
+  const [editItem,     setEditItem]     = useState(null);
+  const [moveItem,     setMoveItem]     = useState(null);
+  const [showLow,      setShowLow]      = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['inventory-items', showLow],
@@ -68,9 +68,7 @@ export default function InventoryPage() {
             Movement
           </button>
           <button onClick={e => { e.stopPropagation(); setEditItem(r); setShowItem(true); }}
-            className="btn-ghost text-xs px-2 py-1">
-            Edit
-          </button>
+            className="btn-ghost text-xs px-2 py-1">Edit</button>
         </div>
       )
     },
@@ -103,9 +101,7 @@ export default function InventoryPage() {
             Movement
           </button>
           <button onClick={() => { setEditItem(r); setShowItem(true); }}
-            className="btn-ghost text-xs px-2 py-1">
-            Edit
-          </button>
+            className="btn-ghost text-xs px-2 py-1">Edit</button>
         </div>
       </div>
     </div>
@@ -114,7 +110,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-4">
 
-      {/* Tabs + action buttons on same row */}
+      {/* Tabs + action button on same row */}
       <div className="flex items-center justify-between gap-3">
         <div className="overflow-x-auto pb-1">
           <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
@@ -132,45 +128,45 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        {/* Stock tab actions */}
-        {tab === 'Stock' && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => setShowLow(s => !s)}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-md transition-all"
-              style={{
-                backgroundColor: showLow ? 'var(--s-red-bg)'      : 'var(--bg-surface)',
-                color:           showLow ? 'var(--s-red-text)'    : 'var(--text-muted)',
-                border:          showLow ? 'none'                  : '1px solid var(--border-base)',
-              }}>
-              <AlertTriangle size={12} />
-              Low Stock
+        <div className="flex gap-2 flex-shrink-0">
+          {tab === 'Stock' && (
+            <>
+              <button onClick={() => setShowLow(s => !s)}
+                className="text-xs px-3 py-1.5 rounded-md transition-all"
+                style={{
+                  backgroundColor: showLow ? 'var(--s-red-bg)'  : 'var(--bg-surface)',
+                  color:           showLow ? 'var(--s-red-text)' : 'var(--text-muted)',
+                  border:          showLow ? 'none'              : '1px solid var(--border-base)',
+                }}>
+                <AlertTriangle size={12} className="inline mr-1" />
+                Low Stock
+              </button>
+              <button onClick={() => { setEditItem(null); setShowItem(true); }} className="btn-primary text-xs">
+                <Plus size={14} /> Add Item
+              </button>
+            </>
+          )}
+          {tab === 'Purchase Orders' && (
+            <button onClick={() => setShowPO(true)} className="btn-primary text-xs">
+              <Plus size={14} /> New PO
             </button>
-            <button onClick={() => { setEditItem(null); setShowItem(true); }} className="btn-primary text-xs">
-              <Plus size={14} /> Add
+          )}
+          {tab === 'Suppliers' && (
+            <button onClick={() => setShowSupplier(true)} className="btn-primary text-xs">
+              <Plus size={14} /> Add Supplier
             </button>
-          </div>
-        )}
-
-        {/* Purchase Orders tab action */}
-        {tab === 'Purchase Orders' && (
-          <button onClick={() => setShowPO(true)} className="btn-primary text-xs flex-shrink-0">
-            <Plus size={14} /> New PO
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       {tab === 'Stock' && (
-        <DataTable
-          columns={columns}
-          data={items}
-          loading={isLoading}
-          emptyTitle="No items found"
-          mobileCard={MobileCard}
-        />
+        <DataTable columns={columns} data={items} loading={isLoading} emptyTitle="No items found" mobileCard={MobileCard} />
       )}
       {tab === 'Purchase Orders' && (
         <PurchaseOrders openForm={showPO} onFormClose={() => setShowPO(false)} />
+      )}
+      {tab === 'Suppliers' && (
+        <Suppliers openForm={showSupplier} onFormClose={() => setShowSupplier(false)} />
       )}
 
       <Modal open={showItem} onClose={() => setShowItem(false)} title={editItem ? 'Edit Item' : 'Add Item'}>

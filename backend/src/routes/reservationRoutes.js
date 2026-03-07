@@ -22,6 +22,7 @@ import {
   assignRoom,
   getTodayArrivals,
   getTodayDepartures,
+  extendStay,
 } from '../controllers/reservationController.js';
 
 const router = Router();
@@ -83,6 +84,12 @@ router.patch('/:id/check-in',
 router.patch('/:id/check-out',
   requirePermission(PERMISSIONS.RESERVATIONS.CHECKOUT),
   checkOut
+);
+
+// PATCH /api/v1/reservations/:id/extend
+router.patch('/:id/extend',
+  requirePermission(PERMISSIONS.RESERVATIONS.UPDATE),
+  extendStay
 );
 
 // PATCH /api/v1/reservations/:id/cancel
