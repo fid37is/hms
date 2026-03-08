@@ -1,65 +1,69 @@
+// src/components/brand/Logo.jsx
+
 import { Link } from 'react-router-dom';
 
 const SIZES = {
-  xs: { box: 32,  font: 20, gap: 4  },
-  sm: { box: 40,  font: 24, gap: 5  },
-  md: { box: 52,  font: 30, gap: 6  },
-  lg: { box: 64,  font: 38, gap: 7  },
-  xl: { box: 80,  font: 48, gap: 8  },
+  xs: { box: 32, font: 18, gap: 7  },
+  sm: { box: 40, font: 21, gap: 8  },
+  md: { box: 48, font: 26, gap: 10 },
+  lg: { box: 58, font: 32, gap: 12 },
+  xl: { box: 72, font: 42, gap: 16 },
 };
 
-const THEME = {
-  dark:  { text: '#0D1A13', bg: 'transparent',            padding: 0,          borderRadius: 0 },
-  light: { text: '#ffffff', bg: 'transparent',            padding: 0,          borderRadius: 0 },
-  white: { text: '#ffffff', bg: 'rgba(13, 26, 19, 0.85)', padding: '6px 14px', borderRadius: 8 },
-};
+function Wordmark({ fontSize }) {
+  return (
+    <span style={{
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+      fontSize, lineHeight: 1, letterSpacing: '-0.03em',
+      fontWeight: 700, userSelect: 'none', color: '#ffffff',
+    }}>
+      Cierlo
+    </span>
+  );
+}
 
 export default function Logo({
-  size      = 'md',
-  variant   = 'full',
-  theme     = 'dark',
-  href      = '/',
-  noLink    = false,
-  style     = {},
-  className = '',
+  size       = 'md',
+  variant    = 'full',  // 'full' | 'icon'
+  href       = '/',
+  noLink     = false,
+  style      = {},
+  className  = '',
+  responsive = false,
+  // legacy props — accepted, ignored
+  theme, light, darkBg,
 }) {
-  const s = SIZES[size]  ?? SIZES.md;
-  const t = THEME[theme] ?? THEME.dark;
+  const s = SIZES[size] ?? SIZES.md;
 
-  const IconMark = () => (
-    <div style={{ height: s.box, width: s.box, flexShrink: 0, overflow: 'hidden', margin: '-12%' }}>
-      <img
-        src="/mira-logo.png"
-        alt="Miravance"
-        style={{ height: '125%', width: '125%', objectFit: 'contain', display: 'block', margin: '-12.5%' }}
-      />
+  const icon = (
+    <img
+      src="/cierlo_logo.png"
+      alt="Cierlo"
+      style={{ height: s.box, width: 'auto', display: 'block', flexShrink: 0 }}
+    />
+  );
+
+  const full = (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: s.gap }}>
+      {icon}
+      <Wordmark fontSize={s.font} />
     </div>
   );
 
-  const Wordmark = () => (
-    <span style={{
-      fontFamily: "'Instrument Serif', Georgia, serif",
-      fontSize: s.font, color: t.text,
-      letterSpacing: '-0.01em', lineHeight: 1, userSelect: 'none',
-    }}>
-      Miravance
-    </span>
-  );
-
-  const inner = (
-    <div
-      style={{
-        display: 'inline-flex', alignItems: 'center',
-        gap: variant === 'icon' ? 0 : s.gap,
-        background: t.bg, padding: t.padding, borderRadius: t.borderRadius,
-        backdropFilter: theme === 'white' ? 'blur(4px)' : 'none',
-        transition: 'background 0.2s ease',
-        ...style,
-      }}
-      className={className}
-    >
-      {(variant === 'full' || variant === 'icon') && <IconMark />}
-      {(variant === 'full' || variant === 'wordmark') && <Wordmark />}
+  const inner = responsive ? (
+    <div style={{ display: 'inline-flex', alignItems: 'center', ...style }} className={className}>
+      <span className="cl-logo-full">{full}</span>
+      <span className="cl-logo-icon" style={{ display: 'none' }}>{icon}</span>
+      <style>{`
+        @media(max-width:640px){
+          .cl-logo-full { display: none !important; }
+          .cl-logo-icon { display: inline-flex !important; }
+        }
+      `}</style>
+    </div>
+  ) : (
+    <div style={{ display: 'inline-flex', alignItems: 'center', ...style }} className={className}>
+      {variant === 'icon' ? icon : full}
     </div>
   );
 

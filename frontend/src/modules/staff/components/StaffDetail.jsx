@@ -70,7 +70,7 @@ function GrantAccessForm({ staff, roles, onSuccess }) {
           ))}
         </select>
         <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-          The role controls what this staff member can see and do in HMS
+          The role controls what this staff member can see and do in Cierlo
         </p>
       </div>
 
@@ -197,8 +197,8 @@ export default function StaffDetail({ staffId }) {
               <p className="text-xs mt-0.5"
                 style={{ color: hasAccess ? 'var(--s-green-text)' : 'var(--text-muted)', opacity: 0.8 }}>
                 {hasAccess
-                  ? 'This staff member can log into HMS'
-                  : 'Grant access so this person can log in and use HMS'
+                  ? 'This staff member can log into Cierlo'
+                  : 'Grant access so this person can log in and use Cierlo'
                 }
               </p>
             </div>
@@ -264,7 +264,7 @@ export default function StaffDetail({ staffId }) {
         open={showRevoke}
         danger
         title="Revoke System Access"
-        message={`Remove HMS login access for ${staff.full_name}? Their staff record will remain intact but they will no longer be able to log in.`}
+        message={`Remove Cierlo login access for ${staff.full_name}? Their staff record will remain intact but they will no longer be able to log in.`}
         loading={revoke.isPending}
         onClose={() => setShowRevoke(false)}
         onConfirm={() => revoke.mutate()}

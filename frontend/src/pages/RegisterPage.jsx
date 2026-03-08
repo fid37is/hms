@@ -6,7 +6,7 @@ import { Eye, EyeOff, ArrowRight, CheckCircle2, Building2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
-import Logo from '../components/brand/logo';
+import Logo from '../components/brand/Logo';
 
 const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap';
 
@@ -295,7 +295,7 @@ export default function RegisterPage() {
                     />
                   </div>
                   {slugPreview && (
-                    <p className="reg-hint">Workspace: <span>{slugPreview}.miravance.io</span></p>
+                    <p className="reg-hint">Workspace: <span>{slugPreview}.cierlo.io</span></p>
                   )}
                 </div>
 

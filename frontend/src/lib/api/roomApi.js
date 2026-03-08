@@ -38,3 +38,15 @@ export const uploadRoomMedia = (roomId, file) => {
 
 export const deleteRoomMedia = (roomId, path) =>
   api.delete(`/rooms/${roomId}/media`, { data: { path } });
+
+// Room Type Media
+export const uploadRoomTypeMedia = (typeId, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post(`/rooms/types/${typeId}/media`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const deleteRoomTypeMedia = (typeId, path) =>
+  api.delete(`/rooms/types/${typeId}/media`, { data: { path } });

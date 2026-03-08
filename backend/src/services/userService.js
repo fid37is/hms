@@ -162,16 +162,19 @@ export const revokeStaffAccess = async (orgId, staffId) => {
   return { message: 'System access revoked.' };
 };
 
-// ─── Roles (global — not org-scoped) ─────────────────────
+// ─── Roles (org-scoped) ───────────────────────────────────
 
-export const getAllRoles = async () => {
+export const getAllRoles = async (orgId) => {
   const { data: roles, error } = await supabase
-    .from('roles').select('id, name, description, created_at').order('name');
+    .from('roles').select('id, name, description, created_at')
+    .eq('org_id', orgId).order('name');
 
   if (error) throw new AppError(`Failed to fetch roles: ${error.message}`, 500);
 
-  const { data: rolePerms } = await supabase
-    .from('role_permissions').select('role_id, permissions(module, action)');
+  const roleIds = (roles || []).map(r => r.id);
+  const { data: rolePerms } = roleIds.length
+    ? await supabase.from('role_permissions').select('role_id, permissions(module, action)').in('role_id', roleIds)
+    : { data: [] };
 
   const permsMap = {};
   for (const rp of (rolePerms || [])) {
@@ -179,12 +182,12 @@ export const getAllRoles = async () => {
     if (rp.permissions) permsMap[rp.role_id].push(`${rp.permissions.module}:${rp.permissions.action}`);
   }
 
-  return roles.map(r => ({ ...r, permissions: permsMap[r.id] || [] }));
+  return (roles || []).map(r => ({ ...r, permissions: permsMap[r.id] || [] }));
 };
 
-export const createRole = async ({ name, description, permissions = [] }) => {
+export const createRole = async (orgId, { name, description, permissions = [] }) => {
   const { data: role, error } = await supabase
-    .from('roles').insert({ name, description }).select().single();
+    .from('roles').insert({ org_id: orgId, name, description }).select().single();
 
   if (error) throw new AppError(`Failed to create role: ${error.message}`, 500);
 
@@ -197,16 +200,24 @@ export const createRole = async ({ name, description, permissions = [] }) => {
     if (permIds.length) await supabase.from('role_permissions').insert(permIds);
   }
 
-  return getAllRoles().then(roles => roles.find(r => r.id === role.id));
+  return getAllRoles(orgId).then(roles => roles.find(r => r.id === role.id));
 };
 
+export const updateRole = async (orgId, id, { name, description, permissions = [] }) => {
+  // Verify role belongs to this org
+  const { data: existing } = await supabase
+    .from('roles').select('id').eq('org_id', orgId).eq('id', id).single();
+  if (!existing) throw new AppError('Role not found.', 404);
 
-export const updateRole = async (id, { name, description, permissions = [] }) => {
-  // Update role name/description
-  const { error } = await supabase.from('roles').update({ name, description }).eq('id', id);
-  if (error) throw new AppError(`Failed to update role: ${error.message}`, 500);
+  const { error: roleErr } = await supabase.from('roles')
+    .update({ name, description }).eq('org_id', orgId).eq('id', id);
+  if (roleErr) throw new AppError(`Failed to update role: ${roleErr.message}`, 500);
 
-  // Replace all permissions: delete existing, insert new ones
+  if (permissions.length) {
+    const permRows = permissions.map(p => { const [module, action] = p.split(':'); return { module, action }; });
+    await supabase.from('permissions').upsert(permRows, { onConflict: 'module,action', ignoreDuplicates: true });
+  }
+
   await supabase.from('role_permissions').delete().eq('role_id', id);
 
   if (permissions.length) {
@@ -218,11 +229,15 @@ export const updateRole = async (id, { name, description, permissions = [] }) =>
     if (permIds.length) await supabase.from('role_permissions').insert(permIds);
   }
 
-  return getAllRoles().then(roles => roles.find(r => r.id === id));
+  return getAllRoles(orgId).then(roles => roles.find(r => r.id === id));
 };
 
-export const deleteRole = async (id) => {
-  const { error } = await supabase.from('roles').delete().eq('id', id);
+export const deleteRole = async (orgId, id) => {
+  const { data: existing } = await supabase
+    .from('roles').select('id').eq('org_id', orgId).eq('id', id).single();
+  if (!existing) throw new AppError('Role not found.', 404);
+
+  const { error } = await supabase.from('roles').delete().eq('org_id', orgId).eq('id', id);
   if (error) throw new AppError(`Failed to delete role: ${error.message}`, 500);
   return { message: 'Role deleted.' };
 };

@@ -3,8 +3,6 @@
 import * as roomService from '../services/roomService.js';
 import { sendSuccess, sendCreated } from '../utils/response.js';
 
-// ─── Room Types ───────────────────────────────────────────
-
 export const getAllRoomTypes = async (req, res, next) => {
   try {
     const data = await roomService.getAllRoomTypes(req.orgId);
@@ -40,8 +38,6 @@ export const deleteRoomType = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// ─── Rate Plans ───────────────────────────────────────────
-
 export const getRatePlans = async (req, res, next) => {
   try {
     const data = await roomService.getRatePlans(req.orgId, req.params.roomTypeId);
@@ -69,8 +65,6 @@ export const deleteRatePlan = async (req, res, next) => {
     return sendSuccess(res, data, 'Rate plan deleted.');
   } catch (err) { next(err); }
 };
-
-// ─── Rooms ────────────────────────────────────────────────
 
 export const getAllRooms = async (req, res, next) => {
   try {
@@ -133,14 +127,16 @@ export const deleteRoom = async (req, res, next) => {
 export const getAvailableRooms = async (req, res, next) => {
   try {
     const { check_in, check_out, type_id } = req.query;
-    const data = await roomService.getAvailableRooms(req.orgId, check_in, check_out, type_id, true);
+    const withMedia = req.query.with_media === '1' || req.path?.includes('public');
+    const data = await roomService.getAvailableRooms(req.orgId, check_in, check_out, type_id, withMedia);
     return sendSuccess(res, data, 'Available rooms retrieved.');
   } catch (err) { next(err); }
 };
 
 export const uploadMedia = async (req, res, next) => {
   try {
-    if (!req.file) throw new (await import('../middleware/errorHandler.js')).AppError('No file provided.', 400);
+    const { AppError } = await import('../middleware/errorHandler.js');
+    if (!req.file) throw new AppError('No file provided.', 400);
     const data = await roomService.uploadRoomMedia(req.orgId, req.params.id, req.file);
     return sendSuccess(res, data, 'Media uploaded.');
   } catch (err) { next(err); }
@@ -149,6 +145,22 @@ export const uploadMedia = async (req, res, next) => {
 export const deleteMedia = async (req, res, next) => {
   try {
     const data = await roomService.deleteRoomMedia(req.orgId, req.params.id, req.body.path);
+    return sendSuccess(res, data, 'Media deleted.');
+  } catch (err) { next(err); }
+};
+
+export const uploadTypeMedia = async (req, res, next) => {
+  try {
+    const { AppError } = await import('../middleware/errorHandler.js');
+    if (!req.file) throw new AppError('No file provided.', 400);
+    const data = await roomService.uploadRoomTypeMedia(req.orgId, req.params.id, req.file);
+    return sendSuccess(res, data, 'Media uploaded.');
+  } catch (err) { next(err); }
+};
+
+export const deleteTypeMedia = async (req, res, next) => {
+  try {
+    const data = await roomService.deleteRoomTypeMedia(req.orgId, req.params.id, req.body.path);
     return sendSuccess(res, data, 'Media deleted.');
   } catch (err) { next(err); }
 };
