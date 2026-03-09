@@ -4,7 +4,7 @@
 // Total loop: ~20 seconds.
 
 import { useState, useEffect } from 'react';
-import Logo from '../brand/Logo';
+import Logo from '../brand/logo';
 
 /* ─── Palette ────────────────────────────────────────────────── */
 const dark    = '#0D0F14';
