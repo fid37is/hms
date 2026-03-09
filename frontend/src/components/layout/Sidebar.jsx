@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import Logo from '../brand/logo';
+import Logo from '../brand/cierlo_logo';
 import {
   LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings,

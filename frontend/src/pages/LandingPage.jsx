@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import Logo from '../components/brand/logo'
+import Logo from '../components/brand/cierlo_logo'
 import DashboardDemo from '../components/marketing/DashboardDemo';
 
 /* ─── Single consistent dark ────────────────────────────────── */

@@ -1,4 +1,4 @@
-// src/components/brand/Logo.jsx
+// src/components/brand/cierlo_logo.jsx
 
 import { Link } from 'react-router-dom';
 
