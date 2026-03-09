@@ -6,6 +6,7 @@ import crypto       from 'crypto';
 import { supabase } from '../config/supabase.js';
 import { env }      from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { auditLogin } from './auditService.js';
 
 const generateAccessToken  = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
 const generateRefreshToken = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
@@ -47,6 +48,7 @@ export const login = async (email, password) => {
   }
 
   await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.id);
+  auditLogin(orgId, user.id, `Login: ${user.email}`);
 
   const tokenPayload = {
     sub:        user.id,

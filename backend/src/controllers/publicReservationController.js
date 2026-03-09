@@ -66,6 +66,7 @@ export const publicCreateReservation = async (req, res, next) => {
       adults, children,
       special_requests,
       rate_per_night,
+      payment_method,
     } = req.body;
 
     // Support both date field naming conventions
@@ -177,10 +178,12 @@ export const publicCreateReservation = async (req, res, next) => {
       check_out_date:  checkOut,
       adults:          adults  || 1,
       children:        children || 0,
-      booking_source:  'online',
-      rate_per_night:  nightRate,
-      deposit_amount:  0,
+      booking_source:   'online',
+      rate_per_night:   nightRate,
+      deposit_amount:   0,
       special_requests: special_requests || null,
+      payment_method:   ['on_arrival','bank_transfer','paystack'].includes(payment_method) ? payment_method : 'on_arrival',
+      payment_status:   payment_method === 'on_arrival' ? 'pending' : 'pending_transfer',
     }, null);
 
     // Send confirmation email (non-blocking — don't fail booking if email fails)

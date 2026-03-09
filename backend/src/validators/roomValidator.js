@@ -21,12 +21,18 @@ export const updateRoomTypeSchema = Joi.object({
 });
 
 export const createRatePlanSchema = Joi.object({
-  room_type_id:  Joi.string().uuid().required(),
-  name:          Joi.string().trim().required(),
-  rate:          Joi.number().integer().min(0).required(), // in kobo
-  valid_from:    Joi.date().iso().optional().allow(null),
-  valid_to:      Joi.date().iso().optional().allow(null),
-  days_of_week:  Joi.array().items(Joi.number().integer().min(0).max(6)).default([0,1,2,3,4,5,6]),
+  room_type_id:             Joi.string().uuid().required(),
+  name:                     Joi.string().trim().required(),
+  base_rate:                Joi.number().integer().min(0).optional(),
+  rate:                     Joi.number().integer().min(0).optional(), // legacy alias
+  rate_per_night:           Joi.number().integer().min(0).optional(), // frontend alias
+  valid_from:               Joi.date().iso().optional().allow(null),
+  valid_to:                 Joi.date().iso().optional().allow(null),
+  days_of_week:             Joi.array().items(Joi.number().integer().min(0).max(6)).default([0,1,2,3,4,5,6]),
+  description:              Joi.string().trim().optional().allow('', null),
+  cancellation_policy:      Joi.string().valid('refundable', 'non_refundable').default('refundable'),
+  free_cancellation_window: Joi.string().valid('24h', '48h', '72h', 'none').default('24h'),
+  payment_timing:           Joi.string().valid('at_property', 'now').default('at_property'),
 });
 
 export const updateRatePlanSchema = Joi.object({

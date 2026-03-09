@@ -35,8 +35,8 @@ export const getRateForDate = async (roomTypeId, date) => {
 
   // Use the most specific plan (highest rate — typically seasonal/weekend)
   if (matching.length > 0) {
-    const best = matching.reduce((a, b) => (a.rate > b.rate ? a : b));
-    return { rate: best.rate, source: 'rate_plan', plan_name: best.name };
+    const best = matching.reduce((a, b) => (a.base_rate > b.base_rate ? a : b));
+    return { rate: best.base_rate, source: 'rate_plan', plan_name: best.name };
   }
 
   // Fall back to room type base rate

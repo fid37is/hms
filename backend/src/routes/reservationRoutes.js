@@ -23,6 +23,7 @@ import {
   getTodayArrivals,
   getTodayDepartures,
   extendStay,
+  markPaymentReceived,
 } from '../controllers/reservationController.js';
 
 const router = Router();
@@ -90,6 +91,12 @@ router.patch('/:id/check-out',
 router.patch('/:id/extend',
   requirePermission(PERMISSIONS.RESERVATIONS.UPDATE),
   extendStay
+);
+
+// PATCH /api/v1/reservations/:id/mark-paid
+router.patch('/:id/mark-paid',
+  requirePermission(PERMISSIONS.RESERVATIONS.UPDATE),
+  markPaymentReceived
 );
 
 // PATCH /api/v1/reservations/:id/cancel

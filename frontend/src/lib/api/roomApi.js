@@ -8,7 +8,7 @@ export const deleteRoomType   = (id)          => api.delete(`/rooms/types/${id}`
 
 // Rate Plans
 export const getRatePlans     = (typeId)      => api.get(`/rooms/types/${typeId}/rates`);
-export const createRatePlan   = (typeId, data)=> api.post(`/rooms/types/${typeId}/rates`, data);
+export const createRatePlan   = (typeId, data)=> api.post('/rooms/rates', { ...data, room_type_id: typeId });
 export const deleteRatePlan   = (id)          => api.delete(`/rooms/rates/${id}`);
 
 // Availability — maps check_in_date/check_out_date to what the backend expects

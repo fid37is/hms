@@ -20,13 +20,14 @@ import ReservationsPage  from './modules/reservations/ReservationsPage';
 import GuestsPage        from './modules/guests/GuestsPage';
 import GuestProfilePage  from './modules/guests/GuestProfilePage';
 import FolioPage         from './modules/billing/FolioPage';
+import BillingPage       from './modules/billing/BillingPage';
 import HousekeepingPage  from './modules/housekeeping/HousekeepingPage';
 import InventoryPage     from './modules/inventory/InventoryPage';
 import MaintenancePage   from './modules/maintenance/MaintenancePage';
 import StaffPage         from './modules/staff/StaffPage';
 import ReportsPage       from './modules/reports/ReportsPage';
-import SettingsPage      from './modules/settings/SettingsPage';
 import ChatPage          from './modules/chat/ChatPage';
+import SettingsPage      from './modules/settings/SettingsPage';
 
 // Guard: blocked if not logged in, or if must change password
 function Guard({ children }) {
@@ -98,14 +99,15 @@ export default function App() {
           <Route path="/reservations" element={<ReservationsPage />} />
           <Route path="/guests"       element={<GuestsPage />} />
           <Route path="/guests/:id"   element={<GuestProfilePage />} />
+          <Route path="/billing"      element={<BillingPage />} />
           <Route path="/folio/:id"    element={<FolioPage />} />
           <Route path="/housekeeping" element={<HousekeepingPage />} />
           <Route path="/inventory"    element={<InventoryPage />} />
           <Route path="/maintenance"  element={<MaintenancePage />} />
           <Route path="/staff"        element={<StaffPage />} />
           <Route path="/reports"      element={<ReportsPage />} />
-          <Route path="/settings"     element={<SettingsPage />} />
           <Route path="/chat"         element={<ChatPage />} />
+          <Route path="/settings"     element={<SettingsPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

@@ -3,7 +3,15 @@ import { useMutation } from '@tanstack/react-query';
 import * as guestApi from '../../../lib/api/guestApi';
 import toast from 'react-hot-toast';
 
-const ID_TYPES = ['passport', 'national_id', "driver's_license", 'voter_card', 'nin'];
+const ID_TYPES = [
+  { value: 'passport',         label: 'Passport'         },
+  { value: 'national_id',      label: 'National ID'      },
+  { value: 'nin',              label: 'NIN'               },
+  { value: 'drivers_license',  label: "Driver's License" },
+  { value: 'voters_card',      label: "Voter's Card"     },
+  { value: 'residence_permit', label: 'Residence Permit' },
+  { value: 'other',            label: 'Other'            },
+];
 
 export default function GuestForm({ guest, onSuccess }) {
   const isEdit = !!guest;
@@ -12,10 +20,12 @@ export default function GuestForm({ guest, onSuccess }) {
     email:         guest?.email         ?? '',
     phone:         guest?.phone         ?? '',
     nationality:   guest?.nationality   ?? '',
+    company_name:  guest?.company_name  ?? '',
     id_type:       guest?.id_type       ?? '',
     id_number:     guest?.id_number     ?? '',
     date_of_birth: guest?.date_of_birth ?? '',
     address:       guest?.address       ?? '',
+    category:      guest?.category      ?? 'regular',
     notes:         guest?.notes         ?? '',
   }));
 
@@ -25,7 +35,7 @@ export default function GuestForm({ guest, onSuccess }) {
     onError:   (e) => toast.error(e.response?.data?.message || 'Failed to save'),
   });
 
-  const handleChange = (e) => {
+  const set = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
@@ -33,60 +43,72 @@ export default function GuestForm({ guest, onSuccess }) {
   return (
     <form onSubmit={e => { e.preventDefault(); save.mutate(form); }} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
         <div className="form-group sm:col-span-2">
-          <label className="label" htmlFor="gf-full_name">Full Name *</label>
-          <input id="gf-full_name" name="full_name" className="input" required
-            value={form.full_name} onChange={handleChange} />
+          <label className="label">Full Name *</label>
+          <input name="full_name" className="input" required value={form.full_name} onChange={set} />
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-phone">Phone</label>
-          <input id="gf-phone" name="phone" className="input" type="tel"
-            placeholder="080xxxxxxxx" value={form.phone} onChange={handleChange} />
+          <label className="label">Phone</label>
+          <input name="phone" className="input" type="tel" placeholder="080xxxxxxxx"
+            value={form.phone} onChange={set} />
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-email">Email</label>
-          <input id="gf-email" name="email" className="input" type="email"
-            value={form.email} onChange={handleChange} />
+          <label className="label">Email</label>
+          <input name="email" className="input" type="email" value={form.email} onChange={set} />
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-nationality">Nationality</label>
-          <input id="gf-nationality" name="nationality" className="input"
-            placeholder="e.g. Nigerian" value={form.nationality} onChange={handleChange} />
+          <label className="label">Nationality</label>
+          <input name="nationality" className="input" placeholder="e.g. Nigerian"
+            value={form.nationality} onChange={set} />
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-dob">Date of Birth</label>
-          <input id="gf-dob" name="date_of_birth" className="input" type="date"
-            value={form.date_of_birth} onChange={handleChange} />
+          <label className="label">Date of Birth</label>
+          <input name="date_of_birth" className="input" type="date"
+            value={form.date_of_birth} onChange={set} />
+        </div>
+
+        <div className="form-group sm:col-span-2">
+          <label className="label">Company / Organisation</label>
+          <input name="company_name" className="input" placeholder="For corporate bookings"
+            value={form.company_name} onChange={set} />
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-id_type">ID Type</label>
-          <select id="gf-id_type" name="id_type" className="input" value={form.id_type} onChange={handleChange}>
+          <label className="label">ID Type</label>
+          <select name="id_type" className="input" value={form.id_type} onChange={set}>
             <option value="">— Select —</option>
-            {ID_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+            {ID_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
 
         <div className="form-group">
-          <label className="label" htmlFor="gf-id_number">ID Number</label>
-          <input id="gf-id_number" name="id_number" className="input"
-            value={form.id_number} onChange={handleChange} />
+          <label className="label">ID Number</label>
+          <input name="id_number" className="input" value={form.id_number} onChange={set} />
         </div>
 
         <div className="form-group sm:col-span-2">
-          <label className="label" htmlFor="gf-address">Address</label>
-          <input id="gf-address" name="address" className="input"
-            value={form.address} onChange={handleChange} />
+          <label className="label">Address</label>
+          <input name="address" className="input" value={form.address} onChange={set} />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Category</label>
+          <select name="category" className="input" value={form.category} onChange={set}>
+            <option value="regular">Regular</option>
+            <option value="vip">VIP</option>
+            <option value="corporate">Corporate</option>
+            <option value="blacklisted">Blacklisted</option>
+          </select>
         </div>
 
         <div className="form-group sm:col-span-2">
-          <label className="label" htmlFor="gf-notes">Notes</label>
-          <textarea id="gf-notes" name="notes" className="input" rows={2}
-            value={form.notes} onChange={handleChange} />
+          <label className="label">Notes</label>
+          <textarea name="notes" className="input" rows={2} value={form.notes} onChange={set} />
         </div>
       </div>
 

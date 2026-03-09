@@ -7,8 +7,10 @@ export const addChargeSchema = Joi.object({
   quantity:    Joi.number().integer().min(1).default(1),
   unit_price:  Joi.number().integer().min(0).required(),
   department:  Joi.string()
-    .valid('room', 'restaurant', 'bar', 'laundry', 'transport', 'minibar', 'telephone', 'other')
+    .valid('room', 'food', 'beverage', 'laundry', 'spa', 'transport', 'minibar', 'telephone', 'other')
     .default('other'),
+  amount:      Joi.number().integer().min(0).optional(), // computed by service, accepted but not required
+  tax_amount:  Joi.number().integer().min(0).optional(),
 });
 
 export const voidChargeSchema = Joi.object({

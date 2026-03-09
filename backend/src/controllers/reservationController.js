@@ -94,3 +94,13 @@ export const getTodayDepartures = async (req, res, next) => {
     return sendSuccess(res, data, 'Today departures retrieved.');
   } catch (err) { next(err); }
 };
+
+export const markPaymentReceived = async (req, res, next) => {
+  try {
+    const { payment_status, payment_ref } = req.body;
+    const data = await reservationService.markPaymentReceived(
+      req.orgId, req.params.id, { payment_status, payment_ref }
+    );
+    return sendSuccess(res, data, 'Payment status updated.');
+  } catch (err) { next(err); }
+};

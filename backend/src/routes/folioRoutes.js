@@ -17,6 +17,7 @@ import {
   getFolioByReservation,
   getFolioById,
   getFolioSummary,
+  getOpenFolios,
   addCharge,
   voidCharge,
   addPayment,
@@ -30,6 +31,8 @@ const router = Router();
 router.use(authenticate);
 
 // GET  /api/v1/folio/reservation/:reservationId
+router.get('/open', requirePermission(PERMISSIONS.BILLING.READ), getOpenFolios);
+
 router.get('/reservation/:reservationId',
   requirePermission(PERMISSIONS.BILLING.READ),
   getFolioByReservation

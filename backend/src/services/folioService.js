@@ -185,3 +185,26 @@ export const closeShift = async (orgId, staffId, closingBalance, notes) => {
   if (error) throw new AppError(`Failed to close shift: ${error.message}`, 500);
   return data;
 };
+
+export const getOpenFolios = async (orgId, page = 1, limit = 25) => {
+  const from = (page - 1) * limit;
+
+  const { data, error, count } = await supabase
+    .from('folios')
+    .select(`
+      id, folio_no, status, total_charges, total_payments, balance, created_at,
+      reservations (
+        id, reservation_no, check_in_date, check_out_date,
+        rooms ( number ),
+        guests ( id, full_name, phone )
+      )
+    `, { count: 'exact' })
+    .eq('org_id', orgId)
+    .eq('status', 'open')
+    .gt('balance', 0)
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1);
+
+  if (error) throw new AppError('Failed to fetch open folios.', 500);
+  return { data: data || [], total: count || 0 };
+};

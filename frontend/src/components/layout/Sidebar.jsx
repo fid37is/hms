@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import Logo from '../brand/Logo';
 import {
-  LayoutDashboard, BedDouble, CalendarCheck, Users,
+  LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings,
   ChevronLeft, ChevronRight, LogOut, MessageSquare,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/maintenance',  icon: Wrench,          label: 'Maintenance',  permission: 'maintenance:read' },
   { to: '/staff',        icon: HardHat,         label: 'Staff',        permission: 'staff:read' },
   { to: '/reports',      icon: BarChart3,       label: 'Reports',      permission: 'reports:basic' },
+  { to: '/billing',      icon: Receipt,         label: 'Billing',      permission: 'billing:read' },
   { to: '/chat',         icon: MessageSquare,   label: 'Guest Chat',   permission: 'chat' },
   { to: '/settings',     icon: Settings,        label: 'Settings',     permission: 'settings:read' },
 ];
