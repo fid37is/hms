@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import Logo from './Logo';
+import Logo from '../components/brand/Logo';
 import DashboardDemo from '../components/marketing/DashboardDemo';
 
 /* ─── Single consistent dark ────────────────────────────────── */
