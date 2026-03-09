@@ -6,7 +6,7 @@ import { Eye, EyeOff, ArrowRight, CheckCircle2, Building2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
-import Logo from '../components/brand/logo';
+import Logo from '../components/brand/cierlo_logo';
 
 const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap';
 
@@ -25,16 +25,16 @@ function PasswordStrength({ password }) {
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-        {[0,1,2].map(i => (
+        {[0, 1, 2].map(i => (
           <div key={i} style={{
             flex: 1, height: 3, borderRadius: 2,
-            background: i < score ? colors[score-1] : '#e8e6e1',
+            background: i < score ? colors[score - 1] : '#e8e6e1',
             transition: 'background 0.3s'
           }} />
         ))}
       </div>
       {score > 0 && (
-        <span style={{ fontSize: 11, color: colors[score-1] }}>{labels[score-1]}</span>
+        <span style={{ fontSize: 11, color: colors[score - 1] }}>{labels[score - 1]}</span>
       )}
     </div>
   );
@@ -220,14 +220,14 @@ export default function RegisterPage() {
           <div className="reg-left-mid">
             <div className="reg-left-eyebrow">Get started today</div>
             <h2 className="reg-left-headline">
-              Your hotel<br/>workspace,<br/><em>ready in minutes</em>
+              Your hotel<br />workspace,<br /><em>ready in minutes</em>
             </h2>
             <div className="reg-perks">
               {PERKS.map(p => (
                 <div key={p} className="reg-perk">
                   <div className="reg-perk-check">
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="2,5 4,7 8,3"/>
+                      <polyline points="2,5 4,7 8,3" />
                     </svg>
                   </div>
                   {p}
@@ -239,7 +239,7 @@ export default function RegisterPage() {
           <div className="reg-trial-badge">
             <div className="reg-trial-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a6b4a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
               </svg>
             </div>
             <div>
@@ -254,7 +254,7 @@ export default function RegisterPage() {
           <div className="reg-form-wrap">
             <Link to="/" className="reg-back-link">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11.5 7H2.5M6.5 3.5L3 7l3.5 3.5"/>
+                <path d="M11.5 7H2.5M6.5 3.5L3 7l3.5 3.5" />
               </svg>
               Back to home
             </Link>
@@ -265,7 +265,7 @@ export default function RegisterPage() {
                 <div key={label} className="reg-step-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div className={`reg-step-circle ${i < step ? 'done' : i === step ? 'active' : 'idle'}`}>
                     {i < step
-                      ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
+                      ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
                       : i + 1
                     }
                   </div>
@@ -295,7 +295,7 @@ export default function RegisterPage() {
                     />
                   </div>
                   {slugPreview && (
-                    <p className="reg-hint">Workspace: <span>{slugPreview}.miravance.io</span></p>
+                    <p className="reg-hint">Workspace: <span>{slugPreview}.cierlo.io</span></p>
                   )}
                 </div>
 

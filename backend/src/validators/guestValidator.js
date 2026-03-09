@@ -8,7 +8,7 @@ export const createGuestSchema = Joi.object({
   phone:        Joi.string().trim().optional().allow('', null),
   nationality:  Joi.string().trim().optional().allow('', null),
   id_type:      Joi.string()
-    .valid('passport', 'nin', 'drivers_license', 'voters_card', 'other')
+    .valid('passport', 'national_id', 'nin', 'drivers_license', 'voters_card', 'residence_permit', 'other')
     .optional()
     .allow(null),
   id_number:      Joi.string().trim().optional().allow('', null),
@@ -26,7 +26,7 @@ export const updateGuestSchema = Joi.object({
   phone:          Joi.string().trim().optional().allow('', null),
   nationality:    Joi.string().trim().optional().allow('', null),
   id_type:        Joi.string()
-    .valid('passport', 'nin', 'drivers_license', 'voters_card', 'other')
+    .valid('passport', 'national_id', 'nin', 'drivers_license', 'voters_card', 'residence_permit', 'other')
     .optional()
     .allow(null),
   id_number:      Joi.string().trim().optional().allow('', null),

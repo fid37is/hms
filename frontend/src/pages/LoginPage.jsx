@@ -6,7 +6,7 @@ import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import * as authApi from '../lib/api/authApi';
 import toast from 'react-hot-toast';
-import Logo from '../components/brand/logo';
+import Logo from '../components/brand/cierlo_logo'
 
 const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap';
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
         .auth-left-content { position: relative; z-index: 1; }
         .auth-left-eyebrow {
           font-size: 11px; font-weight: 500; letter-spacing: 0.1em;
-          text-transform: uppercase; color: #1a6b4a; margin-bottom: 20px;
+          text-transform: uppercase; color: #F59E0B; margin-bottom: 20px;
         }
         .auth-left-headline {
           font-family: 'Instrument Serif', Georgia, serif;
@@ -114,7 +114,7 @@ export default function LoginPage() {
           background: #fff; outline: none; transition: border-color 0.2s;
           -webkit-font-smoothing: antialiased;
         }
-        .auth-input:focus { border-color: #0a0a0a; }
+        .auth-input:focus { border-color: #D97706; }
         .auth-input::placeholder { color: #b5b3ae; }
         .auth-input-wrap { position: relative; }
         .auth-input-wrap .auth-input { padding-right: 44px; }
@@ -178,7 +178,7 @@ export default function LoginPage() {
           <Logo size="sm" theme="light" />
 
           <div className="auth-left-content">
-            <div className="auth-left-eyebrow">Advance Every Stay</div>
+            <div className="auth-left-eyebrow">Your hotel, always on.</div>
             <h2 className="auth-left-headline">
               Everything your<br/>hotel needs to<br/><em>run smoothly</em>
             </h2>

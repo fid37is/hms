@@ -1,36 +1,36 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate }    from 'react-router-dom';
 import { Bell, Sun, Moon, KeyRound, LogOut, ChevronDown, Menu } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
-import { useThemeStore } from '../../store/themeStore';
-import { useUIStore } from '../../store/uiStore';
+import { useAuthStore }    from '../../store/authStore';
+import { useThemeStore }   from '../../store/themeStore';
+import { useUIStore }      from '../../store/uiStore';
 import ChangePasswordModal from '../shared/ChangePasswordModal';
-import * as authApi from '../../lib/api/authApi';
+import * as authApi        from '../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
 const TITLES = {
-  '/dashboard': 'Dashboard',
-  '/rooms': 'Rooms',
+  '/dashboard':    'Dashboard',
+  '/rooms':        'Rooms',
   '/reservations': 'Reservations',
-  '/guests': 'Guests',
+  '/guests':       'Guests',
   '/housekeeping': 'Housekeeping',
-  '/inventory': 'Inventory',
-  '/maintenance': 'Maintenance',
-  '/staff': 'Staff',
-  '/reports': 'Reports',
-  '/settings': 'Settings',
+  '/inventory':    'Inventory',
+  '/maintenance':  'Maintenance',
+  '/staff':        'Staff',
+  '/reports':      'Reports',
+  '/settings':     'Settings',
 };
 
 export default function Header() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { pathname }          = useLocation();
+  const navigate              = useNavigate();
+  const { user, logout }      = useAuthStore();
   const { mode, toggleTheme } = useThemeStore();
-  const { toggleSidebar } = useUIStore();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [changePw, setChangePw] = useState(false);
+  const { toggleSidebar }     = useUIStore();
+  const [menuOpen, setMenuOpen]  = useState(false);
+  const [changePw, setChangePw]  = useState(false);
   const menuRef = useRef();
-  const title = TITLES[pathname] || 'HMS Pro';
+  const title   = TITLES[pathname] || 'Cierlo';
 
   useEffect(() => {
     const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
@@ -39,7 +39,7 @@ export default function Header() {
   }, []);
 
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch (_) { }
+    try { await authApi.logout(); } catch (_) {}
     logout();
     navigate('/login');
     toast.success('Logged out');
@@ -60,8 +60,7 @@ export default function Header() {
           >
             <Menu size={18} />
           </button>
-          <h1 className="text-base font-semibold" style={{ color: 'var(--text-base)' }}>{title}</h1>
-
+          <h1 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{title}</h1>
         </div>
 
         <div className="flex items-center gap-1">

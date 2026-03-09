@@ -1,3 +1,5 @@
+// hms/frontend/src/modules/settings/components/HotelConfig.jsx
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import * as configApi from '../../../lib/api/configApi';
@@ -6,7 +8,9 @@ import toast from 'react-hot-toast';
 
 const BLANK = {
   // Identity
-  hotel_name: '', tagline: '', description: '', logo_url: '', primary_color: '#1F4E8C',
+  hotel_name: '', tagline: '', description: '', logo_url: '',
+  // Branding
+  primary_color: '#1F4E8C', secondary_color: '#c9a96e',
   // Location
   address: '', city: '', state: '', country: 'Nigeria', google_maps_url: '',
   // Contact
@@ -15,6 +19,9 @@ const BLANK = {
   instagram_url: '', facebook_url: '', twitter_url: '',
   // Financial
   currency: 'NGN', currency_symbol: '₦', tax_rate: '7.5', service_charge: '10',
+  // Payment methods
+  pay_on_arrival: true, bank_transfer: false, paystack_enabled: false,
+  bank_name: '', bank_account_number: '', bank_account_name: '', paystack_public_key: '',
   // Operations
   timezone: 'Africa/Lagos', check_in_time: '14:00', check_out_time: '11:00',
   // Policies
@@ -43,6 +50,30 @@ function Field({ label, children }) {
   );
 }
 
+function ColorField({ label, name, value, onChange }) {
+  return (
+    <Field label={label}>
+      <div className="flex gap-2 items-center">
+        <input
+          name={name}
+          type="color"
+          className="w-10 h-9 rounded cursor-pointer border p-0.5"
+          style={{ borderColor: 'var(--border-base)' }}
+          value={value}
+          onChange={onChange}
+        />
+        <input
+          name={name}
+          className="input font-mono"
+          placeholder="#000000"
+          value={value}
+          onChange={onChange}
+        />
+      </div>
+    </Field>
+  );
+}
+
 export default function HotelConfig() {
   const { data, isLoading } = useQuery({
     queryKey: ['hotel-config'],
@@ -59,6 +90,7 @@ export default function HotelConfig() {
       description:         data.description         ?? '',
       logo_url:            data.logo_url            ?? '',
       primary_color:       data.primary_color       ?? '#1F4E8C',
+      secondary_color:     data.secondary_color     ?? '#c9a96e',
       address:             data.address             ?? '',
       city:                data.city                ?? '',
       state:               data.state               ?? '',
@@ -70,10 +102,17 @@ export default function HotelConfig() {
       instagram_url:       data.instagram_url       ?? '',
       facebook_url:        data.facebook_url        ?? '',
       twitter_url:         data.twitter_url         ?? '',
-      currency:            data.currency            ?? 'NGN',
-      currency_symbol:     data.currency_symbol     ?? '₦',
-      tax_rate:            data.tax_rate   != null  ? String(data.tax_rate)        : '7.5',
-      service_charge:      data.service_charge != null ? String(data.service_charge) : '10',
+      currency:             data.currency            ?? 'NGN',
+      currency_symbol:      data.currency_symbol     ?? '₦',
+      tax_rate:             data.tax_rate   != null  ? String(data.tax_rate)            : '7.5',
+      service_charge:       data.service_charge != null ? String(data.service_charge)   : '10',
+      pay_on_arrival:       data.pay_on_arrival      ?? true,
+      bank_transfer:        data.bank_transfer        ?? false,
+      paystack_enabled:     data.paystack_enabled     ?? false,
+      bank_name:            data.bank_name            ?? '',
+      bank_account_number:  data.bank_account_number  ?? '',
+      bank_account_name:    data.bank_account_name    ?? '',
+      paystack_public_key:  data.paystack_public_key  ?? '',
       timezone:            data.timezone            ?? 'Africa/Lagos',
       check_in_time:       (data.check_in_time  ?? '14:00').slice(0, 5),
       check_out_time:      (data.check_out_time ?? '11:00').slice(0, 5),
@@ -97,14 +136,16 @@ export default function HotelConfig() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Strip seconds from time fields (Postgres TIME returns HH:MM:SS)
     const stripSeconds = (t) => t ? t.slice(0, 5) : t;
     save.mutate({
       ...form,
-      tax_rate:       Number(form.tax_rate)       || 0,
-      service_charge: Number(form.service_charge) || 0,
-      check_in_time:  stripSeconds(form.check_in_time),
-      check_out_time: stripSeconds(form.check_out_time),
+      tax_rate:            Number(form.tax_rate)       || 0,
+      service_charge:      Number(form.service_charge) || 0,
+      check_in_time:       stripSeconds(form.check_in_time),
+      check_out_time:      stripSeconds(form.check_out_time),
+      pay_on_arrival:      Boolean(form.pay_on_arrival),
+      bank_transfer:       Boolean(form.bank_transfer),
+      paystack_enabled:    Boolean(form.paystack_enabled),
     });
   };
 
@@ -128,19 +169,38 @@ export default function HotelConfig() {
               placeholder="Short description shown on the website homepage…"
               value={form.description} onChange={handleChange} />
           </Field>
-          <Field label="Brand Color">
-            <div className="flex gap-2 items-center">
-              <input name="primary_color" type="color" className="w-10 h-9 rounded cursor-pointer border p-0.5"
-                style={{ borderColor: 'var(--border-base)' }}
-                value={form.primary_color} onChange={handleChange} />
-              <input name="primary_color" className="input font-mono" placeholder="#1F4E8C"
-                value={form.primary_color} onChange={handleChange} />
-            </div>
-          </Field>
           <Field label="Logo URL">
             <input name="logo_url" className="input" placeholder="https://…"
               value={form.logo_url} onChange={handleChange} />
           </Field>
+
+          {/* Brand Colors — primary + secondary side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <ColorField
+              label="Primary Color"
+              name="primary_color"
+              value={form.primary_color}
+              onChange={handleChange}
+            />
+            <ColorField
+              label="Accent Color"
+              name="secondary_color"
+              value={form.secondary_color}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Live preview swatch */}
+          <div className="flex gap-3 pt-1">
+            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
+              style={{ backgroundColor: form.primary_color }}>
+              Primary
+            </div>
+            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
+              style={{ backgroundColor: form.secondary_color }}>
+              Accent
+            </div>
+          </div>
         </Section>
 
         <Section title="Location">
@@ -234,6 +294,65 @@ export default function HotelConfig() {
           </Field>
         </Section>
 
+        <Section title="Payment Methods">
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            Choose which payment options guests can use when booking online.
+          </p>
+
+          {/* Toggles */}
+          <div className="flex flex-col gap-3 mb-4">
+            {[
+              { key: 'pay_on_arrival', label: 'Pay on Arrival', sub: 'Guest pays at the front desk on check-in. No charge now.' },
+              { key: 'bank_transfer',  label: 'Bank Transfer',  sub: 'Guest pays to your bank account before arrival.' },
+              { key: 'paystack_enabled', label: 'Paystack (Online Card)', sub: 'Guest pays by card at time of booking.' },
+            ].map(({ key, label, sub }) => (
+              <label key={key} className="flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-colors"
+                style={{ border: '1px solid var(--border-soft)', backgroundColor: form[key] ? 'var(--brand-subtle)' : 'var(--bg-subtle)' }}>
+                <input type="checkbox" className="mt-0.5" checked={!!form[key]}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: form[key] ? 'var(--brand)' : 'var(--text-base)' }}>{label}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          {/* Bank details — shown when bank transfer is enabled */}
+          {form.bank_transfer && (
+            <div className="flex flex-col gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Bank Account Details</p>
+              <Field label="Bank Name">
+                <input name="bank_name" className="input" placeholder="e.g. First Bank"
+                  value={form.bank_name} onChange={handleChange} />
+              </Field>
+              <Field label="Account Number">
+                <input name="bank_account_number" className="input font-mono" placeholder="0123456789"
+                  value={form.bank_account_number} onChange={handleChange} />
+              </Field>
+              <Field label="Account Name">
+                <input name="bank_account_name" className="input" placeholder="Eagle Base Hotel Ltd"
+                  value={form.bank_account_name} onChange={handleChange} />
+              </Field>
+            </div>
+          )}
+
+          {/* Paystack key — shown when paystack is enabled */}
+          {form.paystack_enabled && (
+            <div className="flex flex-col gap-3 p-3 rounded-xl mt-3" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Paystack Configuration</p>
+              <Field label="Public Key">
+                <input name="paystack_public_key" className="input font-mono" placeholder="pk_live_…"
+                  value={form.paystack_public_key} onChange={handleChange} />
+              </Field>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Get your public key from your Paystack dashboard → Settings → API Keys.
+                Never enter your secret key here.
+              </p>
+            </div>
+          )}
+        </Section>
+
         <Section title="Operations">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Check-in Time">
@@ -262,17 +381,17 @@ export default function HotelConfig() {
       <Section title="Policies">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Cancellation Policy">
-            <textarea name="cancellation_policy" rows={3} className="input"
+            <textarea name="cancellation_policy" rows={4} className="input"
               placeholder="e.g. Free cancellation up to 24 hours before check-in…"
               value={form.cancellation_policy} onChange={handleChange} />
           </Field>
           <Field label="Pets Policy">
-            <textarea name="pets_policy" rows={3} className="input"
+            <textarea name="pets_policy" rows={4} className="input"
               placeholder="e.g. Pets are not allowed on the premises…"
               value={form.pets_policy} onChange={handleChange} />
           </Field>
           <Field label="Smoking Policy">
-            <textarea name="smoking_policy" rows={3} className="input"
+            <textarea name="smoking_policy" rows={4} className="input"
               placeholder="e.g. No smoking on premises…"
               value={form.smoking_policy} onChange={handleChange} />
           </Field>

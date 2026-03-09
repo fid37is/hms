@@ -84,7 +84,7 @@ export default function CheckOutForm({ reservation: res, onSuccess, onExtend }) 
             Outstanding balance of {formatCurrency(balance)} must be settled before check-out.
           </p>
           {!showPay ? (
-            <button onClick={() => { setShowPay(true); setPayAmount(String(balance)); }}
+            <button onClick={() => { setShowPay(true); setPayAmount(String(Math.round(balance / 100))); }}
               className="btn-primary text-xs">
               Collect Payment
             </button>
@@ -109,7 +109,7 @@ export default function CheckOutForm({ reservation: res, onSuccess, onExtend }) 
                 value={payNotes} onChange={e => setPayNotes(e.target.value)} />
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => addPayment.mutate({ amount: Number(payAmount), method: payMethod, notes: payNotes })}
+                  onClick={() => addPayment.mutate({ amount: Math.round(Number(payAmount) * 100), method: payMethod, notes: payNotes })}
                   disabled={addPayment.isPending || !payAmount}
                   className="btn-primary text-xs">
                   {addPayment.isPending ? 'Recording…' : 'Record Payment'}

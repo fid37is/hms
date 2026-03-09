@@ -38,6 +38,8 @@ import {
   getAvailableRooms,
   uploadMedia,
   deleteMedia,
+  uploadTypeMedia,
+  deleteTypeMedia,
 } from '../controllers/roomController.js';
 
 const router = Router();
@@ -61,6 +63,8 @@ router.get('/types/:id', requirePermission(PERMISSIONS.ROOMS.READ),   getRoomTyp
 router.post('/types',    requirePermission(PERMISSIONS.ROOMS.UPDATE),  validate(createRoomTypeSchema), createRoomType);
 router.patch('/types/:id', requirePermission(PERMISSIONS.ROOMS.UPDATE), validate(updateRoomTypeSchema), updateRoomType);
 router.delete('/types/:id', requirePermission(PERMISSIONS.ROOMS.UPDATE), deleteRoomType);
+router.post('/types/:id/media',   requirePermission(PERMISSIONS.ROOMS.UPDATE), upload.single('file'), uploadTypeMedia);
+router.delete('/types/:id/media', requirePermission(PERMISSIONS.ROOMS.UPDATE), deleteTypeMedia);
 
 // ─── Rate Plans ───────────────────────────────────────────
 // GET    /api/v1/rooms/types/:roomTypeId/rates
@@ -99,4 +103,4 @@ router.delete('/:id',         requirePermission(PERMISSIONS.ROOMS.UPDATE),  dele
 router.post('/:id/media',     requirePermission(PERMISSIONS.ROOMS.UPDATE),  upload.single('file'), uploadMedia);
 router.delete('/:id/media',   requirePermission(PERMISSIONS.ROOMS.UPDATE),  deleteMedia);
 
-export default router;
+export default router;  

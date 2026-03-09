@@ -66,6 +66,7 @@ export const publicCreateReservation = async (req, res, next) => {
       adults, children,
       special_requests,
       rate_per_night,
+      payment_method,
     } = req.body;
 
     // Support both date field naming conventions
@@ -78,31 +79,56 @@ export const publicCreateReservation = async (req, res, next) => {
 
     // ── Re-validate availability at submission time (prevent double-booking) ──
     if (room_type_id) {
-      // Count total rooms of this type
-      const { data: totalRooms } = await supabase
+      // Count bookable rooms of this type
+      // Dirty/ready rooms are bookable — they will be cleaned before check-in
+      // Only hard-exclude: out_of_order, maintenance, blocked
+      const { data: bookableRooms } = await supabase
         .from('rooms')
-        .select('id', { count: 'exact' })
+        .select('id')
         .eq('org_id', req.orgId)
         .eq('type_id', room_type_id)
-        .eq('is_active', true)
-        .eq('is_blocked', false);
+        .eq('is_blocked', false)
+        .not('status', 'in', '("out_of_order","maintenance")');
 
-      const totalCount = totalRooms?.length || 0;
+      const totalCount = bookableRooms?.length || 0;
 
-      // Count confirmed/checked-in reservations overlapping these dates
-      const { data: overlapping } = await supabase
+      // Count rooms of this type with CONFIRMED reservations overlapping these dates
+      // checked_in reservations hold a specific room_id — we check by room not type
+      // to allow same-day turnover (checkout date = new checkin date is valid)
+      const { data: confirmedOverlap } = await supabase
         .from('reservations')
-        .select('id', { count: 'exact' })
+        .select('id')
         .eq('org_id', req.orgId)
         .eq('room_type_id', room_type_id)
-        .in('status', ['confirmed', 'checked_in'])
+        .eq('status', 'confirmed')
         .lt('check_in_date', checkOut)
         .gt('check_out_date', checkIn);
 
-      const bookedCount = overlapping?.length || 0;
+      // Count checked-in rooms of this type overlapping (these hold room_id)
+      const { data: checkedInOverlap } = await supabase
+        .from('reservations')
+        .select('room_id')
+        .eq('org_id', req.orgId)
+        .eq('status', 'checked_in')
+        .lt('check_in_date', checkOut)
+        .gt('check_out_date', checkIn)
+        .not('room_id', 'is', null);
+
+      // Cross-reference checked-in room_ids against rooms of this type
+      const checkedInRoomIds = (checkedInOverlap || []).map(r => r.room_id);
+      let checkedInCount = 0;
+      if (checkedInRoomIds.length > 0 && bookableRooms?.length > 0) {
+        const bookableIds = new Set(bookableRooms.map(r => r.id));
+        checkedInCount = checkedInRoomIds.filter(id => bookableIds.has(id)).length;
+      }
+
+      const bookedCount = (confirmedOverlap?.length || 0) + checkedInCount;
 
       if (bookedCount >= totalCount) {
-        throw new AppError('Sorry, no rooms of this type are available for your selected dates.', 409);
+        throw new AppError(
+          'Sorry, no rooms of this type are available for your selected dates. Please try different dates or contact us directly.',
+          409
+        );
       }
     }
 
@@ -152,10 +178,12 @@ export const publicCreateReservation = async (req, res, next) => {
       check_out_date:  checkOut,
       adults:          adults  || 1,
       children:        children || 0,
-      booking_source:  'online',
-      rate_per_night:  nightRate,
-      deposit_amount:  0,
+      booking_source:   'online',
+      rate_per_night:   nightRate,
+      deposit_amount:   0,
       special_requests: special_requests || null,
+      payment_method:   ['on_arrival','bank_transfer','paystack'].includes(payment_method) ? payment_method : 'on_arrival',
+      payment_status:   payment_method === 'on_arrival' ? 'pending' : 'pending_transfer',
     }, null);
 
     // Send confirmation email (non-blocking — don't fail booking if email fails)

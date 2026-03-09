@@ -190,8 +190,10 @@ function CustomDomainSection({ org }) {
                 <td className="px-3 py-2"><code style={{ color: 'var(--text-base)' }}>www</code></td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <code style={{ color: 'var(--text-base)' }}>{org.slug}.{BASE_DOMAIN}</code>
-                    <CopyButton text={`${org.slug}.${BASE_DOMAIN}`} />
+                    <code style={{ color: 'var(--text-base)' }}>
+                      {BASE_DOMAIN.includes('pages.dev') ? BASE_DOMAIN : `${org.slug}.${BASE_DOMAIN}`}
+                    </code>
+                    <CopyButton text={BASE_DOMAIN.includes('pages.dev') ? BASE_DOMAIN : `${org.slug}.${BASE_DOMAIN}`} />
                   </div>
                 </td>
                 <td className="px-3 py-2"><code style={{ color: 'var(--text-muted)' }}>Auto</code></td>
@@ -278,7 +280,7 @@ function CustomDomainSection({ org }) {
 
 // ── Main panel ────────────────────────────────────────────
 export default function WebsitePanel() {
-  const { data: org, isLoading } = useQuery({
+  const { data: org, isLoading, isError } = useQuery({
     queryKey: ['org-profile'],
     queryFn:  () => authApi.getOrg().then(r => r.data.data),
   });
@@ -289,7 +291,15 @@ export default function WebsitePanel() {
     </div>
   );
 
-  const subdomainUrl  = `https://${org.slug}.${BASE_DOMAIN}`;
+  if (isError || !org) return (
+    <div className="flex items-center gap-2 py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
+      <AlertTriangle size={15} /> Could not load organisation data.
+    </div>
+  );
+
+  const subdomainUrl  = BASE_DOMAIN.includes('pages.dev')
+    ? `https://${BASE_DOMAIN}`
+    : `https://${org.slug}.${BASE_DOMAIN}`;
   const publicApiUrl  = `${API_BASE}/public`;
 
   return (

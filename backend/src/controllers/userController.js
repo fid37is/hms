@@ -54,14 +54,14 @@ export const revokeAccess = async (req, res, next) => {
 
 export const getRoles = async (req, res, next) => {
   try {
-    const data = await userService.getAllRoles();
+    const data = await userService.getAllRoles(req.orgId);
     return sendSuccess(res, data, 'Roles retrieved.');
   } catch (err) { next(err); }
 };
 
 export const createRole = async (req, res, next) => {
   try {
-    const data = await userService.createRole(req.body);
+    const data = await userService.createRole(req.orgId, req.body);
     return sendCreated(res, data, 'Role created.');
   } catch (err) { next(err); }
 };
@@ -75,14 +75,14 @@ export const deleteUser = async (req, res, next) => {
 
 export const updateRoleCtrl = async (req, res, next) => {
   try {
-    const data = await userService.updateRole(req.params.id, req.body);
+    const data = await userService.updateRole(req.orgId, req.params.id, req.body);
     return sendSuccess(res, data, 'Role updated.');
   } catch (e) { next(e); }
 };
 
 export const deleteRole = async (req, res, next) => {
   try {
-    const data = await userService.deleteRole(req.params.id);
+    const data = await userService.deleteRole(req.orgId, req.params.id);
     return sendSuccess(res, data, 'Role deleted.');
   } catch (err) { next(err); }
 };

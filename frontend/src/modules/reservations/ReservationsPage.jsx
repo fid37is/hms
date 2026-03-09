@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Plus, Search, ChevronUp, ChevronDown, X, CreditCard } from 'lucide-react';
 import * as resApi        from '../../lib/api/reservationApi';
 import DataTable          from '../../components/shared/DataTable';
 import StatusBadge        from '../../components/shared/StatusBadge';
@@ -29,6 +29,29 @@ const SORT_OPTIONS = [
 
 const PANEL_WIDTH = 440;
 
+const PAYMENT_METHOD_LABEL = {
+  on_arrival:    'On Arrival',
+  bank_transfer: 'Bank Transfer',
+  paystack:      'Card',
+};
+
+const PAYMENT_STATUS_STYLE = {
+  pending:          { bg: 'var(--s-yellow-bg)', color: 'var(--s-yellow-text)', label: 'Pending'           },
+  pending_transfer: { bg: 'var(--s-blue-bg)',   color: 'var(--s-blue-text)',   label: 'Awaiting Transfer' },
+  paid:             { bg: 'var(--s-green-bg)',   color: 'var(--s-green-text)', label: 'Paid'              },
+  refunded:         { bg: 'var(--s-red-bg)',     color: 'var(--s-red-text)',   label: 'Refunded'          },
+};
+
+function PaymentBadge({ status }) {
+  const s = PAYMENT_STATUS_STYLE[status] || PAYMENT_STATUS_STYLE.pending;
+  return (
+    <span className="text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
+      style={{ backgroundColor: s.bg, color: s.color }}>
+      {s.label}
+    </span>
+  );
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -43,12 +66,13 @@ export default function ReservationsPage() {
   const qc = useQueryClient();
   const isMobile = useIsMobile();
 
-  const [status, setStatus] = useState('');
-  const [search, setSearch] = useState('');
-  const [sort,   setSort]   = useState('check_in_date');
-  const [order,  setOrder]  = useState('desc');
-  const [panel,  setPanel]  = useState(null); // { type, res }
-  const [cancel, setCancel] = useState(null);
+  const [status,   setStatus]   = useState('');
+  const [search,   setSearch]   = useState('');
+  const [sort,     setSort]     = useState('check_in_date');
+  const [order,    setOrder]    = useState('desc');
+  const [panel,    setPanel]    = useState(null); // { type, res }
+  const [cancel,   setCancel]   = useState(null);
+  const [markPaid, setMarkPaid] = useState(null);
 
   const openPanel  = (type, res = null) => setPanel({ type, res });
   const closePanel = () => setPanel(null);
@@ -63,6 +87,12 @@ export default function ReservationsPage() {
     mutationFn: ({ id, reason }) => resApi.cancelReservation(id, { reason }),
     onSuccess: () => { toast.success('Reservation cancelled'); setCancel(null); qc.invalidateQueries(['reservations']); },
     onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
+  });
+
+  const doMarkPaid = useMutation({
+    mutationFn: (id) => resApi.markPaymentReceived(id, { payment_status: 'paid' }),
+    onSuccess: () => { toast.success('Payment marked as received'); setMarkPaid(null); qc.invalidateQueries(['reservations']); },
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed to update payment'),
   });
 
   const reservations = (data || [])
@@ -109,7 +139,22 @@ export default function ReservationsPage() {
     { key: 'check_in_date',  label: 'Check-in',  render: r => formatDate(r.check_in_date)   },
     { key: 'check_out_date', label: 'Check-out', render: r => formatDate(r.check_out_date)  },
     { key: 'total_amount',   label: 'Amount',    render: r => formatCurrency(r.total_amount) },
-    { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
+    { key: 'status',         label: 'Status',    render: r => <StatusBadge status={r.status} /> },
+
+    // ── Payment ──────────────────────────────────────────────────────────
+    { key: 'payment', label: 'Payment',
+      render: r => (
+        <div className="flex flex-col gap-1 items-start">
+          <PaymentBadge status={r.payment_status || 'pending'} />
+          {r.payment_method && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
+            </span>
+          )}
+        </div>
+      ),
+    },
+
     { key: 'actions', label: '', width: '140px',
       render: r => (
         <div className="flex gap-1.5 justify-end flex-wrap">
@@ -120,6 +165,15 @@ export default function ReservationsPage() {
           {r.status === 'checked_in' && (
             <button onClick={e => { e.stopPropagation(); openPanel('checkout', r); }}
               className="btn-secondary text-xs px-2.5 py-1">Check Out</button>
+          )}
+          {/* Mark Paid — only when payment is still outstanding */}
+          {['confirmed','checked_in'].includes(r.status) &&
+           ['pending','pending_transfer'].includes(r.payment_status) && (
+            <button onClick={e => { e.stopPropagation(); setMarkPaid(r); }}
+              className="text-xs px-2.5 py-1 rounded-md flex items-center gap-1"
+              style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
+              <CreditCard size={11} /> Paid
+            </button>
           )}
           {['confirmed','checked_in'].includes(r.status) && (
             <button onClick={e => { e.stopPropagation(); setCancel(r); }}
@@ -143,17 +197,31 @@ export default function ReservationsPage() {
             {r.rooms?.number ? `Room ${r.rooms.number}` : 'Unassigned'} · {formatDate(r.check_in_date)} → {formatDate(r.check_out_date)}
           </p>
         </div>
-        <div className="text-right flex-shrink-0">
+        <div className="text-right flex-shrink-0 flex flex-col gap-1 items-end">
           <StatusBadge status={r.status} />
-          <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-base)' }}>{formatCurrency(r.total_amount)}</p>
+          <PaymentBadge status={r.payment_status || 'pending'} />
+          <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-base)' }}>{formatCurrency(r.total_amount)}</p>
+          {r.payment_method && (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
+            </p>
+          )}
         </div>
       </div>
-      <div className="flex gap-2 pt-1" style={{ borderTop: '1px solid var(--border-soft)' }}>
+      <div className="flex gap-2 pt-1 flex-wrap" style={{ borderTop: '1px solid var(--border-soft)' }}>
         {r.status === 'confirmed' && (
           <button onClick={() => openPanel('checkin', r)} className="btn-primary text-xs px-3 py-1.5 flex-1 justify-center">Check In</button>
         )}
         {r.status === 'checked_in' && (
           <button onClick={() => openPanel('checkout', r)} className="btn-secondary text-xs px-3 py-1.5 flex-1 justify-center">Check Out</button>
+        )}
+        {['confirmed','checked_in'].includes(r.status) &&
+         ['pending','pending_transfer'].includes(r.payment_status) && (
+          <button onClick={() => setMarkPaid(r)}
+            className="text-xs px-3 py-1.5 rounded-md flex items-center gap-1"
+            style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
+            <CreditCard size={11} /> Mark Paid
+          </button>
         )}
         {['confirmed','checked_in'].includes(r.status) && (
           <button onClick={() => setCancel(r)}
@@ -171,7 +239,7 @@ export default function ReservationsPage() {
   return (
     <div style={{ display: 'flex', gap: 0, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
 
-      {/* ── Left: table area — shrinks to make room ── */}
+      {/* ── Left: table area ── */}
       <div style={{
         flex: 1,
         minWidth: 0,
@@ -182,14 +250,12 @@ export default function ReservationsPage() {
 
           {/* Controls row */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Search */}
             <div className="relative" style={{ width: 200 }}>
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
               <input className="input pl-8 text-sm" placeholder="Search…"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
-            {/* Status tabs */}
             <div className="flex gap-0.5 p-1 rounded-lg overflow-x-auto" style={{ backgroundColor: 'var(--bg-subtle)' }}>
               {STATUS_TABS.map(t => (
                 <button key={t.value} onClick={() => setStatus(t.value)}
@@ -204,7 +270,6 @@ export default function ReservationsPage() {
               ))}
             </div>
 
-            {/* Sort */}
             <select className="input text-sm" style={{ width: 'auto' }}
               value={sort} onChange={e => setSort(e.target.value)}>
               {SORT_OPTIONS.map(o => (
@@ -212,7 +277,6 @@ export default function ReservationsPage() {
               ))}
             </select>
 
-            {/* Order toggle */}
             <button onClick={() => setOrder(o => o === 'asc' ? 'desc' : 'asc')}
               className="btn-ghost px-2.5 py-1.5 flex items-center gap-1 text-xs"
               style={{ color: 'var(--text-muted)' }}>
@@ -230,7 +294,6 @@ export default function ReservationsPage() {
             </button>
           </div>
 
-          {/* Table */}
           <DataTable
             columns={columns}
             data={reservations}
@@ -255,40 +318,38 @@ export default function ReservationsPage() {
         />
       )}
 
-      {/* ── Right: slide-in panel — fixed to content area right edge ── */}
+      {/* ── Right: slide-in panel ── */}
       {panelOpen && (
-      <div style={{
-        position: 'fixed',
-        top: isMobile ? 0 : 56,
-        right: 0,
-        bottom: 0,
-        left: isMobile ? 0 : 'auto',
-        width: isMobile ? '100%' : PANEL_WIDTH,
-        zIndex: isMobile ? 50 : 30,
-        backgroundColor: 'var(--bg-surface)',
-        borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
-        boxShadow: isMobile ? 'none' : '-6px 0 24px rgba(0,0,0,0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideInPanel 240ms cubic-bezier(0.4, 0, 0.2, 1)',
-      }}>
-        {/* Panel header */}
-        <div className="flex items-center justify-between px-5 flex-shrink-0"
-          style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-          <button onClick={closePanel}
-            className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-            <X size={15} />
-          </button>
+        <div style={{
+          position: 'fixed',
+          top: isMobile ? 0 : 56,
+          right: 0,
+          bottom: 0,
+          left: isMobile ? 0 : 'auto',
+          width: isMobile ? '100%' : PANEL_WIDTH,
+          zIndex: isMobile ? 50 : 30,
+          backgroundColor: 'var(--bg-surface)',
+          borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
+          boxShadow: isMobile ? 'none' : '-6px 0 24px rgba(0,0,0,0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'slideInPanel 240ms cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          <div className="flex items-center justify-between px-5 flex-shrink-0"
+            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
+            <button onClick={closePanel}
+              className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              <X size={15} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ paddingTop: 12 }}>
+            {panelContent()}
+          </div>
         </div>
-        {/* Panel body */}
-        <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ paddingTop: 12 }}>
-          {panelContent()}
-        </div>
-      </div>
       )}
 
       {/* Cancel confirm */}
@@ -298,6 +359,19 @@ export default function ReservationsPage() {
         title="Cancel Reservation"
         message={`Cancel ${cancel?.reservation_no} for ${cancel?.guests?.full_name}?`}
         confirmLabel="Yes, Cancel" danger
+      />
+
+      {/* Mark as Paid confirm */}
+      <ConfirmDialog
+        open={!!markPaid} onClose={() => setMarkPaid(null)}
+        onConfirm={() => doMarkPaid.mutate(markPaid?.id)}
+        title="Confirm Payment Received"
+        message={
+          markPaid?.payment_method === 'bank_transfer'
+            ? `Confirm bank transfer from ${markPaid?.guests?.full_name} has been received and verified?`
+            : `Mark payment as received for ${markPaid?.guests?.full_name}?`
+        }
+        confirmLabel="Yes, Mark Paid"
       />
     </div>
   );

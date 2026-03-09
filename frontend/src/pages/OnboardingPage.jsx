@@ -110,7 +110,7 @@ export default function OnboardingPage() {
           </h1>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {allDone
-              ? 'Your HMS is fully configured and ready for operations.'
+              ? 'Your Cierlo account is fully configured and ready for operations.'
               : `Let's get your hotel set up. ${completedCount} of ${STEPS.length} steps complete.`}
           </p>
         </div>

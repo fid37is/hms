@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import Logo from '../brand/cierlo_logo';
 import {
-  LayoutDashboard, BedDouble, CalendarCheck, Users,
+  LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings,
   ChevronLeft, ChevronRight, LogOut, MessageSquare,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const NAV = [
   { to: '/maintenance',  icon: Wrench,          label: 'Maintenance',  permission: 'maintenance:read' },
   { to: '/staff',        icon: HardHat,         label: 'Staff',        permission: 'staff:read' },
   { to: '/reports',      icon: BarChart3,       label: 'Reports',      permission: 'reports:basic' },
+  { to: '/billing',      icon: Receipt,         label: 'Billing',      permission: 'billing:read' },
   { to: '/chat',         icon: MessageSquare,   label: 'Guest Chat',   permission: 'chat' },
   { to: '/settings',     icon: Settings,        label: 'Settings',     permission: 'settings:read' },
 ];
@@ -77,35 +79,28 @@ export default function Sidebar() {
       style={{ width: w, backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}>
 
       {/* Logo */}
-      <div className="flex-shrink-0"
-        style={{ height: 56, position: 'relative', borderBottom: '1px solid var(--sidebar-border)' }}>
-        {sidebarOpen ? (
-          <div className="flex items-center h-full px-4 gap-2.5">
-            <img src="/mira-logo.png" alt="Miravance" className="flex-shrink-0"
-              style={{ height: 28, width: 'auto' }} />
-            <span className="flex-1 truncate" style={{
-              fontFamily: "'Instrument Serif', Georgia, serif", fontSize: 17,
-              letterSpacing: '-0.01em', color: 'var(--sidebar-text-active)', userSelect: 'none',
-            }}>Miravance</span>
-            <button onClick={toggleSidebar} className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded"
-              style={{ color: 'var(--sidebar-text)' }}>
-              <ChevronLeft size={14} />
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-center h-full">
-              <img src="/mira-logo.png" alt="Miravance" style={{ height: 28, width: 'auto' }} />
-            </div>
-            <button onClick={toggleSidebar} style={{
-              position: 'absolute', top: 8, right: 8, width: 16, height: 16,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sidebar-text)',
-            }}>
-              <ChevronRight size={11} />
-            </button>
-          </>
-        )}
+      <div className="flex-shrink-0 flex items-center"
+        style={{ height: 56, borderBottom: '1px solid var(--sidebar-border)', padding: '0 12px', gap: 8, overflow: 'hidden' }}>
+        {/* Icon always visible, same size */}
+        <Logo size="sm" variant="icon" light noLink style={{ flexShrink: 0 }} />
+        {/* Wordmark slides in/out */}
+        <div style={{
+          flex: 1, minWidth: 0,
+          opacity: sidebarOpen ? 1 : 0,
+          width: sidebarOpen ? 'auto' : 0,
+          overflow: 'hidden',
+          transition: 'opacity .2s ease, width .2s ease',
+          whiteSpace: 'nowrap',
+          fontFamily: "'DM Sans', system-ui, sans-serif",
+          fontSize: 18, fontWeight: 700, letterSpacing: '-0.03em',
+          color: '#ffffff',
+        }}>
+          Cierlo
+        </div>
+        <button onClick={toggleSidebar} className="flex-shrink-0 flex items-center justify-center rounded"
+          style={{ color: 'var(--sidebar-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+          {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
       </div>
 
       {/* Nav */}

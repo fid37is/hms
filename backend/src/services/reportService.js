@@ -142,11 +142,13 @@ export const getDashboardStats = async (orgId) => {
 export const getOccupancyReport = async (orgId, dateFrom, dateTo) => {
   const { data: reservations, error } = await supabase
     .from('reservations')
-    .select(`id, check_in_date, check_out_date, status,
-      rooms ( id, number, floor, room_types ( name ) )`)
+    .select(`id, reservation_no, check_in_date, check_out_date, status,
+      guests!guest_id ( id, full_name ),
+      rooms!room_id ( id, number, floor, room_types ( name ) )`)
     .eq('org_id', orgId)
     .in('status', ['confirmed', 'checked_in', 'checked_out'])
-    .gte('check_in_date', dateFrom).lte('check_out_date', dateTo)
+    .lt('check_in_date', dateTo)    // check-in before range ends
+    .gt('check_out_date', dateFrom) // check-out after range starts
     .order('check_in_date');
 
   if (error) throw new AppError(`Failed to fetch occupancy data: ${error.message}`, 500);
@@ -165,49 +167,77 @@ export const getOccupancyReport = async (orgId, dateFrom, dateTo) => {
   }, 0);
 
   return {
-    date_from:        dateFrom,
-    date_to:          dateTo,
-    total_rooms:      totalRooms || 0,
-    total_room_nights: totalRoomNights,
-    occupied_nights:  occupiedNights,
-    occupancy_rate:   totalRoomNights > 0
-      ? `${((occupiedNights / totalRoomNights) * 100).toFixed(1)}%` : '0%',
-    reservations:     reservations || [],
+    date_from:    dateFrom,
+    date_to:      dateTo,
+    summary: {
+      total_rooms:       totalRooms || 0,
+      total_room_nights: totalRoomNights,
+      occupied_nights:   occupiedNights,
+      occupancy_rate:    totalRoomNights > 0
+        ? `${((occupiedNights / totalRoomNights) * 100).toFixed(1)}%` : '0%',
+    },
+    reservations: reservations || [],
   };
 };
 
 // ─── Revenue Report ───────────────────────────────────────
 
 export const getRevenueReport = async (orgId, dateFrom, dateTo) => {
-  const { data: payments, error } = await supabase
-    .from('payments')
-    .select('amount, method, created_at, folio_id')
-    .eq('org_id', orgId).eq('status', 'completed')
-    .gte('created_at', dateFrom).lte('created_at', dateTo + 'T23:59:59');
+  const dateTo23 = dateTo + 'T23:59:59';
 
-  if (error) throw new AppError(`Failed to fetch revenue data: ${error.message}`, 500);
+  const [paymentsRes, chargesRes] = await Promise.all([
+    supabase
+      .from('payments')
+      .select('amount, method, created_at')
+      .eq('org_id', orgId).eq('status', 'completed')
+      .gte('created_at', dateFrom).lte('created_at', dateTo23),
 
-  const { data: charges } = await supabase
-    .from('folio_items')
-    .select('amount, department')
-    .eq('org_id', orgId).eq('is_voided', false)
-    .gte('posted_at', dateFrom).lte('posted_at', dateTo + 'T23:59:59');
+    supabase
+      .from('folio_items')
+      .select('amount, department, posted_at')
+      .eq('org_id', orgId).eq('is_voided', false)
+      .gte('posted_at', dateFrom).lte('posted_at', dateTo23),
+  ]);
 
-  const totalRevenue = (payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+  if (paymentsRes.error) throw new AppError(`Failed to fetch revenue data: ${paymentsRes.error.message}`, 500);
 
+  const payments = paymentsRes.data || [];
+  const charges  = chargesRes.data  || [];
+
+  // Total revenue = sum of all non-voided charges posted in the period
+  // (reflects what was billed, not just what was explicitly recorded as a payment)
+  const totalRevenue = charges.reduce((s, c) => s + (c.amount || 0), 0);
+  const paymentCount = payments.length;
+
+  // Payments collected by method
   const byMethod = Object.entries(
-    (payments || []).reduce((acc, p) => {
-      acc[p.method] = (acc[p.method] || 0) + p.amount; return acc;
+    payments.reduce((acc, p) => {
+      acc[p.method] = (acc[p.method] || 0) + (p.amount || 0); return acc;
     }, {})
-  ).map(([method, amount]) => ({ method, amount }));
+  ).map(([method, total]) => ({ method, total }))
+   .sort((a, b) => b.total - a.total);
 
+  // Charges by department
   const byDepartment = Object.entries(
-    (charges || []).reduce((acc, c) => {
-      acc[c.department] = (acc[c.department] || 0) + c.amount; return acc;
+    charges.reduce((acc, c) => {
+      acc[c.department] = (acc[c.department] || 0) + (c.amount || 0); return acc;
     }, {})
-  ).map(([department, amount]) => ({ department, amount }));
+  ).map(([department, total]) => ({ department, total }))
+   .sort((a, b) => b.total - a.total);
 
-  return { date_from: dateFrom, date_to: dateTo, total_revenue: totalRevenue, by_method: byMethod, by_department: byDepartment };
+  // Total collected vs total billed
+  const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0);
+
+  return {
+    date_from:      dateFrom,
+    date_to:        dateTo,
+    total_revenue:  totalRevenue,
+    total_collected: totalCollected,
+    outstanding:    totalRevenue - totalCollected,
+    payment_count:  paymentCount,
+    by_method:      byMethod,
+    by_department:  byDepartment,
+  };
 };
 
 // ─── Guest Report ─────────────────────────────────────────
@@ -256,5 +286,71 @@ export const getHousekeepingReport = async (orgId, dateFrom, dateTo) => {
     date_from: dateFrom, date_to: dateTo,
     total_tasks: (data || []).length, by_status: byStatus,
     avg_completion_minutes: Math.round(avgMinutes), tasks: data || [],
+  };
+};
+
+// ─── Night Audit ──────────────────────────────────────────
+
+export const getNightAudit = async (orgId, date) => {
+  const dateStart = date + 'T00:00:00';
+  const dateEnd   = date + 'T23:59:59';
+
+  const [arrivalsRes, departuresRes, inHouseRes, paymentsRes, chargesRes] = await Promise.all([
+    // Checked in on this date
+    supabase.from('reservations')
+      .select('id, reservation_no, check_in_date, check_out_date, rate_per_night, total_amount, guests!guest_id ( full_name ), rooms!room_id ( number )')
+      .eq('org_id', orgId).eq('status', 'checked_in').eq('check_in_date', date),
+
+    // Checked out on this date
+    supabase.from('reservations')
+      .select('id, reservation_no, check_in_date, check_out_date, rate_per_night, total_amount, guests!guest_id ( full_name ), rooms!room_id ( number )')
+      .eq('org_id', orgId).eq('status', 'checked_out').eq('check_out_date', date),
+
+    // Still in house (checked in before today, checking out after today)
+    supabase.from('reservations')
+      .select('id, reservation_no, check_in_date, check_out_date, rate_per_night, guests!guest_id ( full_name ), rooms!room_id ( number )')
+      .eq('org_id', orgId).eq('status', 'checked_in')
+      .lte('check_in_date', date).gt('check_out_date', date),
+
+    // Payments received on this date
+    supabase.from('payments')
+      .select('id, payment_no, amount, method, notes, received_at')
+      .eq('org_id', orgId).eq('status', 'completed')
+      .gte('received_at', dateStart).lte('received_at', dateEnd),
+
+    // Charges posted on this date
+    supabase.from('folio_items')
+      .select('id, department, description, amount')
+      .eq('org_id', orgId).eq('is_voided', false)
+      .gte('posted_at', dateStart).lte('posted_at', dateEnd),
+  ]);
+
+  const payments = paymentsRes.data || [];
+  const charges  = chargesRes.data  || [];
+
+  const totalPayments = payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const totalCharges  = charges.reduce((s, c)  => s + (c.amount || 0), 0);
+
+  const byDepartment = Object.entries(
+    charges.reduce((acc, c) => {
+      acc[c.department] = (acc[c.department] || 0) + (c.amount || 0); return acc;
+    }, {})
+  ).map(([department, total]) => ({ department, total })).sort((a, b) => b.total - a.total);
+
+  return {
+    date,
+    arrivals:    arrivalsRes.data   || [],
+    departures:  departuresRes.data || [],
+    in_house:    inHouseRes.data    || [],
+    payments,
+    charges,
+    by_department: byDepartment,
+    totals: {
+      arrivals:   (arrivalsRes.data   || []).length,
+      departures: (departuresRes.data || []).length,
+      in_house:   (inHouseRes.data    || []).length,
+      payments:   totalPayments,
+      charges:    totalCharges,
+    },
   };
 };

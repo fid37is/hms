@@ -14,11 +14,16 @@ export const requirePermission = (permission) => {
     }
 
     // Admins bypass all permission checks
-    if (user.role === ROLES.ADMIN) {
+    if (user.role?.toLowerCase() === ROLES.ADMIN) {
       return next();
     }
 
     const userPermissions = user.permissions || [];
+
+    // Wildcard permission grants full access
+    if (userPermissions.includes('*')) {
+      return next();
+    }
 
     if (!userPermissions.includes(permission)) {
       return sendForbidden(
@@ -41,11 +46,15 @@ export const requireAnyPermission = (permissions) => {
       return sendForbidden(res, 'Authentication required.');
     }
 
-    if (user.role === ROLES.ADMIN) {
+    if (user.role?.toLowerCase() === ROLES.ADMIN) {
       return next();
     }
 
     const userPermissions = user.permissions || [];
+
+    if (userPermissions.includes('*')) {
+      return next();
+    }
     const hasAny = permissions.some((p) => userPermissions.includes(p));
 
     if (!hasAny) {

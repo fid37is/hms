@@ -6,6 +6,7 @@ import crypto       from 'crypto';
 import { supabase } from '../config/supabase.js';
 import { env }      from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { auditLogin } from './auditService.js';
 
 const generateAccessToken  = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
 const generateRefreshToken = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
@@ -47,6 +48,7 @@ export const login = async (email, password) => {
   }
 
   await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.id);
+  auditLogin(orgId, user.id, `Login: ${user.email}`);
 
   const tokenPayload = {
     sub:        user.id,
@@ -138,9 +140,20 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
     throw new AppError(`Failed to create user account: ${authError.message}`, 500);
   }
 
-  // 5. Fetch the Admin role
+  // 5. Create Admin role for this org with all permissions
   const { data: adminRole } = await supabase
-    .from('roles').select('id').ilike('name', 'admin').maybeSingle();
+    .from('roles').insert({ org_id: org.id, name: 'Admin', description: 'Full system access' })
+    .select('id').single();
+
+  // Assign all permissions to Admin role
+  if (adminRole) {
+    const { data: allPerms } = await supabase.from('permissions').select('id');
+    if (allPerms?.length) {
+      await supabase.from('role_permissions').insert(
+        allPerms.map(p => ({ role_id: adminRole.id, permission_id: p.id }))
+      );
+    }
+  }
 
   // 6. Create user profile
   const { data: user, error: userError } = await supabase

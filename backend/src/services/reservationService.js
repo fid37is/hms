@@ -1,6 +1,7 @@
 // src/services/reservationService.js
 
 import { supabase }             from '../config/supabase.js';
+import { auditCreate, auditUpdate } from './auditService.js';
 import { AppError }             from '../middleware/errorHandler.js';
 import { RESERVATION_STATUS, ROOM_STATUS } from '../config/constants.js';
 
@@ -29,6 +30,7 @@ export const getAllReservations = async (orgId, filters = {}, page = 1, limit = 
     .from('reservations')
     .select(`id, reservation_no, check_in_date, check_out_date, actual_check_in, actual_check_out,
       status, booking_source, rate_per_night, total_amount, deposit_amount, deposit_paid,
+      payment_status, payment_method, payment_ref, amount_paid,
       adults, children, special_requests, created_at,
       guests!guest_id ( id, full_name, email, phone, category ),
       rooms!room_id ( id, number, floor, room_types ( id, name ) )`,
@@ -134,6 +136,8 @@ export const createReservation = async (orgId, payload, createdBy) => {
       deposit_paid:    (deposit_amount || 0) > 0,
       special_requests: special_requests || null,
       notes:           notes   || null,
+      payment_method:  payload.payment_method  || 'on_arrival',
+      payment_status:  payload.payment_status  || 'pending',
       created_by:      createdBy,
     })
     .select().single();
@@ -142,6 +146,7 @@ export const createReservation = async (orgId, payload, createdBy) => {
     if (error.code === '23505') throw new AppError('Duplicate reservation.', 409);
     throw new AppError('Failed to create reservation.', 500);
   }
+  auditCreate(orgId, createdBy, 'reservations', data.id, { reservation_no: data.reservation_no, guest_id, check_in_date, check_out_date });
   return data;
 };
 
@@ -192,10 +197,22 @@ export const checkIn = async (orgId, id, checkedInBy, { payment_mode = 'pay_late
   if (payment_mode === 'full' && paid_amount < totalDue)
     throw new AppError(`Full payment requires ${totalDue}. Received ${paid_amount}.`, 400);
 
-  // Update reservation status
+  // Determine payment_status from what was collected
+  const newAmountPaid = paid_amount + (reservation.deposit_paid ? (reservation.deposit_amount || 0) : 0);
+  const newPaymentStatus =
+    payment_mode === 'pay_later' ? 'pending' :
+    newAmountPaid >= totalDue   ? 'paid'    : 'pending';
+
+  // Update reservation status + payment fields
   const { data, error } = await supabase
     .from('reservations')
-    .update({ status: RESERVATION_STATUS.CHECKED_IN, actual_check_in: new Date().toISOString() })
+    .update({
+      status:          RESERVATION_STATUS.CHECKED_IN,
+      actual_check_in: new Date().toISOString(),
+      amount_paid:     newAmountPaid,
+      payment_status:  newPaymentStatus,
+      ...(payment_method && payment_method !== 'on_arrival' ? { payment_method } : {}),
+    })
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError('Failed to process check-in.', 500);
@@ -254,6 +271,7 @@ export const checkIn = async (orgId, id, checkedInBy, { payment_mode = 'pay_late
     });
   }
 
+  auditUpdate(orgId, checkedInBy, 'reservations', id, { status: 'confirmed' }, { status: 'checked_in', payment_mode });
   return { ...data, folio_id: folio.id };
 };
 
@@ -341,7 +359,7 @@ export const checkOut = async (orgId, id, checkedOutBy) => {
 
   const { data, error } = await supabase
     .from('reservations')
-    .update({ status: RESERVATION_STATUS.CHECKED_OUT, actual_check_out: new Date().toISOString() })
+    .update({ status: RESERVATION_STATUS.CHECKED_OUT, actual_check_out: new Date().toISOString(), payment_status: 'paid' })
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError('Failed to process check-out.', 500);
@@ -355,6 +373,7 @@ export const checkOut = async (orgId, id, checkedOutBy) => {
       .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: checkedOutBy })
       .eq('org_id', orgId).eq('id', folio.id);
 
+  auditUpdate(orgId, checkedOutBy, 'reservations', id, { status: 'checked_in' }, { status: 'checked_out' });
   return data;
 };
 
@@ -372,6 +391,7 @@ export const cancelReservation = async (orgId, id, reason) => {
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError('Failed to cancel reservation.', 500);
+  auditUpdate(orgId, null, 'reservations', id, { status: reservation.status }, { status: 'cancelled', reason });
   return data;
 };
 
@@ -425,5 +445,23 @@ export const getTodayDepartures = async (orgId) => {
     .order('reservation_no');
 
   if (error) throw new AppError('Failed to fetch departures.', 500);
+  return data;
+};
+
+export const markPaymentReceived = async (orgId, id, { payment_status = 'paid', payment_ref } = {}) => {
+  const reservation = await getReservationById(orgId, id);
+
+  if (!['pending', 'pending_transfer'].includes(reservation.payment_status))
+    throw new AppError('Payment is already marked as received or refunded.', 409);
+
+  const update = { payment_status };
+  if (payment_ref) update.payment_ref = payment_ref;
+
+  const { data, error } = await supabase
+    .from('reservations')
+    .update(update)
+    .eq('org_id', orgId).eq('id', id).select().single();
+
+  if (error) throw new AppError('Failed to update payment status.', 500);
   return data;
 };

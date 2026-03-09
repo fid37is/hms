@@ -8,7 +8,7 @@ export const deleteRoomType   = (id)          => api.delete(`/rooms/types/${id}`
 
 // Rate Plans
 export const getRatePlans     = (typeId)      => api.get(`/rooms/types/${typeId}/rates`);
-export const createRatePlan   = (typeId, data)=> api.post(`/rooms/types/${typeId}/rates`, data);
+export const createRatePlan   = (typeId, data)=> api.post('/rooms/rates', { ...data, room_type_id: typeId });
 export const deleteRatePlan   = (id)          => api.delete(`/rooms/rates/${id}`);
 
 // Availability — maps check_in_date/check_out_date to what the backend expects
@@ -38,3 +38,15 @@ export const uploadRoomMedia = (roomId, file) => {
 
 export const deleteRoomMedia = (roomId, path) =>
   api.delete(`/rooms/${roomId}/media`, { data: { path } });
+
+// Room Type Media
+export const uploadRoomTypeMedia = (typeId, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return api.post(`/rooms/types/${typeId}/media`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const deleteRoomTypeMedia = (typeId, path) =>
+  api.delete(`/rooms/types/${typeId}/media`, { data: { path } });

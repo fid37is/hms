@@ -16,25 +16,15 @@ export const getAllRoomTypes = async (orgId) => {
 
   if (error) throw new AppError('Failed to fetch room types.', 500);
 
-  const { data: rooms } = await supabase
-    .from('rooms')
-    .select('id, number, floor, type_id, media')
-    .eq('org_id', orgId)
-    
-    .eq('is_blocked', false)
-    .not('media', 'is', null);
-
-  const photosByType = {};
-  for (const room of (rooms || [])) {
-    const photos = (room.media || []).filter(m => m.type === 'image' || m.type === 'gif');
-    if (!photos.length) continue;
-    if (!photosByType[room.type_id]) photosByType[room.type_id] = [];
-    if (photosByType[room.type_id].length < 6) {
-      photosByType[room.type_id].push({ url: photos[0].url, room_number: room.number, room_id: room.id });
-    }
-  }
-
-  return types.map(t => ({ ...t, photos: photosByType[t.id] || [] }));
+  // Each type has its own marketing media (uploaded via TypeMediaSection in HMS).
+  // photos = type-level media only. Individual room photos are loaded separately
+  // when a guest clicks into a specific type on the hotel website.
+  return types.map(t => ({
+    ...t,
+    photos: (t.media || [])
+      .filter(m => m.type === 'image' || m.type === 'gif')
+      .map(m => ({ url: m.url, path: m.path })),
+  }));
 };
 
 export const getRoomTypeById = async (orgId, id) => {
@@ -47,25 +37,25 @@ export const getRoomTypeById = async (orgId, id) => {
 
   if (error || !data) throw new AppError('Room type not found.', 404);
 
+  // Individual rooms belonging to this type — each carries its own media
   const { data: rooms } = await supabase
     .from('rooms')
-    .select('id, number, floor, status, media')
+    .select('id, number, floor, status, notes, media')
     .eq('org_id', orgId)
     .eq('type_id', id)
-    
     .eq('is_blocked', false)
     .order('number');
 
-  const photos = [];
-  for (const room of (rooms || [])) {
-    for (const m of (room.media || [])) {
-      if (m.type === 'image' || m.type === 'gif') {
-        photos.push({ url: m.url, room_number: room.number, room_id: room.id, floor: room.floor });
-      }
-    }
-  }
+  // Type-level marketing photos (from type.media — set by admin in HMS)
+  const photos = (data.media || [])
+    .filter(m => m.type === 'image' || m.type === 'gif')
+    .map(m => ({ url: m.url, path: m.path }));
 
-  return { ...data, photos };
+  return {
+    ...data,
+    photos,           // marketing images for the type hero gallery
+    rooms: rooms || [], // individual rooms with their own media
+  };
 };
 
 export const createRoomType = async (orgId, payload) => {
@@ -100,7 +90,6 @@ export const deleteRoomType = async (orgId, id) => {
     .select('id')
     .eq('org_id', orgId)
     .eq('type_id', id)
-    
     .limit(1);
 
   if (rooms?.length > 0) throw new AppError('Cannot delete a room type that has rooms assigned.', 409);
@@ -116,6 +105,26 @@ export const deleteRoomType = async (orgId, id) => {
 };
 
 // ─── Rate Plans ───────────────────────────────────────────
+//
+// Fields: name, description, base_rate, is_refundable,
+//         cancellation_hours, prepayment_required, prepayment_percent
+//
+// Business rules (enforced server-side):
+//   - Non-refundable rates always have cancellation_hours = 0
+//   - Non-refundable rates always require prepayment
+//   - prepayment_percent defaults to 100 when prepayment is required
+
+const sanitiseRatePlan = (payload) => {
+  const d = { ...payload };
+  if (d.is_refundable === false) {
+    d.cancellation_hours  = 0;
+    d.prepayment_required = true;
+  }
+  if (d.prepayment_required && !d.prepayment_percent) {
+    d.prepayment_percent = 100;
+  }
+  return d;
+};
 
 export const getRatePlans = async (orgId, roomTypeId) => {
   const { data, error } = await supabase
@@ -127,13 +136,14 @@ export const getRatePlans = async (orgId, roomTypeId) => {
     .order('name');
 
   if (error) throw new AppError('Failed to fetch rate plans.', 500);
-  return data;
+  // Alias base_rate as rate_per_night for frontend consistency
+  return (data || []).map(p => ({ ...p, rate_per_night: p.base_rate }));
 };
 
 export const createRatePlan = async (orgId, payload) => {
   const { data, error } = await supabase
     .from('rate_plans')
-    .insert({ ...payload, org_id: orgId })
+    .insert({ ...sanitiseRatePlan(payload), org_id: orgId })
     .select()
     .single();
 
@@ -144,7 +154,7 @@ export const createRatePlan = async (orgId, payload) => {
 export const updateRatePlan = async (orgId, id, payload) => {
   const { data, error } = await supabase
     .from('rate_plans')
-    .update(payload)
+    .update(sanitiseRatePlan(payload))
     .eq('org_id', orgId)
     .eq('id', id)
     .select()
@@ -171,9 +181,8 @@ export const getAllRooms = async (orgId, filters = {}) => {
   let query = supabase
     .from('rooms')
     .select(`id, number, floor, status, is_blocked, block_reason, notes, type_id, media,
-      room_types ( id, name, base_rate, max_occupancy, amenities )`)
+      room_types ( id, name, base_rate, max_occupancy, amenities, media )`)
     .eq('org_id', orgId)
-    
     .order('number');
 
   if (filters.status) {
@@ -195,7 +204,6 @@ export const getRoomById = async (orgId, id) => {
       room_types ( id, name, base_rate, max_occupancy, amenities )`)
     .eq('org_id', orgId)
     .eq('id', id)
-    
     .single();
 
   if (error || !data) throw new AppError('Room not found.', 404);
@@ -208,7 +216,6 @@ export const createRoom = async (orgId, payload) => {
     .select('id')
     .eq('org_id', orgId)
     .eq('number', payload.number)
-    
     .single();
 
   if (existing) throw new AppError(`Room number ${payload.number} already exists.`, 409);
@@ -219,7 +226,7 @@ export const createRoom = async (orgId, payload) => {
     .select()
     .single();
 
-  if (error) throw new AppError('Failed to create room.', 500);
+  if (error) throw new AppError(`Failed to create room: ${error.message}`, 500);
   return data;
 };
 
@@ -233,7 +240,6 @@ export const updateRoom = async (orgId, id, payload) => {
       .eq('org_id', orgId)
       .eq('number', payload.number)
       .neq('id', id)
-      
       .single();
 
     if (existing) throw new AppError(`Room number ${payload.number} already exists.`, 409);
@@ -315,29 +321,45 @@ export const deleteRoom = async (orgId, id) => {
   return { message: 'Room deleted.' };
 };
 
+// ─── Availability ─────────────────────────────────────────
+//
+// Bookable = everything except out_of_order and maintenance.
+// dirty / ready / clean / available are all fine — they'll be cleaned before check-in.
+// Occupied rooms are excluded via the reservation conflict query, not by status,
+// because a room's status flag may lag during a busy shift.
+//
+// Overlap uses half-open intervals [checkIn, checkOut) so a guest checking out on
+// date X frees the room for a new guest checking in on date X (same-day turnover).
+
+const UNBOOKABLE = '("out_of_order","maintenance")';
+
 export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null, withMedia = false) => {
-  const { data: occupied } = await supabase
+  // Step 1: rooms tied up by confirmed/checked-in reservations overlapping the dates
+  const { data: conflicting } = await supabase
     .from('reservations')
     .select('room_id')
     .eq('org_id', orgId)
     .in('status', ['confirmed', 'checked_in'])
     .lt('check_in_date', checkOut)
-    .gt('check_out_date', checkIn);
+    .gt('check_out_date', checkIn)
+    .not('room_id', 'is', null);
 
-  const occupiedIds = (occupied || []).map(r => r.room_id).filter(Boolean);
+  const conflictingIds = (conflicting || []).map(r => r.room_id).filter(Boolean);
 
+  // Step 2: all non-blocked, physically usable rooms
   let query = supabase
     .from('rooms')
     .select(`id, number, floor, status, type_id,
       ${withMedia ? 'media,' : ''}
       room_types ( id, name, base_rate, max_occupancy, amenities )`)
     .eq('org_id', orgId)
-    
     .eq('is_blocked', false)
-    .in('status', [ROOM_STATUS.AVAILABLE, ROOM_STATUS.CLEAN])
+    .not('status', 'in', UNBOOKABLE)
     .order('number');
 
-  if (occupiedIds.length > 0) query = query.not('id', 'in', `(${occupiedIds.join(',')})`);
+  if (conflictingIds.length > 0) {
+    query = query.not('id', 'in', `(${conflictingIds.join(',')})`);
+  }
   if (typeId) query = query.eq('type_id', typeId);
 
   const { data, error } = await query;
@@ -345,7 +367,7 @@ export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null,
   return data;
 };
 
-// ─── Media ────────────────────────────────────────────────
+// ─── Room Media ───────────────────────────────────────────
 
 export const uploadRoomMedia = async (orgId, roomId, file) => {
   const ALLOWED = ['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];
@@ -353,7 +375,7 @@ export const uploadRoomMedia = async (orgId, roomId, file) => {
 
   const isVideo = file.mimetype.startsWith('video/');
   const limit   = isVideo ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
-  if (file.size > limit) throw new AppError(`File too large.`, 400);
+  if (file.size > limit) throw new AppError('File too large.', 400);
 
   const room = await getRoomById(orgId, roomId);
   const currentMedia = room.media || [];
@@ -401,6 +423,71 @@ export const deleteRoomMedia = async (orgId, roomId, mediaPath) => {
     .eq('id', roomId)
     .select()
     .single();
+
+  if (error) throw new AppError(`Failed to update media: ${error.message}`, 500);
+  return data;
+};
+
+// ─── Room Type Media ──────────────────────────────────────
+
+export const uploadRoomTypeMedia = async (orgId, typeId, file) => {
+  const ALLOWED = ['image/jpeg','image/png','image/webp','image/gif'];
+  if (!ALLOWED.includes(file.mimetype)) throw new AppError('Invalid file type. Images only.', 400);
+  if (file.size > 2 * 1024 * 1024) throw new AppError('File too large. Max 2MB.', 400);
+
+  const { data: type, error: typeErr } = await supabase
+    .from('room_types').select('id, media').eq('org_id', orgId).eq('id', typeId).single();
+  if (typeErr || !type) throw new AppError('Room type not found.', 404);
+
+  const currentMedia = type.media || [];
+
+  // Room types only have one cover photo — replace existing on new upload
+  if (currentMedia.length > 0) {
+    const oldPaths = currentMedia.map(m => m.path).filter(Boolean);
+    if (oldPaths.length > 0) await supabase.storage.from('room-media').remove(oldPaths);
+  }
+
+  const ext       = file.originalname.split('.').pop().toLowerCase();
+  const filename  = `room-types/${typeId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const mediaType = file.mimetype === 'image/gif' ? 'gif' : 'image';
+
+  const { error: uploadError } = await supabase.storage
+    .from('room-media')
+    .upload(filename, file.buffer, { contentType: file.mimetype, cacheControl: '3600', upsert: false });
+
+  if (uploadError) throw new AppError(`Upload failed: ${uploadError.message}`, 500);
+
+  const { data: { publicUrl } } = supabase.storage.from('room-media').getPublicUrl(filename);
+
+  const updatedMedia = [{
+    url: publicUrl, path: filename, type: mediaType,
+    name: file.originalname, size: file.size, added_at: new Date().toISOString(),
+  }];
+
+  const { data, error } = await supabase
+    .from('room_types')
+    .update({ media: updatedMedia })
+    .eq('org_id', orgId).eq('id', typeId)
+    .select().single();
+
+  if (error) throw new AppError(`Failed to save media: ${error.message}`, 500);
+  return data;
+};
+
+export const deleteRoomTypeMedia = async (orgId, typeId, mediaPath) => {
+  const { data: type, error: typeErr } = await supabase
+    .from('room_types').select('id, media').eq('org_id', orgId).eq('id', typeId).single();
+  if (typeErr || !type) throw new AppError('Room type not found.', 404);
+
+  await supabase.storage.from('room-media').remove([mediaPath]);
+
+  const updatedMedia = (type.media || []).filter(m => m.path !== mediaPath);
+
+  const { data, error } = await supabase
+    .from('room_types')
+    .update({ media: updatedMedia })
+    .eq('org_id', orgId).eq('id', typeId)
+    .select().single();
 
   if (error) throw new AppError(`Failed to update media: ${error.message}`, 500);
   return data;

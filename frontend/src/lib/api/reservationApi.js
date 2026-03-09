@@ -10,3 +10,4 @@ export const cancelReservation = (id, d) => api.patch(`/reservations/${id}/cance
 export const assignRoom       = (id, d)  => api.patch(`/reservations/${id}/assign-room`, d);
 export const getTodayArrivals   = ()     => api.get('/reservations/arrivals/today');
 export const getTodayDepartures = ()     => api.get('/reservations/departures/today');
+export const markPaymentReceived = (id, d) => api.patch(`/reservations/${id}/mark-paid`, d);

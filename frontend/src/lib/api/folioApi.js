@@ -8,3 +8,4 @@ export const addPayment            = (id, d) => api.post(`/folio/${id}/payments`
 export const refundPayment         = (id, payId, d) => api.patch(`/folio/${id}/payments/${payId}/refund`, d);
 export const openShift             = (d)    => api.post('/folio/shift/open', d);
 export const closeShift            = (d)    => api.post('/folio/shift/close', d);
+export const getOpenFolios      = (params) => api.get('/folio/open', { params });
