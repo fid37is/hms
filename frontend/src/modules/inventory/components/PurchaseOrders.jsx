@@ -4,7 +4,7 @@ import * as invApi   from '../../../lib/api/inventoryApi';
 import DataTable     from '../../../components/shared/DataTable';
 import StatusBadge   from '../../../components/shared/StatusBadge';
 import Modal         from '../../../components/shared/Modal';
-import POLineItem    from './POLineItem';
+import POLineItem    from './LineItem';
 import { formatDate, formatCurrency } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
