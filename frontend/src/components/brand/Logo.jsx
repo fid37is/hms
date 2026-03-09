@@ -1,4 +1,4 @@
-zz// src/components/brand/Logo.jsx
+// src/components/brand/Logo.jsx
 
 import { Link } from 'react-router-dom';
 
