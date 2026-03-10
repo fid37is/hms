@@ -28,6 +28,7 @@ import StaffPage         from './modules/staff/StaffPage';
 import ReportsPage       from './modules/reports/ReportsPage';
 import ChatPage          from './modules/chat/ChatPage';
 import SettingsPage      from './modules/settings/SettingsPage';
+import FnbPage          from './modules/fnb/FnbPage';
 
 // Guard: blocked if not logged in, or if must change password
 function Guard({ children }) {
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="/staff"        element={<StaffPage />} />
           <Route path="/reports"      element={<ReportsPage />} />
           <Route path="/chat"         element={<ChatPage />} />
+          <Route path="/fnb"          element={<FnbPage />} />
           <Route path="/settings"     element={<SettingsPage />} />
         </Route>
 

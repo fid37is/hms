@@ -9,8 +9,10 @@ import toast from 'react-hot-toast';
 const BLANK = {
   // Identity
   hotel_name: '', tagline: '', description: '', logo_url: '',
-  // Branding
-  primary_color: '#1F4E8C', secondary_color: '#c9a96e',
+  // Branding — core (always set)
+  primary_color: '#1F4E8C', accent_color: '#C9A84C',
+  // Branding — optional role overrides (blank = auto-derived from primary/accent)
+  nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '',
   // Location
   address: '', city: '', state: '', country: 'Nigeria', google_maps_url: '',
   // Contact
@@ -30,6 +32,22 @@ const BLANK = {
   receipt_footer: '',
 };
 
+// ── Contrast helper — returns black or white text for a given bg hex ──────────
+function contrastText(hex) {
+  if (!hex || !hex.startsWith('#')) return '#ffffff';
+  const clean = hex.replace('#', '');
+  const full  = clean.length === 3
+    ? clean.split('').map(c => c + c).join('')
+    : clean;
+  const [r, g, b] = [0, 2, 4].map(i => {
+    const v = parseInt(full.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.35 ? '#1a1a1a' : '#ffffff';
+}
+
+// ── Section wrapper ────────────────────────────────────────────────────────────
 function Section({ title, children }) {
   return (
     <div className="card p-5 space-y-4">
@@ -41,36 +59,72 @@ function Section({ title, children }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   return (
     <div className="form-group">
       <label className="label">{label}</label>
       {children}
+      {hint && <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
     </div>
   );
 }
 
-function ColorField({ label, name, value, onChange }) {
+// ── Color input: swatch + hex text field ──────────────────────────────────────
+function ColorField({ label, name, value, onChange, hint, optional }) {
   return (
-    <Field label={label}>
+    <Field label={optional ? `${label} (optional)` : label} hint={hint}>
       <div className="flex gap-2 items-center">
         <input
           name={name}
           type="color"
-          className="w-10 h-9 rounded cursor-pointer border p-0.5"
+          className="w-10 h-9 rounded cursor-pointer border p-0.5 shrink-0"
           style={{ borderColor: 'var(--border-base)' }}
-          value={value}
+          value={value || '#ffffff'}
           onChange={onChange}
         />
         <input
           name={name}
           className="input font-mono"
-          placeholder="#000000"
+          placeholder={optional ? 'auto' : '#000000'}
           value={value}
           onChange={onChange}
         />
+        {optional && value && (
+          <button
+            type="button"
+            title="Reset to auto"
+            className="text-xs shrink-0 px-2 py-1 rounded transition-colors"
+            style={{ color: 'var(--text-muted)', border: '1px solid var(--border-base)' }}
+            onClick={() => onChange({ target: { name, value: '' } })}
+          >
+            ✕
+          </button>
+        )}
       </div>
     </Field>
+  );
+}
+
+// ── Live preview pill ──────────────────────────────────────────────────────────
+function Swatch({ label, bg, text, overridden }) {
+  if (!bg) return null;
+  const textColor = text || contrastText(bg);
+  return (
+    <div className="flex-1 relative">
+      <div
+        className="h-9 rounded text-center text-xs flex items-center justify-center font-medium px-2 truncate w-full"
+        style={{ backgroundColor: bg, color: textColor }}
+      >
+        {label}
+      </div>
+      {overridden && (
+        <span
+          className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full border-2"
+          style={{ backgroundColor: 'var(--brand)', borderColor: 'var(--bg-surface)', zIndex: 1 }}
+          title="Custom override set"
+        />
+      )}
+    </div>
   );
 }
 
@@ -81,41 +135,62 @@ export default function HotelConfig() {
   });
 
   const [form, setForm] = useState(BLANK);
+  const [showAdvancedColors, setShowAdvancedColors] = useState(false);
 
   useEffect(() => {
     if (!data) return;
+    const hasAdvanced = !!(
+      data.nav_color || data.btn_color || data.footer_color ||
+      data.surface_color || data.bg_color
+    );
+    setShowAdvancedColors(hasAdvanced);
+
     setForm({
       hotel_name:          data.hotel_name          ?? '',
       tagline:             data.tagline             ?? '',
       description:         data.description         ?? '',
       logo_url:            data.logo_url            ?? '',
+      // Core brand colors
       primary_color:       data.primary_color       ?? '#1F4E8C',
-      secondary_color:     data.secondary_color     ?? '#c9a96e',
+      accent_color:        data.accent_color        ?? data.secondary_color ?? '#C9A84C',
+      // Optional role overrides — empty string = auto
+      nav_color:           data.nav_color           ?? '',
+      btn_color:           data.btn_color           ?? '',
+      footer_color:        data.footer_color        ?? '',
+      surface_color:       data.surface_color       ?? '',
+      bg_color:            data.bg_color            ?? '',
+      // Location
       address:             data.address             ?? '',
       city:                data.city                ?? '',
       state:               data.state               ?? '',
       country:             data.country             ?? 'Nigeria',
       google_maps_url:     data.google_maps_url     ?? '',
+      // Contact
       phone:               data.phone               ?? '',
       email:               data.email               ?? '',
       whatsapp_number:     data.whatsapp_number     ?? '',
+      // Social
       instagram_url:       data.instagram_url       ?? '',
       facebook_url:        data.facebook_url        ?? '',
       twitter_url:         data.twitter_url         ?? '',
-      currency:             data.currency            ?? 'NGN',
-      currency_symbol:      data.currency_symbol     ?? '₦',
-      tax_rate:             data.tax_rate   != null  ? String(data.tax_rate)            : '7.5',
-      service_charge:       data.service_charge != null ? String(data.service_charge)   : '10',
-      pay_on_arrival:       data.pay_on_arrival      ?? true,
-      bank_transfer:        data.bank_transfer        ?? false,
-      paystack_enabled:     data.paystack_enabled     ?? false,
-      bank_name:            data.bank_name            ?? '',
-      bank_account_number:  data.bank_account_number  ?? '',
-      bank_account_name:    data.bank_account_name    ?? '',
-      paystack_public_key:  data.paystack_public_key  ?? '',
+      // Financial
+      currency:            data.currency            ?? 'NGN',
+      currency_symbol:     data.currency_symbol     ?? '₦',
+      tax_rate:            data.tax_rate   != null  ? String(data.tax_rate)          : '7.5',
+      service_charge:      data.service_charge != null ? String(data.service_charge) : '10',
+      // Payment
+      pay_on_arrival:      data.pay_on_arrival      ?? true,
+      bank_transfer:       data.bank_transfer       ?? false,
+      paystack_enabled:    data.paystack_enabled    ?? false,
+      bank_name:           data.bank_name           ?? '',
+      bank_account_number: data.bank_account_number ?? '',
+      bank_account_name:   data.bank_account_name   ?? '',
+      paystack_public_key: data.paystack_public_key ?? '',
+      // Operations
       timezone:            data.timezone            ?? 'Africa/Lagos',
       check_in_time:       (data.check_in_time  ?? '14:00').slice(0, 5),
       check_out_time:      (data.check_out_time ?? '11:00').slice(0, 5),
+      // Policies
       cancellation_policy: data.cancellation_policy ?? '',
       pets_policy:         data.pets_policy         ?? '',
       smoking_policy:      data.smoking_policy      ?? 'No smoking on premises',
@@ -137,17 +212,38 @@ export default function HotelConfig() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const stripSeconds = (t) => t ? t.slice(0, 5) : t;
+    // Send null for empty optional color fields so BE knows they're unset (not '').
+    const nullIfEmpty = (v) => v && v.trim() ? v.trim() : null;
     save.mutate({
       ...form,
-      tax_rate:            Number(form.tax_rate)       || 0,
-      service_charge:      Number(form.service_charge) || 0,
-      check_in_time:       stripSeconds(form.check_in_time),
-      check_out_time:      stripSeconds(form.check_out_time),
-      pay_on_arrival:      Boolean(form.pay_on_arrival),
-      bank_transfer:       Boolean(form.bank_transfer),
-      paystack_enabled:    Boolean(form.paystack_enabled),
+      // Normalize optional colors to null when blank
+      nav_color:      nullIfEmpty(form.nav_color),
+      btn_color:      nullIfEmpty(form.btn_color),
+      footer_color:   nullIfEmpty(form.footer_color),
+      surface_color:  nullIfEmpty(form.surface_color),
+      bg_color:       nullIfEmpty(form.bg_color),
+      // Numeric fields
+      tax_rate:       Number(form.tax_rate)       || 0,
+      service_charge: Number(form.service_charge) || 0,
+      // Time fields
+      check_in_time:  stripSeconds(form.check_in_time),
+      check_out_time: stripSeconds(form.check_out_time),
+      // Boolean fields
+      pay_on_arrival:   Boolean(form.pay_on_arrival),
+      bank_transfer:    Boolean(form.bank_transfer),
+      paystack_enabled: Boolean(form.paystack_enabled),
     });
   };
+
+  // Derived preview values — mirrors what theme.js applyBrandColors() will produce
+  const primary  = form.primary_color;
+  const accent   = form.accent_color;
+  const navBg    = form.nav_color    || primary;
+  const btnBg    = form.btn_color    || primary;
+  const accentBg = accent;
+  const footerBg = form.footer_color || primary;
+  const surfaceBg= form.surface_color|| '#ffffff';
+  const pageBg   = form.bg_color     || '#fafaf8';
 
   if (isLoading) return <LoadingSpinner center />;
 
@@ -158,7 +254,8 @@ export default function HotelConfig() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Section title="Hotel Identity">
           <Field label="Hotel Name *">
-            <input name="hotel_name" className="input" required value={form.hotel_name} onChange={handleChange} />
+            <input name="hotel_name" className="input" required
+              value={form.hotel_name} onChange={handleChange} />
           </Field>
           <Field label="Tagline">
             <input name="tagline" className="input" placeholder="e.g. Where comfort meets luxury"
@@ -174,33 +271,108 @@ export default function HotelConfig() {
               value={form.logo_url} onChange={handleChange} />
           </Field>
 
-          {/* Brand Colors — primary + secondary side by side */}
+          {/* ── Brand Colors ─────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <ColorField
               label="Primary Color"
               name="primary_color"
               value={form.primary_color}
               onChange={handleChange}
+              hint="Nav, headings, footer"
             />
             <ColorField
               label="Accent Color"
-              name="secondary_color"
-              value={form.secondary_color}
+              name="accent_color"
+              value={form.accent_color}
               onChange={handleChange}
+              hint="Buttons, prices, highlights"
             />
           </div>
 
-          {/* Live preview swatch */}
-          <div className="flex gap-3 pt-1">
-            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
-              style={{ backgroundColor: form.primary_color }}>
-              Primary
+          {/* Live preview — core roles */}
+          {(() => {
+            const hasAnyOverride = form.nav_color || form.btn_color || form.footer_color || form.surface_color || form.bg_color;
+            return (
+              <>
+                <div className="flex gap-2 pt-1 flex-wrap">
+                  <Swatch label="Nav"    bg={navBg}    overridden={!!form.nav_color} />
+                  <Swatch label="Button" bg={btnBg}    overridden={!!form.btn_color} />
+                  <Swatch label="Accent" bg={accentBg} />
+                  <Swatch label="Footer" bg={footerBg} overridden={!!form.footer_color} />
+                </div>
+                <div className="flex gap-2">
+                  <Swatch label="Page bg" bg={pageBg}    text={contrastText(pageBg)}    overridden={!!form.bg_color} />
+                  <Swatch label="Cards"   bg={surfaceBg} text={contrastText(surfaceBg)} overridden={!!form.surface_color} />
+                </div>
+                {hasAnyOverride && (
+                  <button
+                    type="button"
+                    className="text-xs transition-colors"
+                    style={{ color: 'var(--s-red-text)' }}
+                    onClick={() => setForm(f => ({ ...f, nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '' }))}
+                  >
+                    ↺ Reset all overrides to auto
+                  </button>
+                )}
+              </>
+            );
+          })()}
+
+          {/* ── Advanced color overrides ────────────────────────────── */}
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+            style={{ color: showAdvancedColors ? 'var(--brand)' : 'var(--text-muted)' }}
+            onClick={() => setShowAdvancedColors(v => !v)}
+          >
+            <span style={{
+              display: 'inline-block', width: 12, height: 12,
+              transition: 'transform 0.2s',
+              transform: showAdvancedColors ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}>▶</span>
+            Advanced color overrides
+          </button>
+
+          {showAdvancedColors && (
+            <div className="rounded-xl p-4 space-y-3"
+              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Leave blank to auto-derive from Primary / Accent. Set only if you need a specific color for that element.
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                <ColorField
+                  label="Navigation Bar" name="nav_color"
+                  value={form.nav_color} onChange={handleChange}
+                  hint="Default: same as Primary"
+                  optional
+                />
+                <ColorField
+                  label="Primary Button" name="btn_color"
+                  value={form.btn_color} onChange={handleChange}
+                  hint="Default: same as Primary"
+                  optional
+                />
+                <ColorField
+                  label="Footer" name="footer_color"
+                  value={form.footer_color} onChange={handleChange}
+                  hint="Default: same as Primary"
+                  optional
+                />
+                <ColorField
+                  label="Card / Surface" name="surface_color"
+                  value={form.surface_color} onChange={handleChange}
+                  hint="Default: white"
+                  optional
+                />
+                <ColorField
+                  label="Page Background" name="bg_color"
+                  value={form.bg_color} onChange={handleChange}
+                  hint="Default: off-white"
+                  optional
+                />
+              </div>
             </div>
-            <div className="flex-1 h-8 rounded text-center text-xs flex items-center justify-center text-white font-medium"
-              style={{ backgroundColor: form.secondary_color }}>
-              Accent
-            </div>
-          </div>
+          )}
         </Section>
 
         <Section title="Location">
@@ -238,7 +410,8 @@ export default function HotelConfig() {
             </Field>
           </div>
           <Field label="Email">
-            <input name="email" type="email" className="input" value={form.email} onChange={handleChange} />
+            <input name="email" type="email" className="input"
+              value={form.email} onChange={handleChange} />
           </Field>
         </Section>
 
@@ -299,11 +472,10 @@ export default function HotelConfig() {
             Choose which payment options guests can use when booking online.
           </p>
 
-          {/* Toggles */}
           <div className="flex flex-col gap-3 mb-4">
             {[
-              { key: 'pay_on_arrival', label: 'Pay on Arrival', sub: 'Guest pays at the front desk on check-in. No charge now.' },
-              { key: 'bank_transfer',  label: 'Bank Transfer',  sub: 'Guest pays to your bank account before arrival.' },
+              { key: 'pay_on_arrival',   label: 'Pay on Arrival',        sub: 'Guest pays at the front desk on check-in. No charge now.' },
+              { key: 'bank_transfer',    label: 'Bank Transfer',          sub: 'Guest pays to your bank account before arrival.' },
               { key: 'paystack_enabled', label: 'Paystack (Online Card)', sub: 'Guest pays by card at time of booking.' },
             ].map(({ key, label, sub }) => (
               <label key={key} className="flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-colors"
@@ -311,16 +483,17 @@ export default function HotelConfig() {
                 <input type="checkbox" className="mt-0.5" checked={!!form[key]}
                   onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
                 <div>
-                  <p className="text-xs font-semibold" style={{ color: form[key] ? 'var(--brand)' : 'var(--text-base)' }}>{label}</p>
+                  <p className="text-xs font-semibold"
+                    style={{ color: form[key] ? 'var(--brand)' : 'var(--text-base)' }}>{label}</p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
                 </div>
               </label>
             ))}
           </div>
 
-          {/* Bank details — shown when bank transfer is enabled */}
           {form.bank_transfer && (
-            <div className="flex flex-col gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+            <div className="flex flex-col gap-3 p-3 rounded-xl"
+              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
               <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Bank Account Details</p>
               <Field label="Bank Name">
                 <input name="bank_name" className="input" placeholder="e.g. First Bank"
@@ -337,9 +510,9 @@ export default function HotelConfig() {
             </div>
           )}
 
-          {/* Paystack key — shown when paystack is enabled */}
           {form.paystack_enabled && (
-            <div className="flex flex-col gap-3 p-3 rounded-xl mt-3" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+            <div className="flex flex-col gap-3 p-3 rounded-xl mt-3"
+              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
               <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Paystack Configuration</p>
               <Field label="Public Key">
                 <input name="paystack_public_key" className="input font-mono" placeholder="pk_live_…"

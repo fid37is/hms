@@ -7,6 +7,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   changePasswordSchema,
+  forceChangePasswordSchema,
   registerOrgSchema,
 } from '../validators/authValidator.js';
 import {
@@ -37,7 +38,8 @@ router.post('/register-org',    validate(registerOrgSchema),   registerOrgContro
 // ─── Authenticated ────────────────────────────────────────
 router.post('/logout',          authenticate, logoutController);
 router.get('/me',               authenticate, getProfileController);
-router.patch('/change-password', authenticate, validate(changePasswordSchema), changePasswordController);
+router.patch('/change-password',       authenticate, validate(changePasswordSchema),      changePasswordController);
+router.patch('/force-change-password', authenticate, validate(forceChangePasswordSchema), changePasswordController);
 
 // ─── API Keys (requires JWT auth) ─────────────────────────
 router.get('/api-keys',         authenticate, listApiKeysController);

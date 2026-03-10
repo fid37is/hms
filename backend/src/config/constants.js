@@ -14,67 +14,96 @@ export const ROLES = {
 };
 
 export const PERMISSIONS = {
+  ROOMS: {
+    READ:   'rooms:read',
+    CREATE: 'rooms:create',
+    UPDATE: 'rooms:update',
+    DELETE: 'rooms:delete',
+    STATUS: 'rooms:status',
+  },
   RESERVATIONS: {
-    CREATE:   'reservations:create',
     READ:     'reservations:read',
+    CREATE:   'reservations:create',
     UPDATE:   'reservations:update',
+    CANCEL:   'reservations:cancel',
     DELETE:   'reservations:delete',
     CHECKIN:  'reservations:checkin',
     CHECKOUT: 'reservations:checkout',
   },
-  ROOMS: {
-    READ:   'rooms:read',
-    UPDATE: 'rooms:update',
-    STATUS: 'rooms:status',
-  },
   GUESTS: {
-    CREATE: 'guests:create',
     READ:   'guests:read',
+    CREATE: 'guests:create',
     UPDATE: 'guests:update',
+    DELETE: 'guests:delete',
+    MERGE:  'guests:merge',
   },
   BILLING: {
     READ:     'billing:read',
     CHARGE:   'billing:charge',
     PAYMENT:  'billing:payment',
     VOID:     'billing:void',
+    REFUND:   'billing:refund',
     DISCOUNT: 'billing:discount',
     APPROVE:  'billing:approve',
-  },
-  STAFF: {
-    READ:    'staff:read',
-    UPDATE:  'staff:manage',
-    MANAGE:  'staff:manage',
-    PAYROLL: 'staff:payroll',
-  },
-  INVENTORY: {
-    READ:    'inventory:read',
-    UPDATE:  'inventory:update',
-    APPROVE: 'inventory:orders',
-    ORDERS:  'inventory:orders',
-  },
-  REPORTS: {
-    READ:      'reports:basic',
-    BASIC:     'reports:basic',
-    FINANCIAL: 'reports:financial',
-    AUDIT:     'reports:audit',
-  },
-  CONFIG: {
-    READ:   'settings:read',
-    UPDATE: 'settings:update',
-  },
-  MAINTENANCE: {
-    READ:   'maintenance:read',
-    CREATE: 'maintenance:create',
-    UPDATE: 'maintenance:update',
+    EXPORT:   'billing:export',
   },
   HOUSEKEEPING: {
     READ:   'housekeeping:read',
     UPDATE: 'housekeeping:update',
     ASSIGN: 'housekeeping:assign',
   },
+  INVENTORY: {
+    READ:    'inventory:read',
+    UPDATE:  'inventory:update',
+    DELETE:  'inventory:delete',
+    ORDERS:  'inventory:orders',
+    APPROVE: 'inventory:approve',
+  },
+  MAINTENANCE: {
+    READ:    'maintenance:read',
+    CREATE:  'maintenance:create',
+    UPDATE:  'maintenance:update',
+    ASSIGN:  'maintenance:assign',
+    RESOLVE: 'maintenance:resolve',
+    CLOSE:   'maintenance:close',
+  },
+  STAFF: {
+    READ:    'staff:read',
+    CREATE:  'staff:create',
+    MANAGE:  'staff:manage',
+    DELETE:  'staff:delete',
+    PAYROLL: 'staff:payroll',
+  },
+  REPORTS: {
+    BASIC:     'reports:basic',
+    OCCUPANCY: 'reports:occupancy',
+    FINANCIAL: 'reports:financial',
+    AUDIT:     'reports:audit',
+  },
+  FNB: {
+    READ:    'fnb:read',
+    CREATE:  'fnb:create',
+    UPDATE:  'fnb:update',
+    DELETE:  'fnb:delete',
+    BILLING: 'fnb:billing',
+    MENU:    'fnb:menu',
+  },
+  NIGHT_AUDIT: {
+    READ: 'night_audit:read',
+    RUN:  'night_audit:run',
+  },
+  CHAT: {
+    READ:  'chat:read',
+    REPLY: 'chat:reply',
+  },
+  CONFIG: {
+    READ:   'settings:read',
+    UPDATE: 'settings:update',
+  },
   SETTINGS: {
     READ:   'settings:read',
     UPDATE: 'settings:update',
+    ROLES:  'settings:roles',
   },
 };
 
@@ -165,4 +194,20 @@ export const CURRENCY = {
   toMajor: (kobo)  => kobo / 100,
   toMinor: (naira) => Math.round(naira * 100),
   format:  (kobo)  => `NGN ${(kobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`,
+};
+
+export const FNB_ORDER_STATUS = {
+  OPEN:      'open',
+  SENT:      'sent',
+  PREPARING: 'preparing',
+  READY:     'ready',
+  SERVED:    'served',
+  BILLED:    'billed',
+  CANCELLED: 'cancelled',
+};
+
+export const FNB_ITEM_STATUS = {
+  AVAILABLE:   'available',
+  UNAVAILABLE: 'unavailable',
+  SEASONAL:    'seasonal',
 };

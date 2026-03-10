@@ -3,6 +3,13 @@
 export default function POLineItem({ line, index, items, onChange, onRemove }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // When item_id changes, also populate the name field from the items list
+    if (name === 'item_id') {
+      const selected = items.find(it => it.id === value);
+      onChange(index, 'name', selected?.name ?? '');
+    }
+
     onChange(index, name, value);
   };
 

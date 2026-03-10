@@ -16,6 +16,7 @@ import userRoutes             from './userRoutes.js';
 import chatDepartmentRoutes   from './chatDepartmentRoutes.js';
 import conversationRoutes     from './conversationRoutes.js';
 import publicRoutes           from './publicRoutes.js';
+import fnbRoutes              from './fnbRoutes.js';
 
 const router = Router();
 
@@ -37,5 +38,6 @@ router.use('/staff',            staffRoutes);
 router.use('/reports',          reportRoutes);
 router.use('/config',           configRoutes);
 router.use('/users',            userRoutes);
+router.use('/fnb',              fnbRoutes);
 
 export default router;

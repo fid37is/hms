@@ -9,9 +9,10 @@ export const getAllWorkOrders = async (orgId, filters = {}, page = 1, limit = 20
   const from = (page - 1) * limit;
 
   let q = supabase.from('maintenance_orders')
-    .select(`id, wo_number, location, category, description, priority, status,
+    .select(`id, wo_number, asset_id, location, category, description, priority, status,
       resolution, cost, started_at, resolved_at, created_at,
       rooms!room_id ( id, number, floor ),
+      assets!asset_id ( id, name, serial_number ),
       reporter:reported_by ( id, full_name ),
       assignee:assigned_to ( id, full_name )`, { count: 'exact' })
     .eq('org_id', orgId).order('created_at', { ascending: false });
@@ -42,7 +43,7 @@ export const getWorkOrderById = async (orgId, id) => {
 };
 
 export const createWorkOrder = async (orgId, payload, reportedBy) => {
-  const { location, room_id, category, description, priority, assigned_to, cost } = payload;
+  const { title, location, room_id, asset_id, category, description, priority, assigned_to, cost } = payload;
 
   if (room_id) {
     const { data: room } = await supabase
@@ -52,8 +53,9 @@ export const createWorkOrder = async (orgId, payload, reportedBy) => {
 
   const { data, error } = await supabase
     .from('maintenance_orders')
-    .insert({ org_id: orgId, location, room_id: room_id || null, category: category || null,
-              description, priority: priority || 'normal', status: 'open',
+    .insert({ org_id: orgId, location: location || null, room_id: room_id || null,
+              asset_id: asset_id || null, category: category || null, description: description || title,
+              priority: priority || 'normal', status: 'open',
               reported_by: reportedBy, assigned_to: assigned_to || null, cost: cost || 0 })
     .select().single();
 
