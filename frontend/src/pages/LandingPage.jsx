@@ -1,32 +1,15 @@
 // src/pages/LandingPage.jsx
 // Cierlo — "Your hotel, always on."
-// Aesthetic: Dark-first premium hospitality. Warm amber accents on deep navy-charcoal.
-// Nav + Hero + Stats + Footer: dark #0D0F14. Mid-sections: warm white/off-white.
+// Flame palette — all colors via CSS custom properties from theme.js.
+// Nav/footer/hero use sidebar-bg token (espresso). Light sections use bg-page/bg-subtle.
 // Mobile-first responsive throughout.
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/brand/cierlo_logo'
 import DashboardDemo from '../components/marketing/DashboardDemo';
+import PublicLayout from '../components/layout/PublicLayout';
 
-/* ─── Single consistent dark ────────────────────────────────── */
-const dark    = '#0D0F14';   // ONE dark — nav, hero, stats, footer, CTA
-const darkSub = '#1A1D24';   // cards/surfaces on dark bg
-const darkBrd = 'rgba(255,255,255,0.08)';
-
-/* ─── Light section palette ─────────────────────────────────── */
-const ink    = '#0D0F14';
-const sub    = '#4B5563';
-const muted  = '#9CA3AF';
-const faint  = '#D1D5DB';
-const border = '#E5E7EB';
-const surface= '#F9FAFB';
-const white  = '#FFFFFF';
-
-/* ─── Brand accent ──────────────────────────────────────────── */
-const amber  = '#D97706';
-const amberL = '#FEF3C7';
-const amberG = 'linear-gradient(135deg,#F59E0B,#D97706)';
 
 /* ─── Fonts ─────────────────────────────────────────────────── */
 function Fonts() {
@@ -144,7 +127,7 @@ function PricingSection() {
   ];
 
   return (
-    <div id="pricing" style={{ background:dark, padding:'96px 0' }}>
+    <div id="pricing" style={{ background:'var(--sidebar-bg)', padding:'96px 0' }}>
       <style>{`
         @media(max-width:768px) {
           .cl-pricing-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
@@ -157,8 +140,8 @@ function PricingSection() {
       <Container>
         <Reveal>
           <div style={{ textAlign:'center', marginBottom:64 }}>
-            <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>Pricing</p>
-            <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:white, lineHeight:1.06, marginBottom:12 }}>
+            <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>Pricing</p>
+            <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-on-brand)', lineHeight:1.06, marginBottom:12 }}>
               Simple, honest <em style={{ fontStyle:'italic', color:'rgba(255,255,255,.4)' }}>pricing</em>
             </h2>
             <p style={{ fontSize:17, color:'rgba(255,255,255,.45)', maxWidth:440, margin:'0 auto', lineHeight:1.7 }}>
@@ -171,8 +154,8 @@ function PricingSection() {
           <div className="cl-pricing-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:48, alignItems:'center', maxWidth:1000, margin:'0 auto' }}>
             {/* Left: features */}
             <div>
-              <p style={{ fontSize:12, fontWeight:600, color:amber, letterSpacing:'.06em', textTransform:'uppercase', marginBottom:14 }}>Everything. One plan.</p>
-              <h3 style={{ fontFamily:serif, fontSize:'clamp(26px,3vw,38px)', fontWeight:400, color:white, lineHeight:1.1, marginBottom:10 }}>
+              <p style={{ fontSize:12, fontWeight:600, color:'var(--accent)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:14 }}>Everything. One plan.</p>
+              <h3 style={{ fontFamily:serif, fontSize:'clamp(26px,3vw,38px)', fontWeight:400, color:'var(--text-on-brand)', lineHeight:1.1, marginBottom:10 }}>
                 Every module included<br /><em style={{ fontStyle:'italic', color:'rgba(255,255,255,.35)' }}>from day one.</em>
               </h3>
               <p style={{ fontSize:15, color:'rgba(255,255,255,.45)', lineHeight:1.72, marginBottom:36, maxWidth:380 }}>
@@ -181,11 +164,11 @@ function PricingSection() {
               <div className="cl-pricing-feats" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'22px 28px' }}>
                 {feats.map(({ cat, items }) => (
                   <div key={cat}>
-                    <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:10 }}>{cat}</p>
+                    <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,235,210,0.3)', marginBottom:10 }}>{cat}</p>
                     <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:7 }}>
                       {items.map(f => (
                         <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'rgba(255,255,255,.55)', lineHeight:1.4 }}>
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke={amber} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0, marginTop:2 }}><polyline points="3,8 6,11 13,5"/></svg>
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke='var(--accent)' strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0, marginTop:2 }}><polyline points="3,8 6,11 13,5"/></svg>
                           {f}
                         </li>
                       ))}
@@ -196,50 +179,50 @@ function PricingSection() {
             </div>
 
             {/* Right: price card */}
-            <div style={{ background:darkSub, borderRadius:16, padding:'40px 36px', border:`1px solid ${darkBrd}`, position:'relative', overflow:'hidden' }}>
+            <div style={{ background:'rgba(255,235,210,0.04)', borderRadius:16, padding:'40px 36px', border:'1px solid rgba(255,220,170,0.1)', position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:-40, right:-40, width:180, height:180, borderRadius:'50%', background:'rgba(217,119,6,.07)', filter:'blur(40px)', pointerEvents:'none' }} />
               <div style={{ position:'relative', zIndex:1 }}>
                 {/* Trial badge */}
                 <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(217,119,6,.15)', border:'1px solid rgba(217,119,6,.3)', borderRadius:100, padding:'4px 12px', marginBottom:28 }}>
-                  <div style={{ width:5, height:5, borderRadius:'50%', background:amber, animation:'clpulse 2s infinite' }} />
-                  <span style={{ fontSize:10, fontWeight:600, color:'#FDE68A', letterSpacing:'.06em', textTransform:'uppercase' }}>14-day free trial</span>
+                  <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
+                  <span style={{ fontSize:10, fontWeight:600, color:'var(--sidebar-text-active)', letterSpacing:'.06em', textTransform:'uppercase' }}>14-day free trial</span>
                 </div>
 
                 {/* Toggle */}
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:24 }}>
-                  <button onClick={() => setAnnual(false)} style={{ fontSize:13, fontWeight:!annual?600:400, color:!annual?white:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:sans }}>Monthly</button>
-                  <button onClick={() => setAnnual(a => !a)} style={{ width:40, height:22, borderRadius:100, border:'none', cursor:'pointer', position:'relative', background:annual?amber:'rgba(255,255,255,.12)', transition:'background .2s', flexShrink:0 }}>
-                    <div style={{ position:'absolute', top:3, left:annual?21:3, width:16, height:16, borderRadius:'50%', background:white, transition:'left .2s' }} />
+                  <button onClick={() => setAnnual(false)} style={{ fontSize:13, fontWeight:!annual?600:400, color:!annual?'var(--text-on-brand)':'rgba(255,235,210,0.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:sans }}>Monthly</button>
+                  <button onClick={() => setAnnual(a => !a)} style={{ width:40, height:22, borderRadius:100, border:'none', cursor:'pointer', position:'relative', background:annual?'var(--accent)':'rgba(255,235,210,0.12)', transition:'background .2s', flexShrink:0 }}>
+                    <div style={{ position:'absolute', top:3, left:annual?21:3, width:16, height:16, borderRadius:'50%', background:'var(--bg-surface)', transition:'left .2s' }} />
                   </button>
                   <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-                    <button onClick={() => setAnnual(true)} style={{ fontSize:13, fontWeight:annual?600:400, color:annual?white:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:sans }}>Annual</button>
-                    {annual && <span style={{ fontSize:10, fontWeight:700, background:'rgba(217,119,6,.2)', color:'#FDE68A', padding:'2px 8px', borderRadius:100 }}>2 months free</span>}
+                    <button onClick={() => setAnnual(true)} style={{ fontSize:13, fontWeight:annual?600:400, color:annual?'var(--text-on-brand)':'rgba(255,235,210,0.3)', background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:sans }}>Annual</button>
+                    {annual && <span style={{ fontSize:10, fontWeight:700, background:'rgba(234,108,10,0.2)', color:'var(--sidebar-text-active)', padding:'2px 8px', borderRadius:100 }}>2 months free</span>}
                   </div>
                 </div>
 
                 {/* Price */}
                 <div style={{ marginBottom:4 }}>
                   <div style={{ display:'flex', alignItems:'flex-end', gap:5, lineHeight:1 }}>
-                    <span style={{ fontFamily:serif, fontSize:68, fontWeight:400, letterSpacing:'-.03em', color:white }}>{p.symbol}{fmt(monthlyDisplay, p.locale)}</span>
-                    <span style={{ fontSize:13, color:'rgba(255,255,255,.3)', paddingBottom:12 }}>/mo</span>
+                    <span style={{ fontFamily:serif, fontSize:68, fontWeight:400, letterSpacing:'-.03em', color:'var(--text-on-brand)' }}>{p.symbol}{fmt(monthlyDisplay, p.locale)}</span>
+                    <span style={{ fontSize:13, color:'rgba(255,235,210,0.3)', paddingBottom:12 }}>/mo</span>
                   </div>
                 </div>
                 <p style={{ fontSize:12, color:'rgba(255,255,255,.25)', marginBottom:28 }}>
                   {annual ? `Billed ${p.symbol}${fmt(p.annual, p.locale)} annually` : `Or ${p.symbol}${fmt(Math.round(p.annual/12), p.locale)}/mo billed annually — save ${p.symbol}${fmt(saving, p.locale)}`}
                 </p>
 
-                <div style={{ height:1, background:darkBrd, marginBottom:24 }} />
+                <div style={{ height:1, background:'rgba(255,220,170,0.1)', marginBottom:24 }} />
 
                 <div style={{ display:'flex', flexDirection:'column', gap:9, marginBottom:28 }}>
                   {['All 10 modules, nothing locked','Unlimited rooms & staff accounts','Guest booking website included','No setup fees, cancel any time'].map(f => (
                     <div key={f} style={{ display:'flex', alignItems:'center', gap:9 }}>
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke={amber} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0 }}><polyline points="3,8 6,11 13,5"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke='var(--accent)' strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0 }}><polyline points="3,8 6,11 13,5"/></svg>
                       <span style={{ fontSize:13, color:'rgba(255,255,255,.65)' }}>{f}</span>
                     </div>
                   ))}
                 </div>
 
-                <Link to="/register" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:amberG, color:white, fontSize:15, fontWeight:500, padding:'13px', borderRadius:9, textDecoration:'none', fontFamily:sans, transition:'opacity .15s, transform .15s' }}
+                <Link to="/register" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'linear-gradient(135deg,var(--brand),var(--brand-hover))', color:'var(--text-on-brand)', fontSize:15, fontWeight:500, padding:'13px', borderRadius:9, textDecoration:'none', fontFamily:sans, transition:'opacity .15s, transform .15s' }}
                   onMouseEnter={e => { e.currentTarget.style.opacity='.88'; e.currentTarget.style.transform='translateY(-1px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='none'; }}>
                   Start free trial
@@ -269,7 +252,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div style={{ background:white, color:ink, fontFamily:sans, overflowX:'hidden' }}>
+    <PublicLayout scrolled={scrolled} mobileMenu={mobileMenu} onToggleMobile={() => setMobileMenu(m => !m)}>
       <Fonts />
       <style>{`
         @keyframes clup    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
@@ -280,7 +263,7 @@ export default function LandingPage() {
 
         .cl-cta {
           display:inline-flex; align-items:center; gap:8px;
-          background:${amberG}; color:${white};
+          background:linear-gradient(135deg,var(--brand),var(--brand-hover)); color:#FFFFFF;
           font-family:${sans}; font-weight:500; border-radius:9px;
           text-decoration:none; border:none; cursor:pointer;
           transition:opacity .15s, transform .15s;
@@ -289,24 +272,26 @@ export default function LandingPage() {
 
         .cl-ghost {
           display:inline-flex; align-items:center; gap:8px;
-          background:transparent; color:${ink};
+          background:transparent; color:var(--text-base);
           font-family:${sans}; font-weight:400; border-radius:9px;
-          text-decoration:none; border:1.5px solid ${border}; cursor:pointer;
+          text-decoration:none; border:1.5px solid var(--border-soft); cursor:pointer;
           transition:border-color .15s, background .15s;
         }
-        .cl-ghost:hover { border-color:${ink}; background:${surface}; }
+        .cl-ghost:hover { border-color:var(--text-base); background:var(--bg-subtle); }
 
         .cl-nav-link { text-decoration:none; color:rgba(255,255,255,.55); font-size:14px; transition:color .15s; }
         .cl-nav-link:hover { color:rgba(255,255,255,.95); }
 
-        .cl-feat-card { background:${white}; transition:background .15s; cursor:default; }
-        .cl-feat-card:hover { background:${surface} !important; }
+        .cl-feat-card { background:var(--bg-surface); transition:background .15s; cursor:default; }
+        .cl-feat-3col > div { display:flex; }
+        .cl-feat-3col > div > .cl-feat-card { flex:1; }
+        .cl-feat-card:hover { background:var(--bg-subtle) !important; }
 
-        .cl-mod-card { border:1px solid ${border}; background:${white}; border-radius:12px; padding:22px 18px; cursor:default; transition:border-color .15s, transform .15s; }
-        .cl-mod-card:hover { border-color:${ink}; transform:translateY(-2px); }
+        .cl-mod-card { border:1px solid var(--border-soft); background:var(--bg-surface); border-radius:12px; padding:22px 18px; cursor:default; transition:border-color .15s, transform .15s; }
+        .cl-mod-card:hover { border-color:var(--text-base); transform:translateY(-2px); }
 
-        .cl-testi { border:1px solid ${border}; border-radius:14px; background:${white}; padding:32px 28px; transition:border-color .15s; }
-        .cl-testi:hover { border-color:${ink}; }
+        .cl-testi { border:1px solid var(--border-soft); border-radius:14px; background:var(--bg-surface); padding:32px 28px; transition:border-color .15s; }
+        .cl-testi:hover { border-color:var(--text-base); }
 
         .cl-fl { text-decoration:none; color:rgba(255,255,255,.4); font-size:14px; transition:color .15s; }
         .cl-fl:hover { color:rgba(255,255,255,.8); }
@@ -331,7 +316,7 @@ export default function LandingPage() {
           .cl-mobile-menu { display:${mobileMenu?'flex':'none'} !important; }
           .cl-container { padding:0 20px !important; }
           .cl-section { padding:72px 0 !important; }
-          .cl-hero-section { padding-top:112px !important; padding-bottom:72px !important; }
+          .cl-hero-section { padding-top:96px !important; }
           .cl-mockup-wrap { display:none !important; }
           .cl-pillars-grid { grid-template-columns:1fr !important; }
         }
@@ -342,61 +327,24 @@ export default function LandingPage() {
         }
       `}</style>
 
-      {/* ══ NAV ════════════════════════════════════════════════ */}
-      <nav style={{ position:'fixed', top:0, left:0, right:0, zIndex:100, background:dark, borderBottom:`1px solid ${scrolled ? darkBrd : 'transparent'}`, transition:'border-color .3s' }}>
-        <div style={{ maxWidth:1200, margin:'0 auto', padding:'0 24px', height:64, display:'flex', alignItems:'center', justifyContent:'space-between' }} className="cl-container">
-          <Logo size="sm" darkBg={false} responsive href="/" />
-
-          <div className="cl-nav-links" style={{ display:'flex', gap:32 }}>
-            {[['#features','Features'],['#modules','Modules'],['#saas','Platform'],['#pricing','Pricing']].map(([h,l]) => (
-              <a key={h} href={h} className="cl-nav-link">{l}</a>
-            ))}
-          </div>
-
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <Link to="/login" style={{ fontSize:14, color:'rgba(255,255,255,.5)', padding:'8px 14px', textDecoration:'none', transition:'color .15s', fontFamily:sans }}
-              onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,.9)'}
-              onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,.5)'}>
-              Sign in
-            </Link>
-            <Link to="/register" className="cl-cta" style={{ fontSize:14, padding:'9px 20px', borderRadius:8 }}>
-              Start free trial
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg>
-            </Link>
-            {/* Mobile hamburger */}
-            <button className="cl-nav-menu-btn" onClick={() => setMobileMenu(m => !m)}
-              style={{ display:'none', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.7)', padding:'6px', alignItems:'center', justifyContent:'center' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu dropdown */}
-        <div className="cl-mobile-menu" style={{ display:'none', flexDirection:'column', borderTop:`1px solid ${darkBrd}`, background:dark, padding:'16px 24px 20px' }}>
-          {[['#features','Features'],['#modules','Modules'],['#saas','Platform'],['#pricing','Pricing']].map(([h,l]) => (
-            <a key={h} href={h} className="cl-nav-link" style={{ padding:'12px 0', borderBottom:`1px solid ${darkBrd}`, fontSize:15 }} onClick={() => setMobileMenu(false)}>{l}</a>
-          ))}
-        </div>
-      </nav>
-
       {/* ══ HERO ═══════════════════════════════════════════════ */}
-      <section className="cl-hero-section" style={{ background:dark, paddingTop:140, paddingBottom:96, position:'relative', overflow:'hidden' }}>
+      <section className="cl-hero-section" style={{ background:'var(--sidebar-bg)', paddingTop:140, paddingBottom:0, position:'relative', overflow:'hidden', minHeight:'100vh', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
         {/* Ambient glow */}
         <div style={{ position:'absolute', top:'10%', left:'50%', transform:'translateX(-50%)', width:600, height:400, background:'radial-gradient(ellipse,rgba(217,119,6,.12) 0%,transparent 70%)', pointerEvents:'none' }} />
         <div style={{ position:'absolute', inset:0, opacity:.025, backgroundImage:`linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px)`, backgroundSize:'52px 52px', pointerEvents:'none' }} />
 
-        <Container>
+        <Container style={{ paddingBottom:80 }}>
           <div className="cl-hero-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:72, alignItems:'center' }}>
             {/* Left */}
             <div>
               <div className="cl-hero-badge" style={{ display:'inline-flex', alignItems:'center', gap:8, border:'1px solid rgba(217,119,6,.3)', background:'rgba(217,119,6,.08)', borderRadius:100, padding:'5px 14px', marginBottom:28, animation:'clfade .5s ease both' }}>
-                <div style={{ width:6, height:6, borderRadius:'50%', background:amber, animation:'clpulse 2s infinite' }} />
-                <span style={{ fontSize:11, fontWeight:500, color:'#FDE68A', letterSpacing:'.06em', textTransform:'uppercase' }}>Now open for hotels</span>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
+                <span style={{ fontSize:11, fontWeight:500, color:'var(--sidebar-text-active)', letterSpacing:'.06em', textTransform:'uppercase' }}>Now open for hotels</span>
               </div>
 
-              <h1 style={{ fontFamily:serif, fontSize:'clamp(52px,6vw,88px)', fontWeight:400, lineHeight:1.0, letterSpacing:'-.025em', color:white, marginBottom:20, animation:'clfade .5s .08s ease both' }}>
+              <h1 style={{ fontFamily:serif, fontSize:'clamp(52px,6vw,88px)', fontWeight:400, lineHeight:1.0, letterSpacing:'-.025em', color:'var(--text-on-brand)', marginBottom:20, animation:'clfade .5s .08s ease both' }}>
                 Your hotel,<br />
-                <em style={{ fontStyle:'italic', color:amber }}>always on.</em>
+                <em style={{ fontStyle:'italic', color:'var(--accent)' }}>always on.</em>
               </h1>
 
               <p style={{ fontSize:18, fontWeight:300, color:'rgba(255,255,255,.5)', lineHeight:1.72, marginBottom:40, maxWidth:420, animation:'clfade .5s .16s ease both' }}>
@@ -428,11 +376,11 @@ export default function LandingPage() {
                   { icon:'M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4', title:'100% Private', desc:'Your data, fully isolated' },
                   { icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', title:'Role-based', desc:'10 built-in access levels' },
                 ].map((c,i) => (
-                  <div key={i} style={{ background:darkSub, border:`1px solid ${darkBrd}`, borderRadius:12, padding:'22px 20px', animation:`clfade .5s ${.3+i*.07}s ease both` }}>
-                    <div style={{ width:34, height:34, background:'rgba(217,119,6,.12)', border:'1px solid rgba(217,119,6,.2)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, color:amber }}>
+                  <div key={i} style={{ background:'rgba(255,235,210,0.04)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:12, padding:'22px 20px', animation:`clfade .5s ${.3+i*.07}s ease both` }}>
+                    <div style={{ width:34, height:34, background:'rgba(217,119,6,.12)', border:'1px solid rgba(217,119,6,.2)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, color:'var(--accent)' }}>
                       <Icon d={c.icon} size={15} />
                     </div>
-                    <div style={{ fontSize:14, fontWeight:600, color:white, marginBottom:4 }}>{c.title}</div>
+                    <div style={{ fontSize:14, fontWeight:600, color:'var(--text-on-brand)', marginBottom:4 }}>{c.title}</div>
                     <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', lineHeight:1.5 }}>{c.desc}</div>
                   </div>
                 ))}
@@ -440,34 +388,32 @@ export default function LandingPage() {
             </div>
           </div>
         </Container>
+
+        {/* Stats strip — pinned to bottom of hero */}
+        <div style={{ borderTop:'1px solid rgba(255,220,170,0.1)', position:'relative', zIndex:1 }}>
+          <Container>
+            <div className="cl-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+              {[['10+','Modules included'],['∞','Rooms supported'],['14','Days free trial'],['100%','Data privacy']].map(([n,l],i) => (
+                <div key={i} style={{ padding:'28px', textAlign:'center', borderRight:i<3?'1px solid rgba(255,220,170,0.1)':'none' }}>
+                  <div style={{ fontFamily:serif, fontSize:'clamp(28px,3vw,44px)', fontWeight:400, color:'var(--text-on-brand)', lineHeight:1 }}>{n}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,220,170,0.4)', marginTop:5 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </Container>
+        </div>
       </section>
 
-      {/* ══ STATS ══════════════════════════════════════════════ */}
-      <div style={{ background:darkSub, borderBottom:`1px solid ${darkBrd}` }}>
-        <Container>
-          <div className="cl-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
-            {[['10+','Modules included'],['∞','Rooms supported'],['14','Days free trial'],['100%','Data privacy']].map(([n,l],i) => (
-              <Reveal key={i} delay={i*.07}>
-                <div style={{ padding:'40px 28px', textAlign:'center', borderRight:i<3?`1px solid ${darkBrd}`:'none' }}>
-                  <div style={{ fontFamily:serif, fontSize:'clamp(36px,3.5vw,52px)', fontWeight:400, color:white, lineHeight:1 }}>{n}</div>
-                  <div style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginTop:6 }}>{l}</div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </div>
-
       {/* ══ FEATURES MOCKUP ════════════════════════════════════ */}
-      <div id="features" className="cl-section" style={{ padding:'96px 0', borderBottom:`1px solid ${border}` }}>
+      <div id="features" className="cl-section" style={{ padding:'56px 0 80px', borderBottom:'1px solid var(--border-soft)' }}>
         <Container>
           <Reveal>
-            <div style={{ textAlign:'center', marginBottom:56 }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>Platform</p>
-              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:ink, lineHeight:1.06, marginBottom:12 }}>
+            <div style={{ textAlign:'center', marginBottom:36 }}>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>Platform</p>
+              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06, marginBottom:12 }}>
                 See it in action
               </h2>
-              <p style={{ fontSize:17, color:sub, maxWidth:440, margin:'0 auto', lineHeight:1.7 }}>
+              <p style={{ fontSize:17, color:'var(--text-sub)', maxWidth:440, margin:'0 auto', lineHeight:1.7 }}>
                 A live dashboard keeping your entire operation visible — from the moment a guest books to the moment they check out.
               </p>
             </div>
@@ -481,26 +427,26 @@ export default function LandingPage() {
       </div>
 
       {/* ══ PILLARS ════════════════════════════════════════════ */}
-      <div className="cl-section" style={{ background:surface, padding:'96px 0', borderBottom:`1px solid ${border}` }}>
+      <div className="cl-section" style={{ background:'var(--bg-subtle)', padding:'96px 0', borderBottom:'1px solid var(--border-soft)' }}>
         <Container>
           <Reveal>
             <div style={{ textAlign:'center', marginBottom:56 }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>The Cierlo Way</p>
-              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:ink, lineHeight:1.06 }}>Built on three principles</h2>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>The Cierlo Way</p>
+              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06 }}>Built on three principles</h2>
             </div>
           </Reveal>
-          <div className="cl-pillars-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:2, background:border, border:`1px solid ${border}`, borderRadius:16, overflow:'hidden' }}>
+          <div className="cl-pillars-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0, background:'var(--border-soft)', border:'1px solid var(--border-soft)', borderRadius:16, overflow:'hidden' }}>
             {[
               { n:'01', t:'Visibility', em:'See your entire operation clearly', d:'A real-time view of every room, booking, staff member, and revenue stream. No blind spots, no surprises.' },
               { n:'02', t:'Control', em:'One platform, zero chaos', d:'Every department — front desk, housekeeping, maintenance, billing — connected in one seamless system.' },
               { n:'03', t:'Growth', em:'Built to scale with you', d:'From your first room to your hundredth, from one property to a group — Cierlo grows alongside your business.' },
             ].map((p,i) => (
               <Reveal key={i} delay={i*.1}>
-                <div style={{ background:white, padding:'44px 40px' }}>
-                  <div style={{ fontFamily:serif, fontSize:44, color:border, lineHeight:1, marginBottom:22 }}>{p.n}</div>
-                  <div style={{ fontSize:20, fontWeight:600, color:ink, marginBottom:5 }}>{p.t}</div>
-                  <div style={{ fontSize:12, color:amber, fontStyle:'italic', marginBottom:14 }}>{p.em}</div>
-                  <div style={{ fontSize:15, color:sub, lineHeight:1.72 }}>{p.d}</div>
+                <div style={{ background:'var(--bg-surface)', padding:'44px 40px', borderRight:'1px solid var(--border-soft)', borderBottom:'1px solid var(--border-soft)' }}>
+                  <div style={{ fontFamily:serif, fontSize:44, color:'var(--border-base)', lineHeight:1, marginBottom:22 }}>{p.n}</div>
+                  <div style={{ fontSize:20, fontWeight:600, color:'var(--text-base)', marginBottom:5 }}>{p.t}</div>
+                  <div style={{ fontSize:12, color:'var(--accent)', fontStyle:'italic', marginBottom:14 }}>{p.em}</div>
+                  <div style={{ fontSize:15, color:'var(--text-sub)', lineHeight:1.72 }}>{p.d}</div>
                 </div>
               </Reveal>
             ))}
@@ -509,20 +455,20 @@ export default function LandingPage() {
       </div>
 
       {/* ══ FEATURE CARDS ══════════════════════════════════════ */}
-      <div id="modules" className="cl-section" style={{ padding:'96px 0', borderBottom:`1px solid ${border}` }}>
+      <div id="modules" className="cl-section" style={{ padding:'96px 0', borderBottom:'1px solid var(--border-soft)' }}>
         <Container>
           <Reveal>
             <div style={{ marginBottom:56 }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>All modules</p>
-              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:ink, lineHeight:1.06, marginBottom:12 }}>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>All modules</p>
+              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06, marginBottom:12 }}>
                 Everything your hotel<br /><em style={{ fontStyle:'italic' }}>needs to operate</em>
               </h2>
-              <p style={{ fontSize:17, color:sub, lineHeight:1.72, maxWidth:480 }}>
+              <p style={{ fontSize:17, color:'var(--text-sub)', lineHeight:1.72, maxWidth:480 }}>
                 One platform covering every department — so your team spends less time switching tools and more time with guests.
               </p>
             </div>
           </Reveal>
-          <div className="cl-feat-3col" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1, background:border, border:`1px solid ${border}`, borderRadius:16, overflow:'hidden' }}>
+          <div className="cl-feat-3col" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0, alignItems:'stretch', background:'var(--border-soft)', border:'1px solid var(--border-soft)', borderRadius:16, overflow:'hidden' }}>
             {[
               { icon:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', n:'Room Management', d:'Manage every room from a single view. Set types, rates, track status in real time, and upload photos.', tags:['Room types','Rate plans','Photo gallery'] },
               { icon:'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18', n:'Reservations', d:'Take bookings from any source, assign rooms, check guests in and out, handle cancellations.', tags:['Check-in / out','Room assignment','Cancellations'] },
@@ -535,14 +481,14 @@ export default function LandingPage() {
               { icon:'M22 12h-4l-3 9L9 3l-3 9H2', n:'Reports & Analytics', d:'See revenue trends, occupancy rates, and performance at a glance. Pull detailed reports any time.', tags:['Revenue charts','Occupancy rate','Guest analytics'] },
             ].map((f,i) => (
               <Reveal key={i} delay={(i%3)*.08}>
-                <div className="cl-feat-card" style={{ padding:'36px 32px' }}>
-                  <div style={{ width:38, height:38, background:surface, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:18, color:ink }}>
+                <div className="cl-feat-card" style={{ padding:'36px 32px', borderRight:'1px solid var(--border-soft)', borderBottom:'1px solid var(--border-soft)', height:'100%', boxSizing:'border-box' }}>
+                  <div style={{ width:38, height:38, background:'var(--bg-subtle)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:18, color:'var(--text-base)' }}>
                     <Icon d={f.icon} size={17} />
                   </div>
-                  <div style={{ fontSize:16, fontWeight:600, color:ink, marginBottom:8 }}>{f.n}</div>
-                  <div style={{ fontSize:14, color:sub, lineHeight:1.7, marginBottom:16 }}>{f.d}</div>
+                  <div style={{ fontSize:16, fontWeight:600, color:'var(--text-base)', marginBottom:8 }}>{f.n}</div>
+                  <div style={{ fontSize:14, color:'var(--text-sub)', lineHeight:1.7, marginBottom:16 }}>{f.d}</div>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                    {f.tags.map(t => <span key={t} style={{ fontSize:11, color:muted, background:surface, border:`1px solid ${border}`, padding:'3px 10px', borderRadius:100 }}>{t}</span>)}
+                    {f.tags.map(t => <span key={t} style={{ fontSize:11, color:'var(--text-muted)', background:'var(--bg-subtle)', border:'1px solid var(--border-soft)', padding:'3px 10px', borderRadius:100 }}>{t}</span>)}
                   </div>
                 </div>
               </Reveal>
@@ -552,13 +498,13 @@ export default function LandingPage() {
       </div>
 
       {/* ══ HOW IT WORKS ═══════════════════════════════════════ */}
-      <div id="saas" style={{ background:dark, padding:'96px 0' }}>
+      <div id="saas" style={{ background:'var(--sidebar-bg)', padding:'96px 0' }}>
         <Container>
           <div className="cl-steps-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:80, alignItems:'start' }}>
             <div>
               <Reveal>
-                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>Getting started</p>
-                <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,54px)', fontWeight:400, letterSpacing:'-.025em', color:white, lineHeight:1.06, marginBottom:48 }}>
+                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>Getting started</p>
+                <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,54px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-on-brand)', lineHeight:1.06, marginBottom:48 }}>
                   Up and running<br /><em style={{ fontStyle:'italic', color:'rgba(255,255,255,.4)' }}>in minutes</em>
                 </h2>
               </Reveal>
@@ -570,10 +516,10 @@ export default function LandingPage() {
                 { n:'5', t:'Go live instantly', d:'Your booking website is automatically linked via your unique subdomain. No API keys or setup needed.' },
               ].map((s,i) => (
                 <Reveal key={i} delay={i*.07}>
-                  <div style={{ display:'flex', gap:22, padding:'22px 0', borderBottom:i<4?`1px solid ${darkBrd}`:'none' }}>
+                  <div style={{ display:'flex', gap:22, padding:'22px 0', borderBottom:i<4?'1px solid rgba(255,220,170,0.1)':'none' }}>
                     <div style={{ fontFamily:serif, fontSize:32, color:'rgba(255,255,255,.12)', lineHeight:1, flexShrink:0, width:28, paddingTop:2 }}>{s.n}</div>
                     <div>
-                      <div style={{ fontSize:16, fontWeight:600, color:white, marginBottom:5 }}>{s.t}</div>
+                      <div style={{ fontSize:16, fontWeight:600, color:'var(--text-on-brand)', marginBottom:5 }}>{s.t}</div>
                       <div style={{ fontSize:14, color:'rgba(255,255,255,.4)', lineHeight:1.68 }}>{s.d}</div>
                     </div>
                   </div>
@@ -582,8 +528,8 @@ export default function LandingPage() {
             </div>
 
             <Reveal delay={.15}>
-              <div style={{ position:'sticky', top:96, background:darkSub, border:`1px solid ${darkBrd}`, borderRadius:14, padding:'32px 28px' }}>
-                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:20 }}>Your setup checklist</p>
+              <div style={{ position:'sticky', top:96, background:'rgba(255,235,210,0.04)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:14, padding:'32px 28px' }}>
+                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,235,210,0.3)', marginBottom:20 }}>Your setup checklist</p>
                 {[
                   { l:'Hotel details configured', done:true },
                   { l:'Room types added', done:true },
@@ -591,9 +537,9 @@ export default function LandingPage() {
                   { l:'Staff members added', done:false },
                   { l:'Booking website connected', done:false },
                 ].map((c,i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', background:'rgba(255,255,255,.03)', border:`1px solid ${darkBrd}`, borderRadius:8, marginBottom:7, fontSize:13, color:white }}>
-                    <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:c.done?amber:'transparent', border:c.done?'none':'1px solid rgba(255,255,255,.15)' }}>
-                      {c.done && <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,5 4,7 8,3"/></svg>}
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:8, marginBottom:7, fontSize:13, color:'var(--text-on-brand)' }}>
+                    <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:c.done?'var(--accent)':'transparent', border:c.done?'none':'1px solid rgba(255,255,255,.15)' }}>
+                      {c.done && <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-on-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,5 4,7 8,3"/></svg>}
                     </div>
                     <span style={{ color:c.done?'rgba(255,255,255,.55)':'rgba(255,255,255,.8)' }}>{c.l}</span>
                   </div>
@@ -601,8 +547,8 @@ export default function LandingPage() {
 
                 <div style={{ marginTop:20, padding:'14px 16px', background:'rgba(217,119,6,.08)', border:'1px solid rgba(217,119,6,.2)', borderRadius:10 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                    <div style={{ width:6, height:6, borderRadius:'50%', background:amber, animation:'clpulse 2s infinite' }} />
-                    <span style={{ fontSize:11, fontWeight:600, letterSpacing:'.06em', textTransform:'uppercase', color:'#FDE68A' }}>Your hotel, online</span>
+                    <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
+                    <span style={{ fontSize:11, fontWeight:600, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--sidebar-text-active)' }}>Your hotel, online</span>
                   </div>
                   <span style={{ fontFamily:"'SF Mono','Fira Code',monospace", fontSize:13, color:'#93c5fd' }}>amarahotel.cierlo.io</span>
                 </div>
@@ -613,12 +559,12 @@ export default function LandingPage() {
       </div>
 
       {/* ══ TESTIMONIALS ═══════════════════════════════════════ */}
-      <div className="cl-section" style={{ padding:'96px 0', borderBottom:`1px solid ${border}` }}>
+      <div className="cl-section" style={{ padding:'96px 0', borderBottom:'1px solid var(--border-soft)' }}>
         <Container>
           <Reveal>
             <div style={{ textAlign:'center', marginBottom:56 }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:14 }}>From the field</p>
-              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:ink, lineHeight:1.06 }}>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>From the field</p>
+              <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06 }}>
                 Hotels running<br /><em style={{ fontStyle:'italic' }}>on Cierlo</em>
               </h2>
             </div>
@@ -631,11 +577,11 @@ export default function LandingPage() {
             ].map((t,i) => (
               <Reveal key={i} delay={i*.1}>
                 <div className="cl-testi">
-                  <div style={{ fontFamily:serif, fontSize:48, color:border, lineHeight:1, marginBottom:12 }}>"</div>
-                  <p style={{ fontSize:15, color:sub, lineHeight:1.76, fontWeight:300, marginBottom:24 }}>{t.q}</p>
+                  <div style={{ fontFamily:serif, fontSize:48, color:'var(--border-base)', lineHeight:1, marginBottom:12 }}>"</div>
+                  <p style={{ fontSize:15, color:'var(--text-sub)', lineHeight:1.76, fontWeight:300, marginBottom:24 }}>{t.q}</p>
                   <div style={{ display:'flex', alignItems:'center', gap:11 }}>
-                    <div style={{ width:38, height:38, borderRadius:'50%', background:surface, border:`1px solid ${border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:ink }}>{t.i}</div>
-                    <div><div style={{ fontSize:13, fontWeight:600, color:ink }}>{t.n}</div><div style={{ fontSize:12, color:muted }}>{t.r}</div></div>
+                    <div style={{ width:38, height:38, borderRadius:'50%', background:'var(--bg-subtle)', border:'1px solid var(--border-soft)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600, color:'var(--text-base)' }}>{t.i}</div>
+                    <div><div style={{ fontSize:13, fontWeight:600, color:'var(--text-base)' }}>{t.n}</div><div style={{ fontSize:12, color:'var(--text-muted)' }}>{t.r}</div></div>
                   </div>
                 </div>
               </Reveal>
@@ -648,15 +594,15 @@ export default function LandingPage() {
       <PricingSection />
 
       {/* ══ CTA ════════════════════════════════════════════════ */}
-      <div style={{ background:white, padding:'112px 0' }}>
+      <div style={{ background:'var(--bg-surface)', padding:'112px 0' }}>
         <Container>
           <Reveal>
             <div style={{ textAlign:'center', maxWidth:600, margin:'0 auto' }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:amber, marginBottom:16 }}>Get started</p>
-              <h2 style={{ fontFamily:serif, fontSize:'clamp(40px,5vw,68px)', fontWeight:400, letterSpacing:'-.025em', color:ink, lineHeight:1.04, marginBottom:16 }}>
-                The light is on.<br /><em style={{ fontStyle:'italic', color:muted }}>Is your hotel ready?</em>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:16 }}>Get started</p>
+              <h2 style={{ fontFamily:serif, fontSize:'clamp(40px,5vw,68px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.04, marginBottom:16 }}>
+                The light is on.<br /><em style={{ fontStyle:'italic', color:'var(--text-muted)' }}>Is your hotel ready?</em>
               </h2>
-              <p style={{ fontSize:17, fontWeight:300, color:sub, maxWidth:400, margin:'0 auto 40px', lineHeight:1.72 }}>
+              <p style={{ fontSize:17, fontWeight:300, color:'var(--text-sub)', maxWidth:400, margin:'0 auto 40px', lineHeight:1.72 }}>
                 Sign up in 60 seconds. Your workspace is ready before you finish your coffee.
               </p>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', marginBottom:16 }}>
@@ -668,42 +614,13 @@ export default function LandingPage() {
                   Sign in to account
                 </Link>
               </div>
-              <p style={{ fontSize:12, color:faint }}>No credit card required · Cancel any time</p>
+              <p style={{ fontSize:12, color:'var(--text-muted)' }}>No credit card required · Cancel any time</p>
             </div>
           </Reveal>
         </Container>
       </div>
 
       {/* ══ FOOTER ═════════════════════════════════════════════ */}
-      <footer style={{ background:dark, borderTop:`1px solid ${darkBrd}` }}>
-        <Container style={{ padding:'64px 24px 48px' }}>
-          <div className="cl-footer-grid" style={{ display:'grid', gridTemplateColumns:'1.8fr 1fr 1fr 1fr', gap:48 }}>
-            <div className="cl-footer-brand">
-              <Logo size="sm" darkBg={false} noLink />
-              <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', lineHeight:1.76, maxWidth:220, marginTop:14 }}>
-                The modern hotel management platform for independent properties and growing groups.
-              </p>
-              <p style={{ fontSize:12, color:'rgba(255,255,255,.2)', marginTop:12, fontStyle:'italic' }}>Your hotel, always on.</p>
-            </div>
-            {[
-              { title:'Product', links:[['#features','Features'],['#modules','All Modules'],['#pricing','Pricing'],['/register','Sign up free']] },
-              { title:'Modules', links:[['#modules','Rooms & Reservations'],['#modules','Billing & Folio'],['#modules','Housekeeping'],['#modules','Staff & Reports']] },
-              { title:'Company', links:[['#','About'],['#','Privacy Policy'],['#','Terms of Service'],['mailto:hello@cierlo.io','Contact']] },
-            ].map(col => (
-              <div key={col.title}>
-                <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:20 }}>{col.title}</p>
-                <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:13 }}>
-                  {col.links.map(([h,l]) => <li key={l}><a href={h} className="cl-fl">{l}</a></li>)}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </Container>
-        <Container style={{ padding:'20px 24px', borderTop:`1px solid ${darkBrd}`, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>© 2026 Cierlo. All rights reserved.</span>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>Built for modern hospitality.</span>
-        </Container>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }

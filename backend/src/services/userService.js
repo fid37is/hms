@@ -6,17 +6,35 @@ import { AppError } from '../middleware/errorHandler.js';
 
 // ─── Seed all permission rows on startup ─────────────────────────────────────
 const ALL_PERMISSION_STRINGS = [
-  'billing:approve','billing:charge','billing:discount','billing:payment','billing:read','billing:void',
-  'guests:create','guests:read','guests:update',
+  // Billing
+  'billing:approve','billing:charge','billing:discount','billing:export',
+  'billing:payment','billing:read','billing:refund','billing:void',
+  // Chat
+  'chat:read','chat:reply',
+  // F&B
+  'fnb:billing','fnb:create','fnb:delete','fnb:menu','fnb:read','fnb:update',
+  // Guests
+  'guests:create','guests:delete','guests:merge','guests:read','guests:update',
+  // Housekeeping
   'housekeeping:assign','housekeeping:read','housekeeping:update',
-  'inventory:orders','inventory:read','inventory:update',
-  'maintenance:create','maintenance:read','maintenance:update',
-  'reports:audit','reports:basic','reports:financial',
-  'reservations:checkin','reservations:checkout','reservations:create',
+  // Inventory
+  'inventory:approve','inventory:delete','inventory:orders','inventory:read','inventory:update',
+  // Maintenance
+  'maintenance:assign','maintenance:close','maintenance:create',
+  'maintenance:read','maintenance:resolve','maintenance:update',
+  // Night Audit
+  'night_audit:read','night_audit:run',
+  // Reports
+  'reports:audit','reports:basic','reports:financial','reports:occupancy',
+  // Reservations
+  'reservations:cancel','reservations:checkin','reservations:checkout','reservations:create',
   'reservations:delete','reservations:read','reservations:update',
-  'rooms:read','rooms:status','rooms:update',
-  'settings:read','settings:update',
-  'staff:manage','staff:payroll','staff:read',
+  // Rooms
+  'rooms:create','rooms:delete','rooms:read','rooms:status','rooms:update',
+  // Settings
+  'settings:read','settings:roles','settings:update',
+  // Staff
+  'staff:create','staff:delete','staff:manage','staff:payroll','staff:read',
 ];
 
 export const seedPermissions = async () => {
@@ -38,6 +56,7 @@ export const getAllUsers = async (orgId) => {
     .from('users')
     .select('id, full_name, email, phone, department, is_active, last_login, created_at, role_id, roles!role_id ( id, name )')
     .eq('org_id', orgId)
+    .eq('is_active', true)
     .order('full_name');
 
   if (error) throw new AppError(`Failed to fetch users: ${error.message}`, 500);

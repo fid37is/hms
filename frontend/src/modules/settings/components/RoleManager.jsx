@@ -7,16 +7,19 @@ import ConfirmDialog  from '../../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 const ALL_PERMISSIONS = [
-  { group: 'Rooms',        perms: ['rooms:read','rooms:update','rooms:status'] },
-  { group: 'Reservations', perms: ['reservations:read','reservations:create','reservations:update','reservations:checkin','reservations:checkout'] },
-  { group: 'Guests',       perms: ['guests:read','guests:create','guests:update'] },
-  { group: 'Billing',      perms: ['billing:read','billing:charge','billing:payment','billing:void','billing:discount','billing:approve'] },
+  { group: 'Rooms',        perms: ['rooms:read','rooms:create','rooms:update','rooms:delete','rooms:status'] },
+  { group: 'Reservations', perms: ['reservations:read','reservations:create','reservations:update','reservations:cancel','reservations:delete','reservations:checkin','reservations:checkout'] },
+  { group: 'Guests',       perms: ['guests:read','guests:create','guests:update','guests:delete','guests:merge'] },
+  { group: 'Billing',      perms: ['billing:read','billing:charge','billing:payment','billing:void','billing:refund','billing:discount','billing:approve','billing:export'] },
   { group: 'Housekeeping', perms: ['housekeeping:read','housekeeping:update','housekeeping:assign'] },
-  { group: 'Inventory',    perms: ['inventory:read','inventory:update','inventory:orders'] },
-  { group: 'Maintenance',  perms: ['maintenance:read','maintenance:create','maintenance:update'] },
-  { group: 'Staff',        perms: ['staff:read','staff:manage','staff:payroll'] },
-  { group: 'Reports',      perms: ['reports:basic','reports:financial','reports:audit'] },
-  { group: 'Settings',     perms: ['settings:read','settings:update'] },
+  { group: 'Inventory',    perms: ['inventory:read','inventory:update','inventory:delete','inventory:orders','inventory:approve'] },
+  { group: 'Maintenance',  perms: ['maintenance:read','maintenance:create','maintenance:update','maintenance:assign','maintenance:resolve','maintenance:close'] },
+  { group: 'Staff',        perms: ['staff:read','staff:create','staff:manage','staff:delete','staff:payroll'] },
+  { group: 'F&B',          perms: ['fnb:read','fnb:create','fnb:update','fnb:delete','fnb:billing','fnb:menu'] },
+  { group: 'Reports',      perms: ['reports:basic','reports:occupancy','reports:financial','reports:audit'] },
+  { group: 'Night Audit',  perms: ['night_audit:read','night_audit:run'] },
+  { group: 'Chat',         perms: ['chat:read','chat:reply'] },
+  { group: 'Settings',     perms: ['settings:read','settings:update','settings:roles'] },
 ];
 
 // Shared permission picker used in both create and edit forms

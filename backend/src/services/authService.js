@@ -243,12 +243,21 @@ export const changePassword = async (userId, currentPassword, newPassword, force
   if (!userData) throw new AppError('User not found.', 404);
 
   if (!forceChange) {
-    const { error } = await supabase.auth.signInWithPassword({ email: userData.email, password: currentPassword });
-    if (error) throw new AppError('Current password is incorrect.', 401);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userData.email, password: currentPassword,
+    });
+    if (signInError) throw new AppError('Current password is incorrect.', 401);
   }
 
-  const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
-  if (error) throw new AppError('Failed to update password.', 500);
+  // Update password and force-invalidate all existing Supabase Auth sessions
+  const { data: updatedUser, error: pwError } = await supabase.auth.admin.updateUserById(userId, {
+    password:      newPassword,
+    email_confirm: true,
+  });
+
+  if (pwError || !updatedUser) {
+    throw new AppError(`Failed to update password: ${pwError?.message || 'unknown error'}`, 500);
+  }
 
   await supabase.from('users').update({ must_change_password: false }).eq('id', userId);
   return { message: 'Password updated successfully.' };
@@ -263,8 +272,13 @@ export const forgotPassword = async (email) => {
 };
 
 export const adminResetPassword = async (userId, newPassword) => {
-  const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
-  if (error) throw new AppError(`Failed to reset password: ${error.message}`, 500);
+  const { data: updatedUser, error } = await supabase.auth.admin.updateUserById(userId, {
+    password:      newPassword,
+    email_confirm: true,
+  });
+  if (error || !updatedUser) throw new AppError(`Failed to reset password: ${error?.message || 'unknown error'}`, 500);
+  // Mark must_change_password so user is prompted to set a personal password on next login
+  await supabase.from('users').update({ must_change_password: true }).eq('id', userId);
   return { message: 'Password reset successfully.' };
 };
 

@@ -1,6 +1,7 @@
 // src/controllers/reservationController.js
 
 import * as reservationService from '../services/reservationService.js';
+import { notify }              from '../services/notificationService.js';
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/response.js';
 
 export const getAllReservations = async (req, res, next) => {
@@ -26,6 +27,13 @@ export const getReservationById = async (req, res, next) => {
 export const createReservation = async (req, res, next) => {
   try {
     const data = await reservationService.createReservation(req.orgId, req.body, req.user.sub);
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'reservation',
+      title: 'New Reservation',
+      body:  `Reservation ${data.reservation_number || data.id?.slice(0,8)} created for ${data.guests?.full_name || 'a guest'}`,
+      link:  '/reservations',
+    });
     return sendCreated(res, data, 'Reservation created.');
   } catch (err) { next(err); }
 };
@@ -44,6 +52,13 @@ export const checkIn = async (req, res, next) => {
       req.orgId, req.params.id, req.user.sub,
       { payment_mode, paid_amount: Number(paid_amount || 0), payment_method, payment_notes }
     );
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'checkin',
+      title: 'Guest Checked In',
+      body:  `${data.guests?.full_name || 'Guest'} checked into Room ${data.rooms?.number || '—'}`,
+      link:  '/reservations',
+    });
     return sendSuccess(res, data, 'Guest checked in successfully.');
   } catch (err) { next(err); }
 };
@@ -51,6 +66,13 @@ export const checkIn = async (req, res, next) => {
 export const checkOut = async (req, res, next) => {
   try {
     const data = await reservationService.checkOut(req.orgId, req.params.id, req.user.sub);
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'checkout',
+      title: 'Guest Checked Out',
+      body:  `${data.guests?.full_name || 'Guest'} checked out of Room ${data.rooms?.number || '—'}`,
+      link:  '/reservations',
+    });
     return sendSuccess(res, data, 'Guest checked out successfully.');
   } catch (err) { next(err); }
 };
@@ -70,6 +92,13 @@ export const extendStay = async (req, res, next) => {
 export const cancelReservation = async (req, res, next) => {
   try {
     const data = await reservationService.cancelReservation(req.orgId, req.params.id, req.body.reason);
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'reservation',
+      title: 'Reservation Cancelled',
+      body:  `Reservation ${data.reservation_number || data.id?.slice(0,8)} has been cancelled`,
+      link:  '/reservations',
+    });
     return sendSuccess(res, data, 'Reservation cancelled.');
   } catch (err) { next(err); }
 };

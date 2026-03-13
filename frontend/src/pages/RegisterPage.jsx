@@ -28,7 +28,7 @@ function PasswordStrength({ password }) {
         {[0, 1, 2].map(i => (
           <div key={i} style={{
             flex: 1, height: 3, borderRadius: 2,
-            background: i < score ? colors[score - 1] : '#e8e6e1',
+            background: i < score ? colors[score - 1] : 'var(--border-soft)',
             transition: 'background 0.3s'
           }} />
         ))}
@@ -90,13 +90,13 @@ export default function RegisterPage() {
         @media (max-width: 768px) { .reg-page { grid-template-columns: 1fr; } .reg-left { display: none !important; } }
 
         .reg-left {
-          background: #0a0a0a; padding: 48px;
+          background: var(--sidebar-bg); padding: 48px;
           display: flex; flex-direction: column; justify-content: space-between;
           position: relative; overflow: hidden;
         }
         .reg-left-grid {
           position: absolute; inset: 0; opacity: 0.04;
-          background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+          background-image: linear-gradient(rgba(255,220,170,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,220,170,0.15) 1px, transparent 1px);
           background-size: 40px 40px;
         }
         .reg-left-mid { position: relative; z-index: 1; }
@@ -107,9 +107,9 @@ export default function RegisterPage() {
         .reg-left-headline {
           font-family: 'Instrument Serif', Georgia, serif;
           font-size: clamp(32px, 3vw, 48px); font-weight: 400;
-          line-height: 1.1; letter-spacing: -0.02em; color: #fff; margin-bottom: 28px;
+          line-height: 1.1; letter-spacing: -0.02em; color: rgba(255,235,210,0.95); margin-bottom: 28px;
         }
-        .reg-left-headline em { font-style: italic; color: rgba(255,255,255,0.35); }
+        .reg-left-headline em { font-style: italic; color: rgba(255,220,170,0.35); }
         .reg-perks { display: flex; flex-direction: column; gap: 12px; }
         .reg-perk { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 300; color: rgba(255,255,255,0.55); }
         .reg-perk-check {
@@ -126,12 +126,12 @@ export default function RegisterPage() {
           width: 32px; height: 32px; background: rgba(26,107,74,0.3);
           border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .reg-trial-title { font-size: 13px; font-weight: 500; color: #fff; }
+        .reg-trial-title { font-size: 13px; font-weight: 500; color: rgba(255,235,210,0.95); }
         .reg-trial-sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 1px; }
 
         .reg-right {
-          background: #fff; display: flex; align-items: center; justify-content: center;
-          padding: 40px; border-left: 1px solid #e8e6e1;
+          background: var(--bg-page); display: flex; align-items: center; justify-content: center;
+          padding: 40px; border-left: 1px solid var(--border-soft);
         }
         .reg-form-wrap { width: 100%; max-width: 380px; }
 
@@ -141,51 +141,51 @@ export default function RegisterPage() {
           width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 600;
           display: flex; align-items: center; justify-content: center; transition: all 0.3s;
         }
-        .reg-step-circle.done { background: #1a6b4a; color: #fff; }
-        .reg-step-circle.active { background: #0a0a0a; color: #fff; }
-        .reg-step-circle.idle { background: #f5f4f1; color: #b5b3ae; border: 1.5px solid #e8e6e1; }
+        .reg-step-circle.done { background: #1a6b4a; color: rgba(255,235,210,0.95); }
+        .reg-step-circle.active { background: var(--sidebar-bg); color: rgba(255,235,210,0.95); }
+        .reg-step-circle.idle { background: var(--bg-subtle); color: var(--text-muted); border: 1.5px solid var(--border-soft); }
         .reg-step-label { font-size: 12px; font-weight: 500; transition: color 0.3s; }
-        .reg-step-connector { flex: 1; height: 1px; background: #e8e6e1; min-width: 20px; }
+        .reg-step-connector { flex: 1; height: 1px; background: var(--border-soft); min-width: 20px; }
 
         .reg-form-title {
           font-family: 'Instrument Serif', Georgia, serif;
           font-size: 26px; font-weight: 400; letter-spacing: -0.01em;
-          color: #1a1a1a; margin-bottom: 6px;
+          color: var(--text-base); margin-bottom: 6px;
         }
-        .reg-form-sub { font-size: 14px; color: #6b6b6b; margin-bottom: 28px; }
+        .reg-form-sub { font-size: 14px; color: var(--text-sub); margin-bottom: 28px; }
 
         .reg-field { margin-bottom: 16px; }
-        .reg-label { display: block; font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+        .reg-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-base); margin-bottom: 6px; }
         .reg-input {
           width: 100%; height: 44px; padding: 0 14px;
-          border: 1.5px solid #e8e6e1; border-radius: 8px;
-          font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a1a;
-          background: #fff; outline: none; transition: border-color 0.2s;
+          border: 1.5px solid var(--border-soft); border-radius: 8px;
+          font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text-base);
+          background: var(--bg-surface); outline: none; transition: border-color 0.2s;
         }
-        .reg-input:focus { border-color: #0a0a0a; }
-        .reg-input::placeholder { color: #b5b3ae; }
+        .reg-input:focus { border-color: var(--sidebar-bg); }
+        .reg-input::placeholder { color: var(--text-muted); }
         .reg-input-wrap { position: relative; }
         .reg-input-wrap .reg-input { padding-right: 44px; }
         .reg-eye {
           position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; cursor: pointer; color: #b5b3ae;
+          background: none; border: none; cursor: pointer; color: var(--text-muted);
           display: flex; align-items: center; padding: 0; transition: color 0.2s;
         }
-        .reg-eye:hover { color: #1a1a1a; }
-        .reg-hint { font-size: 12px; color: #b5b3ae; margin-top: 5px; }
+        .reg-eye:hover { color: var(--text-base); }
+        .reg-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
         .reg-hint span { color: #1a6b4a; }
 
         .reg-actions { display: flex; gap: 10px; margin-top: 8px; }
         .reg-btn-back {
           height: 46px; padding: 0 20px; border-radius: 8px;
-          border: 1.5px solid #e8e6e1; background: #fff; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #6b6b6b;
+          border: 1.5px solid var(--border-soft); background: #fff; cursor: pointer;
+          font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--text-sub);
           transition: border-color 0.2s, color 0.2s;
         }
-        .reg-btn-back:hover { border-color: #0a0a0a; color: #1a1a1a; }
+        .reg-btn-back:hover { border-color: var(--sidebar-bg); color: var(--text-base); }
         .reg-btn-submit {
           flex: 1; height: 46px; border-radius: 8px; border: none; cursor: pointer;
-          background: #0a0a0a; color: #fff; font-family: 'DM Sans', sans-serif;
+          background: var(--sidebar-bg); color: rgba(255,235,210,0.95); font-family: 'DM Sans', sans-serif;
           font-size: 14px; font-weight: 500; display: flex; align-items: center;
           justify-content: center; gap: 8px;
           transition: opacity 0.2s, transform 0.15s;
@@ -193,16 +193,16 @@ export default function RegisterPage() {
         .reg-btn-submit:hover:not(:disabled) { opacity: 0.86; transform: translateY(-1px); }
         .reg-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .reg-footer { margin-top: 24px; text-align: center; font-size: 13px; color: #6b6b6b; }
-        .reg-footer a { color: #1a1a1a; font-weight: 500; text-decoration: none; }
+        .reg-footer { margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-sub); }
+        .reg-footer a { color: var(--text-base); font-weight: 500; text-decoration: none; }
         .reg-footer a:hover { text-decoration: underline; }
 
         .reg-back-link {
           display: inline-flex; align-items: center; gap: 6px;
-          font-size: 13px; color: #6b6b6b; text-decoration: none; margin-bottom: 32px;
+          font-size: 13px; color: var(--text-sub); text-decoration: none; margin-bottom: 32px;
           transition: color 0.2s;
         }
-        .reg-back-link:hover { color: #1a1a1a; }
+        .reg-back-link:hover { color: var(--text-base); }
 
         @keyframes regFadeIn {
           from { opacity: 0; transform: translateY(10px); }
@@ -269,7 +269,7 @@ export default function RegisterPage() {
                       : i + 1
                     }
                   </div>
-                  <span className="reg-step-label" style={{ color: i === step ? '#1a1a1a' : '#b5b3ae' }}>
+                  <span className="reg-step-label" style={{ color: i === step ? 'var(--text-base)' : 'var(--text-muted)' }}>
                     {label}
                   </span>
                   {i < 1 && <div className="reg-step-connector" />}
@@ -286,7 +286,7 @@ export default function RegisterPage() {
                 <div className="reg-field">
                   <label className="reg-label">Hotel or organization name</label>
                   <div className="reg-input-wrap" style={{ display: 'flex', alignItems: 'center' }}>
-                    <Building2 size={15} style={{ position: 'absolute', left: 14, color: '#b5b3ae', pointerEvents: 'none' }} />
+                    <Building2 size={15} style={{ position: 'absolute', left: 14, color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       name="org_name" type="text" className="reg-input"
                       style={{ paddingLeft: 40 }}

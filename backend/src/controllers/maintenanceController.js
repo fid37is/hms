@@ -1,6 +1,7 @@
 // src/controllers/maintenanceController.js
 
 import * as maintenanceService from '../services/maintenanceService.js';
+import { notify }              from '../services/notificationService.js';
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/response.js';
 
 export const getAllWorkOrders = async (req, res, next) => {
@@ -24,6 +25,13 @@ export const getWorkOrderById = async (req, res, next) => {
 export const createWorkOrder = async (req, res, next) => {
   try {
     const data = await maintenanceService.createWorkOrder(req.orgId, req.body, req.user.sub);
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'maintenance',
+      title: 'New Work Order',
+      body:  `${req.body.priority?.toUpperCase() || 'Normal'} priority: ${req.body.description?.slice(0, 80) || 'New maintenance issue raised'}`,
+      link:  '/maintenance',
+    });
     return sendCreated(res, data, 'Work order created.');
   } catch (err) { next(err); }
 };

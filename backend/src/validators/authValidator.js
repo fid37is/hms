@@ -30,12 +30,11 @@ export const refreshTokenSchema = Joi.object({
     }),
 });
 
+// Normal password change — user must prove they know their current password
 export const changePasswordSchema = Joi.object({
   current_password: Joi.string()
     .required()
-    .messages({
-      'any.required': 'Current password is required.',
-    }),
+    .messages({ 'any.required': 'Current password is required.' }),
 
   new_password: Joi.string()
     .min(8)
@@ -47,11 +46,25 @@ export const changePasswordSchema = Joi.object({
 
   confirm_password: Joi.string()
     .valid(Joi.ref('new_password'))
+    .optional()
+    .messages({ 'any.only': 'Passwords do not match.' }),
+});
+
+// Force change — user already proved identity at login, JWT is sufficient
+// No current_password needed; the backend skips re-verification too
+export const forceChangePasswordSchema = Joi.object({
+  new_password: Joi.string()
+    .min(8)
     .required()
     .messages({
-      'any.only':     'Passwords do not match.',
-      'any.required': 'Please confirm your new password.',
+      'string.min':   'New password must be at least 8 characters.',
+      'any.required': 'New password is required.',
     }),
+
+  confirm_password: Joi.string()
+    .valid(Joi.ref('new_password'))
+    .optional()
+    .messages({ 'any.only': 'Passwords do not match.' }),
 });
 
 export const registerOrgSchema = Joi.object({

@@ -66,6 +66,9 @@ export const initSocket = (httpServer, app) => {
     // Staff joins their department room
     if (!isGuest) {
       socket.join('staff:all');
+      // Join org room (for broadcast notifications) and personal room (for targeted notifications)
+      if (user.org_id) socket.join(`org:${user.org_id}`);
+      if (user.sub)    socket.join(`user:${user.sub}`);
 
       socket.on('join_department', ({ departmentId }) => {
         socket.join(`dept:${departmentId}`);

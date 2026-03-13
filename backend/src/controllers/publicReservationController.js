@@ -6,6 +6,7 @@
 
 import { supabase }           from '../config/supabase.js';
 import * as reservationService from '../services/reservationService.js';
+import { notify }              from '../services/notificationService.js';
 import { AppError }           from '../middleware/errorHandler.js';
 import { sendCreated, sendSuccess }  from '../utils/response.js';
 import * as emailService             from '../services/emailService.js';
@@ -210,6 +211,15 @@ export const publicCreateReservation = async (req, res, next) => {
           ratePlanName: ratePlanData?.name,
         }).catch(e => console.error('[email] booking confirmation failed:', e));
       }
+
+      // Notify all staff — online booking came in
+      notify(req.app, {
+        orgId:  req.orgId,
+        type:   'reservation',
+        title:  '🌐 New Online Booking',
+        body:   `${guestData?.full_name || 'A guest'} booked ${roomTypeData?.name || 'a room'} · ${checkIn} → ${checkOut}`,
+        link:   '/reservations',
+      });
     } catch (e) {
       console.error('[email] pre-send lookup failed:', e);
     }
@@ -240,6 +250,13 @@ export const publicCancelReservation = async (req, res, next) => {
       req.params.id,
       req.body.reason || 'Cancelled by guest via website.'
     );
+    notify(req.app, {
+      orgId:  req.orgId,
+      type:   'reservation',
+      title:  'Online Booking Cancelled',
+      body:   `Reservation ${data.reservation_number || req.params.id.slice(0,8)} was cancelled by the guest`,
+      link:   '/reservations',
+    });
     return sendSuccess(res, data, 'Your reservation has been cancelled.');
   } catch (err) { next(err); }
 };
