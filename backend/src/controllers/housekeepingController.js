@@ -1,6 +1,7 @@
 // src/controllers/housekeepingController.js
 
 import * as housekeepingService from '../services/housekeepingService.js';
+import { notify }               from '../services/notificationService.js';
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/response.js';
 
 // ─── Tasks ────────────────────────────────────────────────
@@ -26,6 +27,13 @@ export const getTaskById = async (req, res, next) => {
 export const createTask = async (req, res, next) => {
   try {
     const data = await housekeepingService.createTask(req.orgId, req.body, req.user.sub);
+    notify(req.app, {
+      orgId: req.orgId,
+      type:  'housekeeping',
+      title: 'New Housekeeping Task',
+      body:  `${req.body.task_type || 'Task'} assigned for Room ${data.rooms?.number || req.body.room_id?.slice(0,8) || '—'}`,
+      link:  '/housekeeping',
+    });
     return sendCreated(res, data, 'Task created.');
   } catch (err) { next(err); }
 };
@@ -61,6 +69,17 @@ export const inspectTask = async (req, res, next) => {
 export const assignTask = async (req, res, next) => {
   try {
     const data = await housekeepingService.assignTask(req.orgId, req.params.id, req.body.assigned_to, req.user.sub);
+    // Notify the assigned staff member directly
+    if (req.body.assigned_to) {
+      notify(req.app, {
+        orgId:  req.orgId,
+        userId: req.body.assigned_to,
+        type:   'housekeeping',
+        title:  'Task Assigned to You',
+        body:   `You have been assigned a ${data.task_type || 'housekeeping'} task for Room ${data.rooms?.number || '—'}`,
+        link:   '/housekeeping',
+      });
+    }
     return sendSuccess(res, data, 'Task assigned.');
   } catch (err) { next(err); }
 };

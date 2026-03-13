@@ -26,8 +26,17 @@ export const getProfileController = async (req, res, next) => {
 
 export const changePasswordController = async (req, res, next) => {
   try {
-    const { current_password, new_password, force_change } = req.body;
-    const data = await authService.changePassword(req.user.sub, current_password, new_password, force_change || false);
+    const { current_password, new_password } = req.body;
+    const data = await authService.changePassword(req.user.sub, current_password, new_password, false);
+    return sendSuccess(res, data);
+  } catch (err) { next(err); }
+};
+
+// Force-change: user is already authenticated via JWT — no current password needed
+export const forceChangePasswordController = async (req, res, next) => {
+  try {
+    const { new_password } = req.body;
+    const data = await authService.changePassword(req.user.sub, null, new_password, true);
     return sendSuccess(res, data);
   } catch (err) { next(err); }
 };

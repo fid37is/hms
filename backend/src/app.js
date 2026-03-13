@@ -41,7 +41,7 @@ const corsOptions = {
   },
   credentials:          true,
   methods:              ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders:       ['Content-Type', 'Authorization', 'X-API-Key'],  // ✅ API key header exposed
+  allowedHeaders:       ['Content-Type', 'Authorization', 'X-API-Key', 'X-Org-Slug'],  // ✅ API key + org slug headers
   optionsSuccessStatus: 200,
 };
 

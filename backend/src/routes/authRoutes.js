@@ -15,6 +15,7 @@ import {
   refreshTokenController,
   getProfileController,
   changePasswordController,
+  forceChangePasswordController,
   logoutController,
   forgotPasswordController,
   registerOrgController,
@@ -39,7 +40,7 @@ router.post('/register-org',    validate(registerOrgSchema),   registerOrgContro
 router.post('/logout',          authenticate, logoutController);
 router.get('/me',               authenticate, getProfileController);
 router.patch('/change-password',       authenticate, validate(changePasswordSchema),      changePasswordController);
-router.patch('/force-change-password', authenticate, validate(forceChangePasswordSchema), changePasswordController);
+router.patch('/force-change-password', authenticate, validate(forceChangePasswordSchema), forceChangePasswordController);
 
 // ─── API Keys (requires JWT auth) ─────────────────────────
 router.get('/api-keys',         authenticate, listApiKeysController);

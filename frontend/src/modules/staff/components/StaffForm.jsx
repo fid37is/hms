@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as staffApi from '../../../lib/api/staffApi';
+import { useAuthStore } from '../../../store/authStore';
 import toast from 'react-hot-toast';
 
 export default function StaffForm({ staff, onSuccess }) {
-  const isEdit = !!staff;
+  const isEdit   = !!staff;
+  const { user } = useAuthStore();
+
   const [form, setForm] = useState(() => ({
     full_name:       staff?.full_name       ?? '',
     email:           staff?.email           ?? '',
@@ -21,6 +24,13 @@ export default function StaffForm({ staff, onSuccess }) {
   const { data: depts } = useQuery({
     queryKey: ['departments'],
     queryFn:  () => staffApi.getDepartments().then(r => r.data.data),
+    // Once departments load, pre-select the current manager's department on new-staff forms
+    onSuccess: (data) => {
+      if (!isEdit && !form.department_id && user?.department) {
+        const match = data.find(d => d.name.toLowerCase() === user.department.toLowerCase());
+        if (match) setForm(prev => ({ ...prev, department_id: match.id }));
+      }
+    },
   });
 
   const save = useMutation({

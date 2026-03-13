@@ -30,7 +30,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Settings" />
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
 

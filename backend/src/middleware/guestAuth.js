@@ -1,25 +1,19 @@
 // src/middleware/guestAuth.js
-//
-// Mirrors the pattern in auth.js but for public-facing guest tokens.
-// Guest tokens are issued on booking confirmation and allow guests to
-// manage their own reservation (cancel, view, pay) without an HMS account.
 
 import jwt                  from 'jsonwebtoken';
 import { env }              from '../config/env.js';
 import { sendUnauthorized } from '../utils/response.js';
 
 // ─── Issue a guest token (call this from reservationController after booking) ──
-// Usage:  const token = issueGuestToken({ reservation_id, guest_email, guest_name });
 export const issueGuestToken = (payload) => {
   return jwt.sign(
     { ...payload, type: 'guest' },
     env.JWT_SECRET,
-    { expiresIn: '7d' }   // guest tokens live for 7 days — adjust to your policy
+    { expiresIn: '7d' }
   );
 };
 
 // ─── Middleware: verify guest token ───────────────────────────────────────────
-// Attach decoded guest payload to req.guest (not req.user — keeps guest/staff separate)
 export const verifyGuestToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -32,7 +26,6 @@ export const verifyGuestToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET);
 
-    // Reject staff tokens hitting guest routes
     if (decoded.type !== 'guest') {
       return sendUnauthorized(res, 'Invalid token type.');
     }
@@ -48,10 +41,25 @@ export const verifyGuestToken = (req, res, next) => {
 };
 
 // ─── Middleware: ensure guest can only access their own reservation ────────────
-// Use this on any route with :id or :reservationId param
+// Two token types reach here:
+//
+// 1. BOOKING TOKEN — issued at booking confirmation (no account required)
+//    payload: { reservation_id, guest_email, guest_name, type: 'guest' }
+//    → check req.guest.reservation_id === reservationId
+//
+// 2. ACCOUNT TOKEN — issued at login for registered guests
+//    payload: { sub: guest_id, email, type: 'guest' }
+//    → no reservation_id in token; ownership is verified in the controller
+//      via guest_id, so let it pass here
+//
 export const authorizeGuestReservation = (req, res, next) => {
   const reservationId = req.params.id || req.params.reservationId;
 
+  // Logged-in guest account — has sub (guest_id), no reservation_id
+  // Controller handles ownership check, so pass through
+  if (req.guest.sub) return next();
+
+  // One-time booking token — must match the specific reservation
   if (req.guest.reservation_id !== reservationId) {
     return sendUnauthorized(res, 'You are not authorized to access this reservation.');
   }

@@ -191,9 +191,9 @@ function CustomDomainSection({ org }) {
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <code style={{ color: 'var(--text-base)' }}>
-                      {BASE_DOMAIN.includes('pages.dev') ? BASE_DOMAIN : `${org.slug}.${BASE_DOMAIN}`}
+                      {`${org.slug}.${BASE_DOMAIN}`}
                     </code>
-                    <CopyButton text={BASE_DOMAIN.includes('pages.dev') ? BASE_DOMAIN : `${org.slug}.${BASE_DOMAIN}`} />
+                    <CopyButton text={`${org.slug}.${BASE_DOMAIN}`} />
                   </div>
                 </td>
                 <td className="px-3 py-2"><code style={{ color: 'var(--text-muted)' }}>Auto</code></td>
@@ -297,13 +297,13 @@ export default function WebsitePanel() {
     </div>
   );
 
-  const subdomainUrl  = BASE_DOMAIN.includes('pages.dev')
-    ? `https://${BASE_DOMAIN}`
-    : `https://${org.slug}.${BASE_DOMAIN}`;
-  const publicApiUrl  = `${API_BASE}/public`;
+  const subdomainUrl  = `https://${org.slug}.${BASE_DOMAIN}`;
+  const publicApiUrl  = API_BASE.includes('localhost')
+    ? `${API_BASE}/public`
+    : `${API_BASE.replace('/api/v1', '')}/api/v1/public`;
 
   return (
-    <div className="max-w-[640px] space-y-6">
+    <div className="space-y-6">
 
       {/* Header */}
       <div>

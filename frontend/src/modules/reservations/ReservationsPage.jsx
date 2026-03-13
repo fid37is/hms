@@ -143,16 +143,21 @@ export default function ReservationsPage() {
 
     // ── Payment ──────────────────────────────────────────────────────────
     { key: 'payment', label: 'Payment',
-      render: r => (
-        <div className="flex flex-col gap-1 items-start">
-          <PaymentBadge status={r.payment_status || 'pending'} />
-          {r.payment_method && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
-            </span>
-          )}
-        </div>
-      ),
+      render: r => {
+        if (['cancelled', 'no_show'].includes(r.status)) {
+          return <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>;
+        }
+        return (
+          <div className="flex flex-col gap-1 items-start">
+            <PaymentBadge status={r.payment_status || 'pending'} />
+            {r.payment_method && (
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
 
     { key: 'actions', label: '', width: '140px',
@@ -199,9 +204,11 @@ export default function ReservationsPage() {
         </div>
         <div className="text-right flex-shrink-0 flex flex-col gap-1 items-end">
           <StatusBadge status={r.status} />
-          <PaymentBadge status={r.payment_status || 'pending'} />
+          {!['cancelled','no_show'].includes(r.status) && (
+            <PaymentBadge status={r.payment_status || 'pending'} />
+          )}
           <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-base)' }}>{formatCurrency(r.total_amount)}</p>
-          {r.payment_method && (
+          {r.payment_method && !['cancelled','no_show'].includes(r.status) && (
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
             </p>

@@ -1,11 +1,14 @@
 // src/routes/fnbRoutes.js
 import { Router } from 'express';
+import { authenticate }      from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PERMISSIONS as P }  from '../config/constants.js';
 import * as ctrl from '../controllers/fnbController.js';
 
 const router = Router();
 const R = P.FNB;
+
+router.use(authenticate);
 
 // Outlets
 router.get   ('/outlets',        requirePermission(R.READ),   ctrl.getOutlets);

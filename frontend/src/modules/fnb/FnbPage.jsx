@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, UtensilsCrossed, ChevronRight } from 'lucide-react';
 import * as fnbApi from '../../lib/api/fnbApi';
-import PageHeader  from '../../components/shared/PageHeader';
 import DataTable   from '../../components/shared/DataTable';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { formatCurrency, formatDateTime } from '../../utils/format';
@@ -418,9 +417,7 @@ export default function FnbPage() {
   return (
     <div className="flex h-full">
       <div className="flex-1 min-w-0 space-y-4">
-        <PageHeader title="F&B" subtitle="Food & Beverage" action={tabAction()} />
-
-        {/* Outlet filter + tabs */}
+        {/* Tabs + action */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
             {TABS.map(t => (
@@ -431,6 +428,8 @@ export default function FnbPage() {
               </button>
             ))}
           </div>
+          <div style={{ flex: 1 }} />
+          {tabAction()}
 
           {(outlets || []).length > 0 && (
             <select className="input text-xs py-1 w-auto" value={activeOutlet} onChange={e => setActiveOutlet(e.target.value)}>

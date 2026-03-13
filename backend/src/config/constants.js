@@ -92,6 +92,15 @@ export const PERMISSIONS = {
     READ: 'night_audit:read',
     RUN:  'night_audit:run',
   },
+  EVENTS: {
+    READ:    'events:read',
+    CREATE:  'events:create',
+    UPDATE:  'events:update',
+    CANCEL:  'events:cancel',
+    DELETE:  'events:delete',
+    BILLING: 'events:billing',
+    STAFF:   'events:staff',
+  },
   CHAT: {
     READ:  'chat:read',
     REPLY: 'chat:reply',

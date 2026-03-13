@@ -17,6 +17,9 @@ import chatDepartmentRoutes   from './chatDepartmentRoutes.js';
 import conversationRoutes     from './conversationRoutes.js';
 import publicRoutes           from './publicRoutes.js';
 import fnbRoutes              from './fnbRoutes.js';
+import notificationRoutes     from './notificationRoutes.js';
+import nightAuditRoutes       from './nightAuditRoutes.js';
+import eventRoutes            from './eventRoutes.js';
 
 const router = Router();
 
@@ -39,5 +42,8 @@ router.use('/reports',          reportRoutes);
 router.use('/config',           configRoutes);
 router.use('/users',            userRoutes);
 router.use('/fnb',              fnbRoutes);
+router.use('/notifications',    notificationRoutes);
+router.use('/night-audit',      nightAuditRoutes);
+router.use('/events',           eventRoutes);
 
 export default router;

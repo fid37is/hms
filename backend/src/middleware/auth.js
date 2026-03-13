@@ -18,7 +18,6 @@ export const authenticate = (req, res, next) => {
     if (!decoded.org_id) {
       return sendUnauthorized(res, 'Session expired. Please log in again.');
     }
-    // Ensure org_id is always a plain string, never an object
     const orgId = typeof decoded.org_id === 'string'
       ? decoded.org_id
       : String(decoded.org_id?.id || decoded.org_id);
@@ -54,7 +53,6 @@ export const authenticateApiKey = async (req, res, next) => {
 
     if (!keys?.length) return sendUnauthorized(res, 'Invalid API key.');
 
-    // Find matching key by comparing hash
     let matched = null;
     for (const k of keys) {
       if (await bcrypt.compare(apiKey, k.key_hash)) { matched = k; break; }
@@ -64,7 +62,6 @@ export const authenticateApiKey = async (req, res, next) => {
     if (matched.expires_at && new Date(matched.expires_at) < new Date())
       return sendForbidden(res, 'API key expired.');
 
-    // Fire-and-forget last_used_at update
     supabase.from('api_keys')
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', matched.id).then(() => {});

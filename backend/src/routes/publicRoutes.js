@@ -42,6 +42,9 @@ import {
   sendMessage,
 } from '../controllers/conversationController.js';
 
+// ─── Events ───────────────────────────────────────────────────────────────────
+import { publicEnquiry } from '../controllers/eventController.js';
+
 // ─── Validators ───────────────────────────────────────────────────────────────
 import {
   publicAvailabilitySchema,
@@ -98,5 +101,10 @@ router.get('/auth/me',                  rateLimiter, verifyGuestToken, getMe);
 router.patch('/auth/me',                rateLimiter, verifyGuestToken, updateMe);
 router.get('/auth/my-reservations',     rateLimiter, verifyGuestToken, getMyReservations);
 router.get('/auth/my-reservations/:id', rateLimiter, verifyGuestToken, getMyReservationById);
+
+// =============================================================================
+// PUBLIC EVENT ENQUIRY
+// =============================================================================
+router.post('/events/enquiry', rateLimiter, publicEnquiry);
 
 export default router;

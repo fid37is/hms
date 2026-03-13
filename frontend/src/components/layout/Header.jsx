@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate }    from 'react-router-dom';
 import { Bell, Sun, Moon, KeyRound, LogOut, ChevronDown, Menu } from 'lucide-react';
-import { useAuthStore }    from '../../store/authStore';
-import { useThemeStore }   from '../../store/themeStore';
-import { useUIStore }      from '../../store/uiStore';
-import ChangePasswordModal from '../shared/ChangePasswordModal';
-import * as authApi        from '../../lib/api/authApi';
+import { useAuthStore }        from '../../store/authStore';
+import { useThemeStore }       from '../../store/themeStore';
+import { useUIStore }          from '../../store/uiStore';
+import { useNotifications }    from '../../hooks/useNotifications';
+import ChangePasswordModal     from '../shared/ChangePasswordModal';
+import NotificationPanel       from '../shared/NotificationPanel';
+import * as authApi            from '../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
 const TITLES = {
@@ -13,12 +15,22 @@ const TITLES = {
   '/rooms':        'Rooms',
   '/reservations': 'Reservations',
   '/guests':       'Guests',
+  '/billing':      'Billing',
   '/housekeeping': 'Housekeeping',
   '/inventory':    'Inventory',
   '/maintenance':  'Maintenance',
   '/staff':        'Staff',
   '/reports':      'Reports',
+  '/chat':         'Guest Chat',
+  '/fnb':          'Food & Beverage',
+  '/night-audit':  'Night Audit',
+  '/events':       'Events & Banquets',
   '/settings':     'Settings',
+  '/help':          'Help & Support',
+  '/help/docs':     'Documentation',
+  '/help/support':  'Contact Support',
+  '/help/feedback': 'Feature Requests',
+  '/help/status':   'System Status',
 };
 
 export default function Header() {
@@ -27,10 +39,13 @@ export default function Header() {
   const { user, logout }      = useAuthStore();
   const { mode, toggleTheme } = useThemeStore();
   const { toggleSidebar }     = useUIStore();
-  const [menuOpen, setMenuOpen]  = useState(false);
-  const [changePw, setChangePw]  = useState(false);
-  const menuRef = useRef();
-  const title   = TITLES[pathname] || 'Cierlo';
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [changePw,  setChangePw]  = useState(false);
+  const menuRef  = useRef();
+  const notifRef = useRef();
+  const title    = TITLES[pathname] || 'Cierlo';
 
   useEffect(() => {
     const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
@@ -76,13 +91,35 @@ export default function Header() {
           </button>
 
           {/* Notifications */}
-          <button
-            className="relative w-8 h-8 flex items-center justify-center rounded-md"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            <Bell size={15} />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--s-red-text)' }} />
-          </button>
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen(o => !o)}
+              className="relative w-8 h-8 flex items-center justify-center rounded-md transition-colors"
+              style={{ color: notifOpen ? 'var(--text-base)' : 'var(--text-muted)', backgroundColor: notifOpen ? 'var(--bg-subtle)' : 'transparent' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
+              onMouseLeave={e => { if (!notifOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <Bell size={15} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 flex items-center justify-center rounded-full text-white font-bold"
+                  style={{
+                    backgroundColor: 'var(--s-red-text)',
+                    fontSize: 9, minWidth: 14, height: 14, padding: '0 3px', lineHeight: 1,
+                  }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <NotificationPanel
+                notifications={notifications}
+                onMarkRead={markRead}
+                onMarkAllRead={markAllRead}
+                onClose={() => setNotifOpen(false)}
+              />
+            )}
+          </div>
 
           {/* Avatar dropdown */}
           <div className="relative ml-1" ref={menuRef}>

@@ -9,10 +9,6 @@ import toast from 'react-hot-toast';
 const BLANK = {
   // Identity
   hotel_name: '', tagline: '', description: '', logo_url: '',
-  // Branding — core (always set)
-  primary_color: '#1F4E8C', accent_color: '#C9A84C',
-  // Branding — optional role overrides (blank = auto-derived from primary/accent)
-  nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '',
   // Location
   address: '', city: '', state: '', country: 'Nigeria', google_maps_url: '',
   // Contact
@@ -21,7 +17,7 @@ const BLANK = {
   instagram_url: '', facebook_url: '', twitter_url: '',
   // Financial
   currency: 'NGN', currency_symbol: '₦', tax_rate: '7.5', service_charge: '10',
-  // Payment methods
+  // Payment
   pay_on_arrival: true, bank_transfer: false, paystack_enabled: false,
   bank_name: '', bank_account_number: '', bank_account_name: '', paystack_public_key: '',
   // Operations
@@ -32,22 +28,6 @@ const BLANK = {
   receipt_footer: '',
 };
 
-// ── Contrast helper — returns black or white text for a given bg hex ──────────
-function contrastText(hex) {
-  if (!hex || !hex.startsWith('#')) return '#ffffff';
-  const clean = hex.replace('#', '');
-  const full  = clean.length === 3
-    ? clean.split('').map(c => c + c).join('')
-    : clean;
-  const [r, g, b] = [0, 2, 4].map(i => {
-    const v = parseInt(full.slice(i, i + 2), 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return lum > 0.35 ? '#1a1a1a' : '#ffffff';
-}
-
-// ── Section wrapper ────────────────────────────────────────────────────────────
 function Section({ title, children }) {
   return (
     <div className="card p-5 space-y-4">
@@ -69,65 +49,6 @@ function Field({ label, hint, children }) {
   );
 }
 
-// ── Color input: swatch + hex text field ──────────────────────────────────────
-function ColorField({ label, name, value, onChange, hint, optional }) {
-  return (
-    <Field label={optional ? `${label} (optional)` : label} hint={hint}>
-      <div className="flex gap-2 items-center">
-        <input
-          name={name}
-          type="color"
-          className="w-10 h-9 rounded cursor-pointer border p-0.5 shrink-0"
-          style={{ borderColor: 'var(--border-base)' }}
-          value={value || '#ffffff'}
-          onChange={onChange}
-        />
-        <input
-          name={name}
-          className="input font-mono"
-          placeholder={optional ? 'auto' : '#000000'}
-          value={value}
-          onChange={onChange}
-        />
-        {optional && value && (
-          <button
-            type="button"
-            title="Reset to auto"
-            className="text-xs shrink-0 px-2 py-1 rounded transition-colors"
-            style={{ color: 'var(--text-muted)', border: '1px solid var(--border-base)' }}
-            onClick={() => onChange({ target: { name, value: '' } })}
-          >
-            ✕
-          </button>
-        )}
-      </div>
-    </Field>
-  );
-}
-
-// ── Live preview pill ──────────────────────────────────────────────────────────
-function Swatch({ label, bg, text, overridden }) {
-  if (!bg) return null;
-  const textColor = text || contrastText(bg);
-  return (
-    <div className="flex-1 relative">
-      <div
-        className="h-9 rounded text-center text-xs flex items-center justify-center font-medium px-2 truncate w-full"
-        style={{ backgroundColor: bg, color: textColor }}
-      >
-        {label}
-      </div>
-      {overridden && (
-        <span
-          className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full border-2"
-          style={{ backgroundColor: 'var(--brand)', borderColor: 'var(--bg-surface)', zIndex: 1 }}
-          title="Custom override set"
-        />
-      )}
-    </div>
-  );
-}
-
 export default function HotelConfig() {
   const { data, isLoading } = useQuery({
     queryKey: ['hotel-config'],
@@ -135,30 +56,14 @@ export default function HotelConfig() {
   });
 
   const [form, setForm] = useState(BLANK);
-  const [showAdvancedColors, setShowAdvancedColors] = useState(false);
 
   useEffect(() => {
     if (!data) return;
-    const hasAdvanced = !!(
-      data.nav_color || data.btn_color || data.footer_color ||
-      data.surface_color || data.bg_color
-    );
-    setShowAdvancedColors(hasAdvanced);
-
     setForm({
       hotel_name:          data.hotel_name          ?? '',
       tagline:             data.tagline             ?? '',
       description:         data.description         ?? '',
       logo_url:            data.logo_url            ?? '',
-      // Core brand colors
-      primary_color:       data.primary_color       ?? '#1F4E8C',
-      accent_color:        data.accent_color        ?? data.secondary_color ?? '#C9A84C',
-      // Optional role overrides — empty string = auto
-      nav_color:           data.nav_color           ?? '',
-      btn_color:           data.btn_color           ?? '',
-      footer_color:        data.footer_color        ?? '',
-      surface_color:       data.surface_color       ?? '',
-      bg_color:            data.bg_color            ?? '',
       // Location
       address:             data.address             ?? '',
       city:                data.city                ?? '',
@@ -212,371 +117,262 @@ export default function HotelConfig() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const stripSeconds = (t) => t ? t.slice(0, 5) : t;
-    // Send null for empty optional color fields so BE knows they're unset (not '').
-    const nullIfEmpty = (v) => v && v.trim() ? v.trim() : null;
     save.mutate({
       ...form,
-      // Normalize optional colors to null when blank
-      nav_color:      nullIfEmpty(form.nav_color),
-      btn_color:      nullIfEmpty(form.btn_color),
-      footer_color:   nullIfEmpty(form.footer_color),
-      surface_color:  nullIfEmpty(form.surface_color),
-      bg_color:       nullIfEmpty(form.bg_color),
-      // Numeric fields
-      tax_rate:       Number(form.tax_rate)       || 0,
-      service_charge: Number(form.service_charge) || 0,
-      // Time fields
-      check_in_time:  stripSeconds(form.check_in_time),
-      check_out_time: stripSeconds(form.check_out_time),
-      // Boolean fields
+      tax_rate:         Number(form.tax_rate)       || 0,
+      service_charge:   Number(form.service_charge) || 0,
+      check_in_time:    stripSeconds(form.check_in_time),
+      check_out_time:   stripSeconds(form.check_out_time),
       pay_on_arrival:   Boolean(form.pay_on_arrival),
       bank_transfer:    Boolean(form.bank_transfer),
       paystack_enabled: Boolean(form.paystack_enabled),
     });
   };
 
-  // Derived preview values — mirrors what theme.js applyBrandColors() will produce
-  const primary  = form.primary_color;
-  const accent   = form.accent_color;
-  const navBg    = form.nav_color    || primary;
-  const btnBg    = form.btn_color    || primary;
-  const accentBg = accent;
-  const footerBg = form.footer_color || primary;
-  const surfaceBg= form.surface_color|| '#ffffff';
-  const pageBg   = form.bg_color     || '#fafaf8';
-
   if (isLoading) return <LoadingSpinner center />;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-0">
 
-      {/* Row 1 — Identity + Location */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Section title="Hotel Identity">
-          <Field label="Hotel Name *">
-            <input name="hotel_name" className="input" required
-              value={form.hotel_name} onChange={handleChange} />
-          </Field>
-          <Field label="Tagline">
-            <input name="tagline" className="input" placeholder="e.g. Where comfort meets luxury"
-              value={form.tagline} onChange={handleChange} />
-          </Field>
-          <Field label="Description">
-            <textarea name="description" rows={3} className="input"
-              placeholder="Short description shown on the website homepage…"
-              value={form.description} onChange={handleChange} />
-          </Field>
-          <Field label="Logo URL">
-            <input name="logo_url" className="input" placeholder="https://…"
-              value={form.logo_url} onChange={handleChange} />
-          </Field>
+      {/* ── Open Customizer ───────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b">
+        <div>
+          <div className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>Layout & Design</div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Colours, fonts, hero style, section order</div>
+        </div>
+        <a href="/settings/customize" target="_blank" rel="noreferrer"
+          className="text-sm font-medium px-4 py-2 rounded border transition-colors whitespace-nowrap"
+          style={{ borderColor: 'var(--border-base)', color: 'var(--text-base)' }}>
+          Open Customizer →
+        </a>
+      </div>
 
-          {/* ── Brand Colors ─────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
-            <ColorField
-              label="Primary Color"
-              name="primary_color"
-              value={form.primary_color}
-              onChange={handleChange}
-              hint="Nav, headings, footer"
-            />
-            <ColorField
-              label="Accent Color"
-              name="accent_color"
-              value={form.accent_color}
-              onChange={handleChange}
-              hint="Buttons, prices, highlights"
-            />
-          </div>
+      <div className="space-y-4">
 
-          {/* Live preview — core roles */}
-          {(() => {
-            const hasAnyOverride = form.nav_color || form.btn_color || form.footer_color || form.surface_color || form.bg_color;
-            return (
-              <>
-                <div className="flex gap-2 pt-1 flex-wrap">
-                  <Swatch label="Nav"    bg={navBg}    overridden={!!form.nav_color} />
-                  <Swatch label="Button" bg={btnBg}    overridden={!!form.btn_color} />
-                  <Swatch label="Accent" bg={accentBg} />
-                  <Swatch label="Footer" bg={footerBg} overridden={!!form.footer_color} />
-                </div>
-                <div className="flex gap-2">
-                  <Swatch label="Page bg" bg={pageBg}    text={contrastText(pageBg)}    overridden={!!form.bg_color} />
-                  <Swatch label="Cards"   bg={surfaceBg} text={contrastText(surfaceBg)} overridden={!!form.surface_color} />
-                </div>
-                {hasAnyOverride && (
-                  <button
-                    type="button"
-                    className="text-xs transition-colors"
-                    style={{ color: 'var(--s-red-text)' }}
-                    onClick={() => setForm(f => ({ ...f, nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '' }))}
-                  >
-                    ↺ Reset all overrides to auto
-                  </button>
-                )}
-              </>
-            );
-          })()}
+        {/* Row 1 — Identity + Location */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title="Hotel Identity">
+            <Field label="Hotel Name *">
+              <input name="hotel_name" className="input" required
+                value={form.hotel_name} onChange={handleChange} />
+            </Field>
+            <Field label="Tagline">
+              <input name="tagline" className="input" placeholder="e.g. Where comfort meets luxury"
+                value={form.tagline} onChange={handleChange} />
+            </Field>
+            <Field label="Description">
+              <textarea name="description" rows={3} className="input"
+                placeholder="Short description shown on the website homepage…"
+                value={form.description} onChange={handleChange} />
+            </Field>
+            <Field label="Logo URL">
+              <input name="logo_url" className="input" placeholder="https://…"
+                value={form.logo_url} onChange={handleChange} />
+            </Field>
+          </Section>
 
-          {/* ── Advanced color overrides ────────────────────────────── */}
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-            style={{ color: showAdvancedColors ? 'var(--brand)' : 'var(--text-muted)' }}
-            onClick={() => setShowAdvancedColors(v => !v)}
-          >
-            <span style={{
-              display: 'inline-block', width: 12, height: 12,
-              transition: 'transform 0.2s',
-              transform: showAdvancedColors ? 'rotate(90deg)' : 'rotate(0deg)',
-            }}>▶</span>
-            Advanced color overrides
-          </button>
-
-          {showAdvancedColors && (
-            <div className="rounded-xl p-4 space-y-3"
-              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Leave blank to auto-derive from Primary / Accent. Set only if you need a specific color for that element.
-              </p>
-              <div className="grid grid-cols-1 gap-3">
-                <ColorField
-                  label="Navigation Bar" name="nav_color"
-                  value={form.nav_color} onChange={handleChange}
-                  hint="Default: same as Primary"
-                  optional
-                />
-                <ColorField
-                  label="Primary Button" name="btn_color"
-                  value={form.btn_color} onChange={handleChange}
-                  hint="Default: same as Primary"
-                  optional
-                />
-                <ColorField
-                  label="Footer" name="footer_color"
-                  value={form.footer_color} onChange={handleChange}
-                  hint="Default: same as Primary"
-                  optional
-                />
-                <ColorField
-                  label="Card / Surface" name="surface_color"
-                  value={form.surface_color} onChange={handleChange}
-                  hint="Default: white"
-                  optional
-                />
-                <ColorField
-                  label="Page Background" name="bg_color"
-                  value={form.bg_color} onChange={handleChange}
-                  hint="Default: off-white"
-                  optional
-                />
-              </div>
+          <Section title="Location">
+            <Field label="Street Address">
+              <input name="address" className="input" value={form.address} onChange={handleChange} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="City">
+                <input name="city" className="input" value={form.city} onChange={handleChange} />
+              </Field>
+              <Field label="State">
+                <input name="state" className="input" value={form.state} onChange={handleChange} />
+              </Field>
             </div>
-          )}
-        </Section>
-
-        <Section title="Location">
-          <Field label="Street Address">
-            <input name="address" className="input" value={form.address} onChange={handleChange} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="City">
-              <input name="city" className="input" value={form.city} onChange={handleChange} />
+            <Field label="Country">
+              <input name="country" className="input" value={form.country} onChange={handleChange} />
             </Field>
-            <Field label="State">
-              <input name="state" className="input" value={form.state} onChange={handleChange} />
+            <Field label="Google Maps URL">
+              <input name="google_maps_url" className="input" placeholder="https://maps.google.com/…"
+                value={form.google_maps_url} onChange={handleChange} />
             </Field>
-          </div>
-          <Field label="Country">
-            <input name="country" className="input" value={form.country} onChange={handleChange} />
-          </Field>
-          <Field label="Google Maps URL">
-            <input name="google_maps_url" className="input" placeholder="https://maps.google.com/…"
-              value={form.google_maps_url} onChange={handleChange} />
-          </Field>
-        </Section>
-      </div>
+          </Section>
+        </div>
 
-      {/* Row 2 — Contact + Social */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Section title="Contact">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Phone">
-              <input name="phone" className="input" value={form.phone} onChange={handleChange} />
+        {/* Row 2 — Contact + Social */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title="Contact">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Phone">
+                <input name="phone" className="input" value={form.phone} onChange={handleChange} />
+              </Field>
+              <Field label="WhatsApp">
+                <input name="whatsapp_number" className="input" placeholder="+234…"
+                  value={form.whatsapp_number} onChange={handleChange} />
+              </Field>
+            </div>
+            <Field label="Email">
+              <input name="email" type="email" className="input"
+                value={form.email} onChange={handleChange} />
             </Field>
-            <Field label="WhatsApp">
-              <input name="whatsapp_number" className="input" placeholder="+234…"
-                value={form.whatsapp_number} onChange={handleChange} />
+          </Section>
+
+          <Section title="Social Media">
+            <Field label="Instagram">
+              <input name="instagram_url" className="input" placeholder="https://instagram.com/…"
+                value={form.instagram_url} onChange={handleChange} />
             </Field>
-          </div>
-          <Field label="Email">
-            <input name="email" type="email" className="input"
-              value={form.email} onChange={handleChange} />
-          </Field>
-        </Section>
+            <Field label="Facebook">
+              <input name="facebook_url" className="input" placeholder="https://facebook.com/…"
+                value={form.facebook_url} onChange={handleChange} />
+            </Field>
+            <Field label="X / Twitter">
+              <input name="twitter_url" className="input" placeholder="https://x.com/…"
+                value={form.twitter_url} onChange={handleChange} />
+            </Field>
+          </Section>
+        </div>
 
-        <Section title="Social Media">
-          <Field label="Instagram">
-            <input name="instagram_url" className="input" placeholder="https://instagram.com/…"
-              value={form.instagram_url} onChange={handleChange} />
-          </Field>
-          <Field label="Facebook">
-            <input name="facebook_url" className="input" placeholder="https://facebook.com/…"
-              value={form.facebook_url} onChange={handleChange} />
-          </Field>
-          <Field label="X / Twitter">
-            <input name="twitter_url" className="input" placeholder="https://x.com/…"
-              value={form.twitter_url} onChange={handleChange} />
-          </Field>
-        </Section>
-      </div>
+        {/* Row 3 — Financial + Payment + Operations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title="Financial">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Currency">
+                <select name="currency" className="input" value={form.currency} onChange={handleChange}>
+                  <option value="NGN">NGN — Naira</option>
+                  <option value="USD">USD — Dollar</option>
+                  <option value="GBP">GBP — Pound</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="GHS">GHS — Cedi</option>
+                  <option value="KES">KES — Shilling</option>
+                </select>
+              </Field>
+              <Field label="Symbol">
+                <input name="currency_symbol" className="input font-mono" placeholder="₦"
+                  value={form.currency_symbol} onChange={handleChange} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tax Rate (%)">
+                <input name="tax_rate" type="number" min="0" max="100" step="0.01" className="input"
+                  value={form.tax_rate} onChange={handleChange} />
+              </Field>
+              <Field label="Service Charge (%)">
+                <input name="service_charge" type="number" min="0" max="100" step="0.01" className="input"
+                  value={form.service_charge} onChange={handleChange} />
+              </Field>
+            </div>
+            <Field label="Receipt Footer">
+              <textarea name="receipt_footer" rows={2} className="input"
+                placeholder="Thank you for staying with us…"
+                value={form.receipt_footer} onChange={handleChange} />
+            </Field>
+          </Section>
 
-      {/* Row 3 — Financial + Operations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Section title="Financial">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Currency">
-              <select name="currency" className="input" value={form.currency} onChange={handleChange}>
-                <option value="NGN">NGN — Naira</option>
-                <option value="USD">USD — Dollar</option>
-                <option value="GBP">GBP — Pound</option>
-                <option value="EUR">EUR — Euro</option>
-                <option value="GHS">GHS — Cedi</option>
-                <option value="KES">KES — Shilling</option>
+          <Section title="Payment Methods">
+            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+              Choose which payment options guests can use when booking online.
+            </p>
+            <div className="flex flex-col gap-3 mb-4">
+              {[
+                { key: 'pay_on_arrival',   label: 'Pay on Arrival',        sub: 'Guest pays at the front desk on check-in. No charge now.' },
+                { key: 'bank_transfer',    label: 'Bank Transfer',          sub: 'Guest pays to your bank account before arrival.' },
+                { key: 'paystack_enabled', label: 'Paystack (Online Card)', sub: 'Guest pays by card at time of booking.' },
+              ].map(({ key, label, sub }) => (
+                <label key={key} className="flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-colors"
+                  style={{ border: '1px solid var(--border-soft)', backgroundColor: form[key] ? 'var(--brand-subtle)' : 'var(--bg-subtle)' }}>
+                  <input type="checkbox" className="mt-0.5" checked={!!form[key]}
+                    onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
+                  <div>
+                    <p className="text-xs font-semibold"
+                      style={{ color: form[key] ? 'var(--brand)' : 'var(--text-base)' }}>{label}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {form.bank_transfer && (
+              <div className="flex flex-col gap-3 p-3 rounded-xl"
+                style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+                <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Bank Account Details</p>
+                <Field label="Bank Name">
+                  <input name="bank_name" className="input" placeholder="e.g. First Bank"
+                    value={form.bank_name} onChange={handleChange} />
+                </Field>
+                <Field label="Account Number">
+                  <input name="bank_account_number" className="input font-mono" placeholder="0123456789"
+                    value={form.bank_account_number} onChange={handleChange} />
+                </Field>
+                <Field label="Account Name">
+                  <input name="bank_account_name" className="input" placeholder="Eagle Base Hotel Ltd"
+                    value={form.bank_account_name} onChange={handleChange} />
+                </Field>
+              </div>
+            )}
+
+            {form.paystack_enabled && (
+              <div className="flex flex-col gap-3 p-3 rounded-xl mt-3"
+                style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+                <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Paystack Configuration</p>
+                <Field label="Public Key">
+                  <input name="paystack_public_key" className="input font-mono" placeholder="pk_live_…"
+                    value={form.paystack_public_key} onChange={handleChange} />
+                </Field>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Get your public key from your Paystack dashboard → Settings → API Keys.
+                  Never enter your secret key here.
+                </p>
+              </div>
+            )}
+          </Section>
+
+          <Section title="Operations">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Check-in Time">
+                <input name="check_in_time" type="time" className="input"
+                  value={form.check_in_time} onChange={handleChange} />
+              </Field>
+              <Field label="Check-out Time">
+                <input name="check_out_time" type="time" className="input"
+                  value={form.check_out_time} onChange={handleChange} />
+              </Field>
+            </div>
+            <Field label="Timezone">
+              <select name="timezone" className="input" value={form.timezone} onChange={handleChange}>
+                <option value="Africa/Lagos">Africa/Lagos (WAT +1)</option>
+                <option value="Africa/Accra">Africa/Accra (GMT)</option>
+                <option value="Africa/Nairobi">Africa/Nairobi (EAT +3)</option>
+                <option value="Africa/Johannesburg">Africa/Johannesburg (SAST +2)</option>
+                <option value="Europe/London">Europe/London (GMT/BST)</option>
+                <option value="America/New_York">America/New_York (ET)</option>
               </select>
             </Field>
-            <Field label="Symbol">
-              <input name="currency_symbol" className="input font-mono" placeholder="₦"
-                value={form.currency_symbol} onChange={handleChange} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Tax Rate (%)">
-              <input name="tax_rate" type="number" min="0" max="100" step="0.01" className="input"
-                value={form.tax_rate} onChange={handleChange} />
-            </Field>
-            <Field label="Service Charge (%)">
-              <input name="service_charge" type="number" min="0" max="100" step="0.01" className="input"
-                value={form.service_charge} onChange={handleChange} />
-            </Field>
-          </div>
-          <Field label="Receipt Footer">
-            <textarea name="receipt_footer" rows={2} className="input"
-              placeholder="Thank you for staying with us…"
-              value={form.receipt_footer} onChange={handleChange} />
-          </Field>
-        </Section>
-
-        <Section title="Payment Methods">
-          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-            Choose which payment options guests can use when booking online.
-          </p>
-
-          <div className="flex flex-col gap-3 mb-4">
-            {[
-              { key: 'pay_on_arrival',   label: 'Pay on Arrival',        sub: 'Guest pays at the front desk on check-in. No charge now.' },
-              { key: 'bank_transfer',    label: 'Bank Transfer',          sub: 'Guest pays to your bank account before arrival.' },
-              { key: 'paystack_enabled', label: 'Paystack (Online Card)', sub: 'Guest pays by card at time of booking.' },
-            ].map(({ key, label, sub }) => (
-              <label key={key} className="flex items-start gap-3 cursor-pointer p-3 rounded-xl transition-colors"
-                style={{ border: '1px solid var(--border-soft)', backgroundColor: form[key] ? 'var(--brand-subtle)' : 'var(--bg-subtle)' }}>
-                <input type="checkbox" className="mt-0.5" checked={!!form[key]}
-                  onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} />
-                <div>
-                  <p className="text-xs font-semibold"
-                    style={{ color: form[key] ? 'var(--brand)' : 'var(--text-base)' }}>{label}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          {form.bank_transfer && (
-            <div className="flex flex-col gap-3 p-3 rounded-xl"
-              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Bank Account Details</p>
-              <Field label="Bank Name">
-                <input name="bank_name" className="input" placeholder="e.g. First Bank"
-                  value={form.bank_name} onChange={handleChange} />
-              </Field>
-              <Field label="Account Number">
-                <input name="bank_account_number" className="input font-mono" placeholder="0123456789"
-                  value={form.bank_account_number} onChange={handleChange} />
-              </Field>
-              <Field label="Account Name">
-                <input name="bank_account_name" className="input" placeholder="Eagle Base Hotel Ltd"
-                  value={form.bank_account_name} onChange={handleChange} />
-              </Field>
-            </div>
-          )}
-
-          {form.paystack_enabled && (
-            <div className="flex flex-col gap-3 p-3 rounded-xl mt-3"
-              style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Paystack Configuration</p>
-              <Field label="Public Key">
-                <input name="paystack_public_key" className="input font-mono" placeholder="pk_live_…"
-                  value={form.paystack_public_key} onChange={handleChange} />
-              </Field>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Get your public key from your Paystack dashboard → Settings → API Keys.
-                Never enter your secret key here.
-              </p>
-            </div>
-          )}
-        </Section>
-
-        <Section title="Operations">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Check-in Time">
-              <input name="check_in_time" type="time" className="input"
-                value={form.check_in_time} onChange={handleChange} />
-            </Field>
-            <Field label="Check-out Time">
-              <input name="check_out_time" type="time" className="input"
-                value={form.check_out_time} onChange={handleChange} />
-            </Field>
-          </div>
-          <Field label="Timezone">
-            <select name="timezone" className="input" value={form.timezone} onChange={handleChange}>
-              <option value="Africa/Lagos">Africa/Lagos (WAT +1)</option>
-              <option value="Africa/Accra">Africa/Accra (GMT)</option>
-              <option value="Africa/Nairobi">Africa/Nairobi (EAT +3)</option>
-              <option value="Africa/Johannesburg">Africa/Johannesburg (SAST +2)</option>
-              <option value="Europe/London">Europe/London (GMT/BST)</option>
-              <option value="America/New_York">America/New_York (ET)</option>
-            </select>
-          </Field>
-        </Section>
-      </div>
-
-      {/* Row 4 — Policies */}
-      <Section title="Policies">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Field label="Cancellation Policy">
-            <textarea name="cancellation_policy" rows={4} className="input"
-              placeholder="e.g. Free cancellation up to 24 hours before check-in…"
-              value={form.cancellation_policy} onChange={handleChange} />
-          </Field>
-          <Field label="Pets Policy">
-            <textarea name="pets_policy" rows={4} className="input"
-              placeholder="e.g. Pets are not allowed on the premises…"
-              value={form.pets_policy} onChange={handleChange} />
-          </Field>
-          <Field label="Smoking Policy">
-            <textarea name="smoking_policy" rows={4} className="input"
-              placeholder="e.g. No smoking on premises…"
-              value={form.smoking_policy} onChange={handleChange} />
-          </Field>
+          </Section>
         </div>
-      </Section>
 
-      <div className="flex justify-end">
-        <button type="submit" disabled={save.isPending} className="btn-primary px-6 py-2">
-          {save.isPending ? 'Saving…' : 'Save Settings'}
-        </button>
+        {/* Row 4 — Policies */}
+        <Section title="Policies">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Field label="Cancellation Policy">
+              <textarea name="cancellation_policy" rows={4} className="input"
+                placeholder="e.g. Free cancellation up to 24 hours before check-in…"
+                value={form.cancellation_policy} onChange={handleChange} />
+            </Field>
+            <Field label="Pets Policy">
+              <textarea name="pets_policy" rows={4} className="input"
+                placeholder="e.g. Pets are not allowed on the premises…"
+                value={form.pets_policy} onChange={handleChange} />
+            </Field>
+            <Field label="Smoking Policy">
+              <textarea name="smoking_policy" rows={4} className="input"
+                placeholder="e.g. No smoking on premises…"
+                value={form.smoking_policy} onChange={handleChange} />
+            </Field>
+          </div>
+        </Section>
+
+        <div className="flex justify-end pt-2">
+          <button type="submit" disabled={save.isPending} className="btn-primary px-6 py-2">
+            {save.isPending ? 'Saving…' : 'Save Settings'}
+          </button>
+        </div>
+
       </div>
-
     </form>
   );
 }
