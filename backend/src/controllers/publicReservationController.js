@@ -10,49 +10,95 @@ import { notify }              from '../services/notificationService.js';
 import { AppError }           from '../middleware/errorHandler.js';
 import { sendCreated, sendSuccess }  from '../utils/response.js';
 import * as emailService             from '../services/emailService.js';
+import { issueGuestToken }           from '../middleware/guestAuth.js';
 
 // ─── Helper: find or create guest record ─────────────────────────────────────
-// For logged-in guests  → use their existing guest_id from JWT
-// For unregistered guests → create a minimal guest record from form data
 const resolveGuestId = async (req) => {
-  // req.orgId set by resolveOrg middleware
-  // 1. Logged-in guest account
   if (req.guest?.sub) return req.guest.sub;
 
-  // 2. Unregistered — create a guest record on the fly
   const { first_name, last_name, email, phone } = req.body.guest || {};
   if (!email) throw new AppError('Guest email is required.', 422);
 
   const orgId = req.orgId;
 
-  // Guests are org-scoped — same email can exist across different hotels
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('guests')
-    .select('id, is_deleted')
+    .select('id')
     .eq('org_id', orgId)
     .eq('email', email)
     .eq('is_deleted', false)
     .limit(1)
-    .single();
+    .maybeSingle();
 
+  if (lookupError) throw new AppError('Failed to process guest details.', 500);
   if (existing) return existing.id;
 
-  // Create new guest scoped to this org
   const { data: newGuest, error } = await supabase
     .from('guests')
     .insert({
       org_id:         orgId,
-      full_name:      `${first_name || ''} ${last_name || ''}`.trim(),
+      full_name:      `${first_name || ''} ${last_name || ''}`.trim() || email,
       email,
       phone:          phone || null,
       category:       'regular',
-      is_web_account: true,
+      is_web_account: false,
     })
     .select('id')
     .single();
 
-  if (error) throw new AppError('Failed to process guest details.', 500);
+  if (error) {
+    console.error('[resolveGuestId] insert error:', error.message, error.details);
+    throw new AppError('Failed to process guest details.', 500);
+  }
+
   return newGuest.id;
+};
+
+// ─── POST /api/v1/public/reservations/lookup ─────────────────────────────────
+// Allows any guest to retrieve their booking by reservation_no + email.
+// Returns the reservation and a short-lived booking token for further actions.
+export const lookupReservation = async (req, res, next) => {
+  try {
+    const { reservation_no, email } = req.body;
+
+    if (!reservation_no || !email) {
+      throw new AppError('Booking reference and email are required.', 422);
+    }
+
+    const { data: reservation, error } = await supabase
+      .from('reservations')
+      .select(`
+        *,
+        room_type:room_type_id ( id, name, description ),
+        rooms:room_id ( id, number, floor )
+      `)
+      .eq('org_id', req.orgId)
+      .ilike('reservation_no', reservation_no.trim())
+      .single();
+
+    if (error || !reservation) {
+      throw new AppError('Booking not found. Please check your reference number.', 404);
+    }
+
+    const { data: guest } = await supabase
+      .from('guests')
+      .select('id, email, full_name')
+      .eq('id', reservation.guest_id)
+      .single();
+
+    if (!guest || guest.email.toLowerCase() !== email.trim().toLowerCase()) {
+      throw new AppError('The email address does not match this booking.', 403);
+    }
+
+    const bookingToken = issueGuestToken({
+      sub:            guest.id,
+      reservation_id: reservation.id,
+      guest_email:    guest.email,
+      guest_name:     guest.full_name,
+    });
+
+    return sendSuccess(res, { reservation, token: bookingToken }, 'Booking found.');
+  } catch (err) { next(err); }
 };
 
 // ─── POST /api/v1/public/reservations ────────────────────────────────────────
@@ -70,7 +116,6 @@ export const publicCreateReservation = async (req, res, next) => {
       payment_method,
     } = req.body;
 
-    // Support both date field naming conventions
     const checkIn  = check_in_date  || check_in;
     const checkOut = check_out_date || check_out;
 
@@ -78,11 +123,7 @@ export const publicCreateReservation = async (req, res, next) => {
       throw new AppError('Check-in and check-out dates are required.', 422);
     }
 
-    // ── Re-validate availability at submission time (prevent double-booking) ──
     if (room_type_id) {
-      // Count bookable rooms of this type
-      // Dirty/ready rooms are bookable — they will be cleaned before check-in
-      // Only hard-exclude: out_of_order, maintenance, blocked
       const { data: bookableRooms } = await supabase
         .from('rooms')
         .select('id')
@@ -93,9 +134,6 @@ export const publicCreateReservation = async (req, res, next) => {
 
       const totalCount = bookableRooms?.length || 0;
 
-      // Count rooms of this type with CONFIRMED reservations overlapping these dates
-      // checked_in reservations hold a specific room_id — we check by room not type
-      // to allow same-day turnover (checkout date = new checkin date is valid)
       const { data: confirmedOverlap } = await supabase
         .from('reservations')
         .select('id')
@@ -105,7 +143,6 @@ export const publicCreateReservation = async (req, res, next) => {
         .lt('check_in_date', checkOut)
         .gt('check_out_date', checkIn);
 
-      // Count checked-in rooms of this type overlapping (these hold room_id)
       const { data: checkedInOverlap } = await supabase
         .from('reservations')
         .select('room_id')
@@ -115,7 +152,6 @@ export const publicCreateReservation = async (req, res, next) => {
         .gt('check_out_date', checkIn)
         .not('room_id', 'is', null);
 
-      // Cross-reference checked-in room_ids against rooms of this type
       const checkedInRoomIds = (checkedInOverlap || []).map(r => r.room_id);
       let checkedInCount = 0;
       if (checkedInRoomIds.length > 0 && bookableRooms?.length > 0) {
@@ -133,7 +169,6 @@ export const publicCreateReservation = async (req, res, next) => {
       }
     }
 
-    // ── Validate guest count against room type capacity ──
     if (room_type_id && adults) {
       const { data: roomType } = await supabase
         .from('room_types')
@@ -148,7 +183,6 @@ export const publicCreateReservation = async (req, res, next) => {
       }
     }
 
-    // Get rate per night from rate plan if not provided directly
     let nightRate = rate_per_night;
     if (!nightRate && rate_plan_id) {
       const { data: ratePlan } = await supabase
@@ -159,7 +193,6 @@ export const publicCreateReservation = async (req, res, next) => {
       if (ratePlan) nightRate = ratePlan.base_rate;
     }
 
-    // Fall back to room type base_rate
     if (!nightRate && room_type_id) {
       const { data: roomType } = await supabase
         .from('room_types')
@@ -173,12 +206,12 @@ export const publicCreateReservation = async (req, res, next) => {
 
     const data = await reservationService.createReservation(req.orgId, {
       guest_id,
-      room_id:         null,          // room assigned at check-in by staff
+      room_id:          null,
       room_type_id,
-      check_in_date:   checkIn,
-      check_out_date:  checkOut,
-      adults:          adults  || 1,
-      children:        children || 0,
+      check_in_date:    checkIn,
+      check_out_date:   checkOut,
+      adults:           adults   || 1,
+      children:         children || 0,
       booking_source:   'online',
       rate_per_night:   nightRate,
       deposit_amount:   0,
@@ -187,7 +220,6 @@ export const publicCreateReservation = async (req, res, next) => {
       payment_status:   payment_method === 'on_arrival' ? 'pending' : 'pending_transfer',
     }, null);
 
-    // Send confirmation email (non-blocking — don't fail booking if email fails)
     try {
       const { data: guestData } = await supabase
         .from('guests')
@@ -205,14 +237,13 @@ export const publicCreateReservation = async (req, res, next) => {
 
       if (guestData?.email) {
         emailService.sendBookingConfirmation({
-          reservation: data,
+          reservation:  data,
           guest:        guestData,
           roomTypeName: roomTypeData?.name,
           ratePlanName: ratePlanData?.name,
         }).catch(e => console.error('[email] booking confirmation failed:', e));
       }
 
-      // Notify all staff — online booking came in
       notify(req.app, {
         orgId:  req.orgId,
         type:   'reservation',
@@ -224,17 +255,13 @@ export const publicCreateReservation = async (req, res, next) => {
       console.error('[email] pre-send lookup failed:', e);
     }
 
-    return sendCreated(res, {
-      reservation: data,
-      guest_id,
-    }, 'Your booking is confirmed!');
+    return sendCreated(res, { reservation: data, guest_id }, 'Your booking is confirmed!');
   } catch (err) { next(err); }
 };
 
 // ─── PATCH /api/v1/public/reservations/:id/cancel ────────────────────────────
 export const publicCancelReservation = async (req, res, next) => {
   try {
-    // Verify the reservation belongs to this guest
     const { data: reservation } = await supabase
       .from('reservations')
       .select('id, guest_id')
