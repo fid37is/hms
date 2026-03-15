@@ -144,10 +144,10 @@ export const login = async ({ email, password }) => {
 
 // ─── Get my reservations ──────────────────────────────────────────────────────
 export const getMyReservations = async (guestId) => {
-  // Step 1: fetch reservations flat (no joins to avoid FK naming issues)
+  // Step 1: fetch reservations including room_id
   const { data: reservations, error } = await supabase
     .from('reservations')
-    .select('id, reservation_no, room_type_id, check_in_date, check_out_date, adults, children, status, rate_per_night, total_amount, deposit_amount, deposit_paid, special_requests, cancel_reason, cancelled_at, created_at')
+    .select('id, reservation_no, room_type_id, room_id, check_in_date, check_out_date, adults, children, status, rate_per_night, total_amount, deposit_amount, deposit_paid, special_requests, cancel_reason, cancelled_at, created_at')
     .eq('guest_id', guestId)
     .order('created_at', { ascending: false });
 
@@ -167,9 +167,19 @@ export const getMyReservations = async (guestId) => {
     (types || []).forEach(t => { typeMap[t.id] = t.name; });
   }
 
+  // Step 3: batch-fetch assigned room numbers
+  const roomIds = [...new Set(reservations.map(r => r.room_id).filter(Boolean))];
+  let roomMap = {};
+  if (roomIds.length > 0) {
+    const { data: rooms } = await supabase
+      .from('rooms').select('id, number, floor').in('id', roomIds);
+    (rooms || []).forEach(r => { roomMap[r.id] = r; });
+  }
+
   return reservations.map(r => ({
     ...r,
     room_types: r.room_type_id ? { name: typeMap[r.room_type_id] || null } : null,
+    rooms:      r.room_id      ? roomMap[r.room_id] || null               : null,
   }));
 };
 
@@ -180,7 +190,7 @@ export const getMyReservationById = async (guestId, reservationId) => {
     .select(`
       *,
       room_type:room_type_id ( id, name, description, amenities ),
-      room:room_id ( id, room_number, floor )
+      rooms:room_id ( id, number, floor )
     `)
     .eq('id', reservationId)
     .eq('guest_id', guestId)
@@ -217,7 +227,7 @@ export const refreshGuestToken = async (token) => {
 
   return {
     access_token:  generateGuestAccessToken(tokenPayload),
-    refresh_token: generateGuestRefreshToken(guest.id), // ← FIX: rotate refresh token
+    refresh_token: generateGuestRefreshToken(guest.id),
   };
 };
 

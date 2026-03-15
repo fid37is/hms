@@ -1,10 +1,7 @@
 // src/modules/events/components/EventDetail.jsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  X, Edit2, XCircle, Plus, Trash2, ChevronDown, Users,
-  CreditCard, UserCheck, FileText,
-} from 'lucide-react';
+import { Edit2, XCircle, Plus, Trash2, Users, CreditCard, UserCheck, FileText } from 'lucide-react';
 import * as eventApi from '../../../lib/api/eventApi';
 import StatusBadge   from '../../../components/shared/StatusBadge';
 import { formatCurrency, formatDate, formatDateTime } from '../../../utils/format';
@@ -44,7 +41,6 @@ function AddServiceForm({ eventId, onDone }) {
     onSuccess: () => { toast.success('Service added'); onDone(); },
     onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
-
   return (
     <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
       <div className="grid grid-cols-2 gap-2">
@@ -62,7 +58,8 @@ function AddServiceForm({ eventId, onDone }) {
       </div>
       <div className="flex justify-end gap-2">
         <button className="btn-ghost text-xs" onClick={onDone}>Cancel</button>
-        <button className="btn-primary text-xs" onClick={() => mut.mutate()} disabled={mut.isPending || !form.description || !form.unit_price}>
+        <button className="btn-primary text-xs" onClick={() => mut.mutate()}
+          disabled={mut.isPending || !form.description || !form.unit_price}>
           {mut.isPending ? 'Adding…' : 'Add'}
         </button>
       </div>
@@ -81,7 +78,6 @@ function AddPaymentForm({ eventId, onDone }) {
     onSuccess: () => { toast.success('Payment recorded'); onDone(); },
     onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
-
   return (
     <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
       <div className="grid grid-cols-2 gap-2">
@@ -111,9 +107,8 @@ function AddPaymentForm({ eventId, onDone }) {
 
 export default function EventDetail({ eventId, onClose, onEdit, onRefresh }) {
   const qc = useQueryClient();
-  const [addingService, setAddingService]   = useState(false);
-  const [addingPayment, setAddingPayment]   = useState(false);
-  const [statusOpen, setStatusOpen]         = useState(false);
+  const [addingService, setAddingService] = useState(false);
+  const [addingPayment, setAddingPayment] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -128,7 +123,7 @@ export default function EventDetail({ eventId, onClose, onEdit, onRefresh }) {
 
   const statusMut = useMutation({
     mutationFn: (status) => eventApi.updateEvent(eventId, { status }),
-    onSuccess: () => { toast.success('Status updated'); refetch(); setStatusOpen(false); },
+    onSuccess: () => { toast.success('Status updated'); refetch(); },
     onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
@@ -150,205 +145,187 @@ export default function EventDetail({ eventId, onClose, onEdit, onRefresh }) {
   });
 
   if (isLoading) return (
-    <div className="slide-panel-overlay">
-      <div className="slide-panel" style={{ maxWidth: 560, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="animate-spin rounded-full h-8 w-8 border-2" style={{ borderColor: 'var(--brand)', borderTopColor: 'transparent' }} />
-      </div>
+    <div className="flex items-center justify-center h-40">
+      <div className="animate-spin rounded-full h-8 w-8 border-2"
+        style={{ borderColor: 'var(--brand)', borderTopColor: 'transparent' }} />
     </div>
   );
 
   if (!event) return null;
 
-  const canCancel  = !['cancelled','completed'].includes(event.status);
   const isCancelled = event.status === 'cancelled';
-  const services   = (event.event_services || []).filter(s => !s.is_voided);
-  const payments   = event.event_payments || [];
-  const staffList  = event.event_staff || [];
+  const canCancel   = !['cancelled','completed'].includes(event.status);
+  const services    = (event.event_services || []).filter(s => !s.is_voided);
+  const payments    = event.event_payments || [];
+  const staffList   = event.event_staff || [];
 
   return (
-    <div className="slide-panel-overlay">
-      <div className="slide-panel" style={{ maxWidth: 560 }}>
-        {/* Header */}
-        <div className="slide-panel-header">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold" style={{ color: 'var(--text-base)' }}>{event.title}</h2>
-              <StatusBadge status={event.status} />
-            </div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {event.event_no} · {event.client_name}
-            </p>
+    <div className="flex flex-col h-full">
+      {/* Subheader: title + status + edit button */}
+      <div className="px-5 py-3 flex items-start justify-between gap-2 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-soft)', backgroundColor: 'var(--bg-subtle)' }}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-base)' }}>{event.title}</p>
+            <StatusBadge status={event.status} />
           </div>
-          <div className="flex items-center gap-1">
-            {!isCancelled && (
-              <button className="btn-ghost p-2 rounded-lg" title="Edit" onClick={() => onEdit(event)}>
-                <Edit2 size={14} />
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {event.event_no} · {event.client_name}
+          </p>
+        </div>
+        {!isCancelled && (
+          <button className="btn-ghost p-1.5 rounded-lg flex-shrink-0" title="Edit" onClick={() => onEdit(event)}>
+            <Edit2 size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+        {/* Status progression */}
+        {!isCancelled && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Move to:</span>
+            {STATUS_FLOW.filter(s => s !== 'cancelled' && s !== event.status).map(s => (
+              <button key={s}
+                className="text-xs px-2.5 py-1 rounded-full border transition-colors"
+                style={{ borderColor: 'var(--border-base)', color: 'var(--text-sub)' }}
+                onClick={() => statusMut.mutate(s)}
+                disabled={statusMut.isPending}>
+                {STATUS_LABELS[s]}
               </button>
-            )}
-            <button className="btn-ghost p-2 rounded-lg" onClick={onClose}><X size={16} /></button>
+            ))}
           </div>
+        )}
+
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          <InfoRow label="Date"   value={formatDate(event.event_date)} />
+          <InfoRow label="Time"   value={`${event.start_time?.slice(0,5)} – ${event.end_time?.slice(0,5)}`} />
+          <InfoRow label="Venue"  value={event.event_venues?.name || '—'} />
+          <InfoRow label="Layout" value={event.layout} />
+          <InfoRow label="Type"   value={event.event_type} />
+          <InfoRow label="Guests" value={event.guest_count || 0} />
+          <InfoRow label="Phone"  value={event.client_phone || '—'} />
+          <InfoRow label="Email"  value={event.client_email || '—'} />
         </div>
 
-        <div className="slide-panel-body space-y-5">
-
-          {/* Status changer */}
-          {!isCancelled && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Change status:</span>
-              <div className="flex flex-wrap gap-1">
-                {STATUS_FLOW.filter(s => s !== 'cancelled' && s !== event.status).map(s => (
-                  <button key={s} className="text-xs px-2.5 py-1 rounded-full border transition-colors"
-                    style={{ borderColor: 'var(--border-base)', color: 'var(--text-sub)', background: 'transparent' }}
-                    onClick={() => statusMut.mutate(s)} disabled={statusMut.isPending}>
-                    → {STATUS_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Event Info */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <InfoRow label="Date"   value={formatDate(event.event_date)} />
-            <InfoRow label="Time"   value={`${event.start_time?.slice(0,5)} – ${event.end_time?.slice(0,5)}`} />
-            <InfoRow label="Venue"  value={event.event_venues?.name || '—'} />
-            <InfoRow label="Layout" value={event.layout} />
-            <InfoRow label="Type"   value={event.event_type} />
-            <InfoRow label="Guests" value={event.guest_count || 0} />
-            <InfoRow label="Phone"  value={event.client_phone || '—'} />
-            <InfoRow label="Email"  value={event.client_email || '—'} />
-            {event.coordinator_id && (
-              <InfoRow label="Coordinator" value={event.users?.full_name || '—'} />
-            )}
+        {/* Notes */}
+        {(event.special_requests || event.catering_notes || event.setup_notes || event.internal_notes) && (
+          <div className="space-y-2">
+            {event.special_requests && <NoteBlock label="Special Requests" text={event.special_requests} />}
+            {event.catering_notes   && <NoteBlock label="Catering"         text={event.catering_notes} />}
+            {event.setup_notes      && <NoteBlock label="Setup / Décor"    text={event.setup_notes} />}
+            {event.internal_notes   && <NoteBlock label="Internal Notes"   text={event.internal_notes} />}
           </div>
+        )}
 
-          {/* Notes */}
-          {(event.special_requests || event.catering_notes || event.setup_notes || event.internal_notes) && (
-            <div className="space-y-2">
-              {event.special_requests && <NoteBlock label="Special Requests" text={event.special_requests} />}
-              {event.catering_notes   && <NoteBlock label="Catering"         text={event.catering_notes} />}
-              {event.setup_notes      && <NoteBlock label="Setup / Décor"    text={event.setup_notes} />}
-              {event.internal_notes   && <NoteBlock label="Internal Notes"   text={event.internal_notes} />}
-            </div>
-          )}
-
-          {/* Financial summary */}
-          <div className="rounded-lg p-4 space-y-2" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-            <FinRow label="Subtotal"     value={formatCurrency(event.subtotal     || 0)} />
-            {event.discount > 0 && <FinRow label="Discount" value={`– ${formatCurrency(event.discount)}`} muted />}
-            {event.tax_amount > 0 && <FinRow label="Tax"    value={formatCurrency(event.tax_amount)} />}
-            <div style={{ borderTop: '1px solid var(--border-base)', paddingTop: 8, marginTop: 4 }}>
-              <FinRow label="Total"      value={formatCurrency(event.total_amount || 0)} bold />
-            </div>
-            <FinRow label="Deposit Paid" value={formatCurrency(event.deposit_paid || 0)} />
-            <FinRow label="Balance Due"  value={formatCurrency(event.balance_due  || 0)} bold={event.balance_due > 0} />
+        {/* Financial summary */}
+        <div className="rounded-lg p-4 space-y-2"
+          style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
+          <FinRow label="Subtotal"     value={formatCurrency(event.subtotal     || 0)} />
+          {event.discount > 0   && <FinRow label="Discount"     value={`– ${formatCurrency(event.discount)}`} muted />}
+          {event.tax_amount > 0 && <FinRow label="Tax"          value={formatCurrency(event.tax_amount)} />}
+          <div style={{ borderTop: '1px solid var(--border-base)', paddingTop: 8, marginTop: 4 }}>
+            <FinRow label="Total"      value={formatCurrency(event.total_amount || 0)} bold />
           </div>
+          <FinRow label="Deposit Paid" value={formatCurrency(event.deposit_paid || 0)} />
+          <FinRow label="Balance Due"  value={formatCurrency(event.balance_due  || 0)} bold={event.balance_due > 0} />
+        </div>
 
-          {/* Services */}
-          <Section title="Services" icon={FileText}
-            action={!isCancelled && (
-              <button className="btn-ghost text-xs flex items-center gap-1" onClick={() => setAddingService(s => !s)}>
-                <Plus size={12} /> Add
-              </button>
-            )}>
-            {addingService && (
-              <AddServiceForm eventId={eventId} onDone={() => { setAddingService(false); refetch(); }} />
-            )}
-            {services.length === 0 && !addingService && (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No services added yet</p>
-            )}
-            {services.map(s => (
-              <div key={s.id} className="flex items-center justify-between py-2"
-                style={{ borderBottom: '1px solid var(--border-soft)' }}>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>{s.description}</p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {s.category.replace(/_/g,' ')} · {s.quantity} × {formatCurrency(s.unit_price)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium font-mono" style={{ color: 'var(--text-base)' }}>
-                    {formatCurrency(s.amount)}
-                  </span>
-                  {!isCancelled && (
-                    <button className="btn-ghost p-1 rounded" onClick={() => voidServiceMut.mutate(s.id)}>
-                      <Trash2 size={11} style={{ color: 'var(--s-red-text)' }} />
-                    </button>
-                  )}
-                </div>
+        {/* Services */}
+        <Section title="Services" icon={FileText}
+          action={!isCancelled && (
+            <button className="btn-ghost text-xs flex items-center gap-1" onClick={() => setAddingService(s => !s)}>
+              <Plus size={12} /> Add
+            </button>
+          )}>
+          {addingService && <AddServiceForm eventId={eventId} onDone={() => { setAddingService(false); refetch(); }} />}
+          {services.length === 0 && !addingService && (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No services added yet</p>
+          )}
+          {services.map(s => (
+            <div key={s.id} className="flex items-center justify-between py-2"
+              style={{ borderBottom: '1px solid var(--border-soft)' }}>
+              <div>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>{s.description}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {s.category.replace(/_/g,' ')} · {s.quantity} × {formatCurrency(s.unit_price)}
+                </p>
               </div>
-            ))}
-          </Section>
-
-          {/* Payments */}
-          <Section title="Payments" icon={CreditCard}
-            action={!isCancelled && (
-              <button className="btn-ghost text-xs flex items-center gap-1" onClick={() => setAddingPayment(s => !s)}>
-                <Plus size={12} /> Record
-              </button>
-            )}>
-            {addingPayment && (
-              <AddPaymentForm eventId={eventId} onDone={() => { setAddingPayment(false); refetch(); }} />
-            )}
-            {payments.length === 0 && !addingPayment && (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No payments recorded</p>
-            )}
-            {payments.map(p => (
-              <div key={p.id} className="flex items-center justify-between py-2"
-                style={{ borderBottom: '1px solid var(--border-soft)' }}>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>
-                    {p.payment_no} {p.is_deposit && <span style={{ color: 'var(--brand)', fontSize: 10 }}>· deposit</span>}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {p.method.replace(/_/g,' ')} · {formatDateTime(p.received_at)}
-                  </p>
-                </div>
-                <span className="text-xs font-medium font-mono" style={{ color: 'var(--s-green-text)' }}>
-                  {formatCurrency(p.amount)}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs font-medium font-mono" style={{ color: 'var(--text-base)' }}>
+                  {formatCurrency(s.amount)}
                 </span>
-              </div>
-            ))}
-          </Section>
-
-          {/* Staff */}
-          <Section title="Assigned Staff" icon={UserCheck}
-            action={null}>
-            {staffList.length === 0 && (
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No staff assigned</p>
-            )}
-            {staffList.map(a => (
-              <div key={a.id} className="flex items-center justify-between py-2"
-                style={{ borderBottom: '1px solid var(--border-soft)' }}>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>
-                    {a.staff?.full_name || '—'}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {a.role || a.staff?.job_title || '—'}
-                  </p>
-                </div>
                 {!isCancelled && (
-                  <button className="btn-ghost p-1 rounded" onClick={() => removeStaffMut.mutate(a.id)}>
+                  <button className="btn-ghost p-1 rounded" onClick={() => voidServiceMut.mutate(s.id)}>
                     <Trash2 size={11} style={{ color: 'var(--s-red-text)' }} />
                   </button>
                 )}
               </div>
-            ))}
-          </Section>
-
-          {/* Cancel */}
-          {canCancel && (
-            <div style={{ paddingTop: 8 }}>
-              <button className="text-xs flex items-center gap-1.5 transition-colors"
-                style={{ color: 'var(--s-red-text)' }}
-                onClick={() => { if (window.confirm('Cancel this event?')) cancelMut.mutate(); }}>
-                <XCircle size={13} /> Cancel Event
-              </button>
             </div>
-          )}
+          ))}
+        </Section>
 
-        </div>
+        {/* Payments */}
+        <Section title="Payments" icon={CreditCard}
+          action={!isCancelled && (
+            <button className="btn-ghost text-xs flex items-center gap-1" onClick={() => setAddingPayment(s => !s)}>
+              <Plus size={12} /> Record
+            </button>
+          )}>
+          {addingPayment && <AddPaymentForm eventId={eventId} onDone={() => { setAddingPayment(false); refetch(); }} />}
+          {payments.length === 0 && !addingPayment && (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No payments recorded</p>
+          )}
+          {payments.map(p => (
+            <div key={p.id} className="flex items-center justify-between py-2"
+              style={{ borderBottom: '1px solid var(--border-soft)' }}>
+              <div>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>
+                  {p.payment_no}{p.is_deposit && <span style={{ color: 'var(--brand)', fontSize: 10 }}> · deposit</span>}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {p.method.replace(/_/g,' ')} · {formatDateTime(p.received_at)}
+                </p>
+              </div>
+              <span className="text-xs font-medium font-mono" style={{ color: 'var(--s-green-text)' }}>
+                {formatCurrency(p.amount)}
+              </span>
+            </div>
+          ))}
+        </Section>
+
+        {/* Staff */}
+        <Section title="Assigned Staff" icon={UserCheck}>
+          {staffList.length === 0 && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No staff assigned</p>}
+          {staffList.map(a => (
+            <div key={a.id} className="flex items-center justify-between py-2"
+              style={{ borderBottom: '1px solid var(--border-soft)' }}>
+              <div>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-base)' }}>{a.staff?.full_name || '—'}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{a.role || a.staff?.job_title || '—'}</p>
+              </div>
+              {!isCancelled && (
+                <button className="btn-ghost p-1 rounded" onClick={() => removeStaffMut.mutate(a.id)}>
+                  <Trash2 size={11} style={{ color: 'var(--s-red-text)' }} />
+                </button>
+              )}
+            </div>
+          ))}
+        </Section>
+
+        {/* Cancel event */}
+        {canCancel && (
+          <div style={{ paddingTop: 4 }}>
+            <button className="text-xs flex items-center gap-1.5"
+              style={{ color: 'var(--s-red-text)' }}
+              onClick={() => { if (window.confirm('Cancel this event?')) cancelMut.mutate(); }}>
+              <XCircle size={13} /> Cancel Event
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

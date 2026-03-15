@@ -1,7 +1,6 @@
 // src/modules/events/components/EventForm.jsx
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 import * as eventApi from '../../../lib/api/eventApi';
 import toast from 'react-hot-toast';
 
@@ -24,12 +23,13 @@ export default function EventForm({ event, onClose, onSaved }) {
   useEffect(() => {
     if (event) {
       setForm({
-        ...EMPTY,
-        ...event,
+        ...EMPTY, ...event,
         venue_id:    event.venue_id    || '',
         deposit_due: event.deposit_due ? event.deposit_due / 100 : '',
         discount:    event.discount    ? event.discount    / 100 : '',
       });
+    } else {
+      setForm(EMPTY);
     }
   }, [event]);
 
@@ -50,131 +50,114 @@ export default function EventForm({ event, onClose, onSaved }) {
         discount:    form.discount    ? Math.round(parseFloat(form.discount)    * 100) : 0,
         venue_id:    form.venue_id || null,
       };
-      return isEdit
-        ? eventApi.updateEvent(event.id, payload)
-        : eventApi.createEvent(payload);
+      return isEdit ? eventApi.updateEvent(event.id, payload) : eventApi.createEvent(payload);
     },
-    onSuccess: () => {
-      toast.success(isEdit ? 'Event updated.' : 'Event created.');
-      onSaved();
-    },
-    onError: (err) => toast.error(err.response?.data?.message || 'Failed to save event'),
+    onSuccess: () => { toast.success(isEdit ? 'Event updated.' : 'Event created.'); onSaved(); },
+    onError:   (err) => toast.error(err.response?.data?.message || 'Failed to save event'),
   });
 
-  const field = (label, key, type = 'text', props = {}) => (
-    <div>
-      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      <input type={type} className="input text-sm w-full" value={form[key]}
-        onChange={e => set(key, e.target.value)} {...props} />
+  const F = ({ label, k, type = 'text', props = {} }) => (
+    <div className="form-group">
+      <label className="label">{label}</label>
+      <input type={type} className="input text-sm w-full" value={form[k]}
+        onChange={e => set(k, e.target.value)} {...props} />
     </div>
   );
 
-  const select = (label, key, opts) => (
-    <div>
-      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      <select className="input text-sm w-full" value={form[key]} onChange={e => set(key, e.target.value)}>
+  const S = ({ label, k, opts }) => (
+    <div className="form-group">
+      <label className="label">{label}</label>
+      <select className="input text-sm w-full" value={form[k]} onChange={e => set(k, e.target.value)}>
         {opts.map(o => (
-          <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o.charAt(0).toUpperCase() + o.slice(1).replace(/_/g,' ')}</option>
+          <option key={o.value ?? o} value={o.value ?? o}>
+            {o.label ?? (o.charAt(0).toUpperCase() + o.slice(1).replace(/_/g,' '))}
+          </option>
         ))}
       </select>
     </div>
   );
 
-  const textarea = (label, key, rows = 2) => (
-    <div>
-      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      <textarea className="input text-sm w-full" rows={rows} value={form[key] || ''}
-        onChange={e => set(key, e.target.value)} />
+  const T = ({ label, k, rows = 2 }) => (
+    <div className="form-group">
+      <label className="label">{label}</label>
+      <textarea className="input text-sm w-full" rows={rows} value={form[k] || ''}
+        onChange={e => set(k, e.target.value)} />
     </div>
   );
 
   return (
-    <div className="slide-panel-overlay">
-      <div className="slide-panel" style={{ maxWidth: 560 }}>
-        {/* Header */}
-        <div className="slide-panel-header">
-          <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-base)' }}>
-              {isEdit ? 'Edit Event' : 'New Event'}
-            </h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {isEdit ? `Editing ${event.event_no}` : 'Fill in event details'}
-            </p>
+    <div className="flex flex-col h-full">
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+        {/* Client */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Client</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><F label="Client Name *" k="client_name" /></div>
+            <F label="Email" k="client_email" type="email" />
+            <F label="Phone" k="client_phone" type="tel" />
           </div>
-          <button className="btn-ghost p-2 rounded-lg" onClick={onClose}><X size={16} /></button>
         </div>
 
-        {/* Body */}
-        <div className="slide-panel-body space-y-5">
-
-          {/* Client */}
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Client</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">{field('Client Name *', 'client_name')}</div>
-              {field('Email', 'client_email', 'email')}
-              {field('Phone', 'client_phone', 'tel')}
-            </div>
-          </section>
-
-          {/* Event Details */}
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Event Details</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">{field('Event Title *', 'title')}</div>
-              {select('Event Type', 'event_type', EVENT_TYPES)}
-              {select('Source', 'source', SOURCES)}
-            </div>
-          </section>
-
-          {/* Venue & Timing */}
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Venue & Timing</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Venue</label>
-                <select className="input text-sm w-full" value={form.venue_id} onChange={e => set('venue_id', e.target.value)}>
-                  <option value="">— No venue assigned —</option>
-                  {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                </select>
-              </div>
-              {field('Event Date *', 'event_date', 'date')}
-              {select('Layout', 'layout', LAYOUTS)}
-              {field('Start Time *', 'start_time', 'time')}
-              {field('End Time *',   'end_time',   'time')}
-              {field('Expected Guests', 'guest_count', 'number', { min: 0 })}
-            </div>
-          </section>
-
-          {/* Financials */}
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Financials</p>
-            <div className="grid grid-cols-2 gap-3">
-              {field('Deposit Due (₦)', 'deposit_due', 'number', { min: 0, step: '0.01' })}
-              {field('Discount (₦)',    'discount',    'number', { min: 0, step: '0.01' })}
-            </div>
-          </section>
-
-          {/* Notes */}
-          <section>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Notes</p>
-            <div className="space-y-3">
-              {textarea('Special Requests',   'special_requests')}
-              {textarea('Catering Notes',      'catering_notes')}
-              {textarea('Setup / Décor Notes', 'setup_notes')}
-              {textarea('Internal Notes',      'internal_notes')}
-            </div>
-          </section>
-
+        {/* Event Details */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Event Details</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><F label="Event Title *" k="title" /></div>
+            <S label="Event Type" k="event_type" opts={EVENT_TYPES} />
+            <S label="Source"     k="source"     opts={SOURCES} />
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="slide-panel-footer">
-          <button className="btn-ghost text-sm" onClick={onClose}>Cancel</button>
-          <button className="btn-primary text-sm" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
-          </button>
+        {/* Venue & Timing */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Venue & Timing</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 form-group">
+              <label className="label">Venue</label>
+              <select className="input text-sm w-full" value={form.venue_id} onChange={e => set('venue_id', e.target.value)}>
+                <option value="">— No venue assigned —</option>
+                {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+            <F label="Event Date *"    k="event_date"  type="date" />
+            <S label="Layout"          k="layout"      opts={LAYOUTS} />
+            <F label="Start Time *"    k="start_time"  type="time" />
+            <F label="End Time *"      k="end_time"    type="time" />
+            <div className="col-span-2"><F label="Expected Guests" k="guest_count" type="number" props={{ min: 0 }} /></div>
+          </div>
         </div>
+
+        {/* Financials */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Financials</p>
+          <div className="grid grid-cols-2 gap-3">
+            <F label="Deposit Due (₦)" k="deposit_due" type="number" props={{ min: 0, step: '0.01' }} />
+            <F label="Discount (₦)"    k="discount"    type="number" props={{ min: 0, step: '0.01' }} />
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Notes</p>
+          <div className="space-y-3">
+            <T label="Special Requests"   k="special_requests" />
+            <T label="Catering Notes"     k="catering_notes" />
+            <T label="Setup / Décor"      k="setup_notes" />
+            <T label="Internal Notes"     k="internal_notes" />
+          </div>
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-2 px-5 py-3 flex-shrink-0"
+        style={{ borderTop: '1px solid var(--border-soft)' }}>
+        <button className="btn-ghost text-sm" onClick={onClose}>Cancel</button>
+        <button className="btn-primary text-sm" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+          {mutation.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
+        </button>
       </div>
     </div>
   );

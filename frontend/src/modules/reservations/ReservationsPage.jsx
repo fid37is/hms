@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, ChevronUp, ChevronDown, X, CreditCard } from 'lucide-react';
 import * as resApi        from '../../lib/api/reservationApi';
@@ -6,6 +6,7 @@ import DataTable          from '../../components/shared/DataTable';
 import StatusBadge        from '../../components/shared/StatusBadge';
 import ConfirmDialog      from '../../components/shared/ConfirmDialog';
 import ReservationForm    from './components/ReservationForm';
+import ReservationDetail  from './components/ReservationDetail';
 import CheckInForm        from './components/CheckInForm';
 import CheckOutForm       from './components/CheckOutForm';
 import ExtendStayForm     from './components/ExtendStayForm';
@@ -62,6 +63,58 @@ function useIsMobile() {
   return isMobile;
 }
 
+function MoreMenu({ r, onMarkPaid, onCancel }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const canMarkPaid = ['pending','pending_transfer'].includes(r.payment_status) && r.payment_method !== 'on_arrival';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        className="text-xs px-2 py-1 rounded-md"
+        style={{ color: 'var(--text-muted)', backgroundColor: open ? 'var(--bg-subtle)' : 'transparent', letterSpacing: 0, lineHeight: 1 }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
+        onMouseLeave={e => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; }}>
+        ⋮
+      </button>
+      {open && (
+        <div className="card" style={{
+          position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+          minWidth: 140, zIndex: 50, padding: 4,
+          boxShadow: 'var(--shadow-md)',
+        }}>
+          {canMarkPaid && (
+            <button
+              onClick={e => { e.stopPropagation(); setOpen(false); onMarkPaid(); }}
+              className="w-full text-left px-3 py-2 text-xs rounded-md flex items-center gap-2"
+              style={{ color: 'var(--s-green-text)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--s-green-bg)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              <CreditCard size={11} /> Mark as Paid
+            </button>
+          )}
+          <button
+            onClick={e => { e.stopPropagation(); setOpen(false); onCancel(); }}
+            className="w-full text-left px-3 py-2 text-xs rounded-md"
+            style={{ color: 'var(--s-red-text)' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--s-red-bg)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReservationsPage() {
   const qc = useQueryClient();
   const isMobile = useIsMobile();
@@ -114,11 +167,12 @@ export default function ReservationsPage() {
         : String(bv).localeCompare(String(av));
     });
 
-  const panelTitle = { new: 'New Reservation', checkin: 'Check In', checkout: 'Check Out', extend: 'Extend Stay' }[panel?.type] || '';
+  const panelTitle = { new: 'New Reservation', detail: 'Reservation', checkin: 'Check In', checkout: 'Check Out', extend: 'Extend Stay' }[panel?.type] || '';
 
   const panelContent = () => {
     if (!panel) return null;
     switch (panel.type) {
+      case 'detail':   return <ReservationDetail reservation={panel.res} onAction={(type) => openPanel(type, panel.res)} />;
       case 'new':      return <ReservationForm onSuccess={onDone} />;
       case 'checkin':  return <CheckInForm reservation={panel.res} onSuccess={onDone} />;
       case 'checkout': return <CheckOutForm reservation={panel.res} onSuccess={onDone} onExtend={() => openPanel('extend', panel.res)} />;
@@ -144,13 +198,22 @@ export default function ReservationsPage() {
     // ── Payment ──────────────────────────────────────────────────────────
     { key: 'payment', label: 'Payment',
       render: r => {
+        // Cancelled / no-show — never show payment info
         if (['cancelled', 'no_show'].includes(r.status)) {
           return <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>;
+        }
+        // Confirmed pay-on-arrival — payment hasn't happened yet, don't show a misleading badge
+        if (r.status === 'confirmed' && r.payment_method === 'on_arrival' && r.payment_status !== 'paid') {
+          return (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              On Arrival
+            </span>
+          );
         }
         return (
           <div className="flex flex-col gap-1 items-start">
             <PaymentBadge status={r.payment_status || 'pending'} />
-            {r.payment_method && (
+            {r.payment_method && r.payment_method !== 'on_arrival' && r.payment_status === 'pending_transfer' && (
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {PAYMENT_METHOD_LABEL[r.payment_method] || r.payment_method}
               </span>
@@ -160,35 +223,24 @@ export default function ReservationsPage() {
       },
     },
 
-    { key: 'actions', label: '', width: '140px',
-      render: r => (
-        <div className="flex gap-1.5 justify-end flex-wrap">
-          {r.status === 'confirmed' && (
-            <button onClick={e => { e.stopPropagation(); openPanel('checkin', r); }}
-              className="btn-primary text-xs px-2.5 py-1">Check In</button>
-          )}
-          {r.status === 'checked_in' && (
-            <button onClick={e => { e.stopPropagation(); openPanel('checkout', r); }}
-              className="btn-secondary text-xs px-2.5 py-1">Check Out</button>
-          )}
-          {/* Mark Paid — only when payment is still outstanding */}
-          {['confirmed','checked_in'].includes(r.status) &&
-           ['pending','pending_transfer'].includes(r.payment_status) && (
-            <button onClick={e => { e.stopPropagation(); setMarkPaid(r); }}
-              className="text-xs px-2.5 py-1 rounded-md flex items-center gap-1"
-              style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
-              <CreditCard size={11} /> Paid
-            </button>
-          )}
-          {['confirmed','checked_in'].includes(r.status) && (
-            <button onClick={e => { e.stopPropagation(); setCancel(r); }}
-              className="text-xs px-2.5 py-1 rounded-md"
-              style={{ backgroundColor: 'var(--s-red-bg)', color: 'var(--s-red-text)' }}>
-              Cancel
-            </button>
-          )}
-        </div>
-      ),
+    { key: 'actions', label: '', width: '150px',
+      render: r => {
+        const isOpen = panel?.res?.id === r.id;
+        const showMore = ['confirmed','checked_in'].includes(r.status);
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {!isOpen && r.status === 'confirmed' && (
+              <button onClick={e => { e.stopPropagation(); openPanel('checkin', r); }}
+                className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap">Check In</button>
+            )}
+            {!isOpen && r.status === 'checked_in' && (
+              <button onClick={e => { e.stopPropagation(); openPanel('checkout', r); }}
+                className="btn-secondary text-xs px-3 py-1.5 whitespace-nowrap">Check Out</button>
+            )}
+            {showMore && <MoreMenu r={r} onMarkPaid={() => setMarkPaid(r)} onCancel={() => setCancel(r)} />}
+          </div>
+        );
+      },
     },
   ];
 
@@ -204,8 +256,12 @@ export default function ReservationsPage() {
         </div>
         <div className="text-right flex-shrink-0 flex flex-col gap-1 items-end">
           <StatusBadge status={r.status} />
-          {!['cancelled','no_show'].includes(r.status) && (
+          {!['cancelled','no_show'].includes(r.status) &&
+           !(r.status === 'confirmed' && r.payment_method === 'on_arrival' && r.payment_status !== 'paid') && (
             <PaymentBadge status={r.payment_status || 'pending'} />
+          )}
+          {r.status === 'confirmed' && r.payment_method === 'on_arrival' && r.payment_status !== 'paid' && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>On Arrival</span>
           )}
           <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-base)' }}>{formatCurrency(r.total_amount)}</p>
           {r.payment_method && !['cancelled','no_show'].includes(r.status) && (
@@ -223,7 +279,8 @@ export default function ReservationsPage() {
           <button onClick={() => openPanel('checkout', r)} className="btn-secondary text-xs px-3 py-1.5 flex-1 justify-center">Check Out</button>
         )}
         {['confirmed','checked_in'].includes(r.status) &&
-         ['pending','pending_transfer'].includes(r.payment_status) && (
+         ['pending','pending_transfer'].includes(r.payment_status) &&
+         r.payment_method !== 'on_arrival' && (
           <button onClick={() => setMarkPaid(r)}
             className="text-xs px-3 py-1.5 rounded-md flex items-center gap-1"
             style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
@@ -296,9 +353,11 @@ export default function ReservationsPage() {
               {reservations.length} record{reservations.length !== 1 ? 's' : ''}
             </span>
 
-            <button onClick={() => openPanel('new')} className="btn-primary text-xs">
-              <Plus size={14} /> New
-            </button>
+            {panel?.type !== 'new' && (
+              <button onClick={() => openPanel('new')} className="btn-primary text-xs">
+                <Plus size={14} /> New
+              </button>
+            )}
           </div>
 
           <DataTable
@@ -307,6 +366,7 @@ export default function ReservationsPage() {
             loading={isLoading}
             emptyTitle="No reservations found"
             mobileCard={MobileCard}
+            onRowClick={r => openPanel('detail', r)}
           />
         </div>
       </div>

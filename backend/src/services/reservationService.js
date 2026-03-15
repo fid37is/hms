@@ -63,6 +63,7 @@ export const getReservationById = async (orgId, id) => {
     .from('reservations')
     .select(`id, reservation_no, check_in_date, check_out_date, actual_check_in, actual_check_out,
       status, booking_source, rate_per_night, total_amount, deposit_amount, deposit_paid,
+      payment_status, payment_method, payment_ref, amount_paid,
       adults, children, special_requests, notes, cancel_reason, cancelled_at, created_at, updated_at,
       guests!guest_id ( id, full_name, email, phone, nationality, id_type, id_number, category, loyalty_points ),
       rooms!room_id ( id, number, floor, room_types ( id, name, base_rate, amenities ) )`)
@@ -272,7 +273,12 @@ export const checkIn = async (orgId, id, checkedInBy, { payment_mode = 'pay_late
   }
 
   auditUpdate(orgId, checkedInBy, 'reservations', id, { status: 'confirmed' }, { status: 'checked_in', payment_mode });
-  return { ...data, folio_id: folio.id };
+  return {
+    ...data,
+    folio_id:    folio.id,
+    guest_name:  reservation.guests?.full_name,
+    room_number: reservation.rooms?.number,
+  };
 };
 
 // ── Extend Stay ───────────────────────────────────────────────────────────────
@@ -374,7 +380,11 @@ export const checkOut = async (orgId, id, checkedOutBy) => {
       .eq('org_id', orgId).eq('id', folio.id);
 
   auditUpdate(orgId, checkedOutBy, 'reservations', id, { status: 'checked_in' }, { status: 'checked_out' });
-  return data;
+  return {
+    ...data,
+    guest_name:  reservation.guests?.full_name,
+    room_number: reservation.rooms?.number,
+  };
 };
 
 export const cancelReservation = async (orgId, id, reason) => {

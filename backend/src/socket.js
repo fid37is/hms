@@ -6,6 +6,8 @@
 //   conv:{conversationId}   — joined by guest + staff in that conversation
 //   dept:{departmentId}     — joined by all staff assigned to a department
 //   staff:all               — joined by all connected staff (for admin overview)
+//   guest:{guestId}         — personal room for account guests (targeted notifications)
+//   guest:{reservationId}   — personal room for booking-token guests (no account)
 //
 // HOW TO WIRE INTO app.js / server.js:
 //
@@ -15,9 +17,9 @@
 //   const io = initSocket(httpServer, app);
 //   httpServer.listen(PORT);
 
-import { Server } from 'socket.io';
-import jwt        from 'jsonwebtoken';
-import { env }    from './config/env.js';
+import { Server }   from 'socket.io';
+import jwt          from 'jsonwebtoken';
+import { env }      from './config/env.js';
 import { supabase } from './config/supabase.js';
 
 export const initSocket = (httpServer, app) => {
@@ -34,9 +36,8 @@ export const initSocket = (httpServer, app) => {
     if (!token) return next(new Error('No token'));
 
     try {
-      // Try guest JWT first (type: 'guest'), then staff JWT
       const decoded = jwt.verify(token, env.JWT_SECRET);
-      socket.data.user = decoded;
+      socket.data.user    = decoded;
       socket.data.isGuest = decoded.type === 'guest';
       next();
     } catch {
@@ -48,25 +49,34 @@ export const initSocket = (httpServer, app) => {
   io.on('connection', (socket) => {
     const { user, isGuest } = socket.data;
 
-    // Guest joins their conversation rooms
     if (isGuest) {
-      socket.on('join_conversation', async ({ conversationId }) => {
-        // Verify guest owns this conversation
-        const { data } = await supabase
-          .from('conversations')
-          .select('id, guest_id')
-          .eq('id', conversationId)
-          .eq('guest_id', user.sub)
-          .single();
+      // Two guest token types both carry type: 'guest' but different payloads:
+      //   Account token  → has sub (guest_id), no reservation_id
+      //   Booking token  → has reservation_id, no sub
+      // Join whichever room key is available so notifyGuest() can reach them.
+      const guestRoomId = user.sub || user.reservation_id;
+      if (guestRoomId) socket.join(`guest:${guestRoomId}`);
 
-        if (data) socket.join(`conv:${conversationId}`);
+      socket.on('join_conversation', async ({ conversationId }) => {
+        if (user.sub) {
+          // Account guest — verify ownership before joining
+          const { data } = await supabase
+            .from('conversations')
+            .select('id, guest_id')
+            .eq('id', conversationId)
+            .eq('guest_id', user.sub)
+            .single();
+
+          if (data) socket.join(`conv:${conversationId}`);
+        } else {
+          // Booking-token guest — no guest_id to check against, trust the token
+          socket.join(`conv:${conversationId}`);
+        }
       });
     }
 
-    // Staff joins their department room
     if (!isGuest) {
       socket.join('staff:all');
-      // Join org room (for broadcast notifications) and personal room (for targeted notifications)
       if (user.org_id) socket.join(`org:${user.org_id}`);
       if (user.sub)    socket.join(`user:${user.sub}`);
 

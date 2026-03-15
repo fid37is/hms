@@ -101,3 +101,24 @@ export const getUnreadCount = async (orgId, userId) => {
   if (error) throw error;
   return count || 0;
 };
+
+// ── Delete one notification ───────────────────────────────────────────────────
+export const deleteNotification = async (orgId, userId, notificationId) => {
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', notificationId)
+    .eq('org_id', orgId)
+    .or(`user_id.eq.${userId},user_id.is.null`);
+  if (error) throw error;
+};
+
+// ── Delete all read notifications ─────────────────────────────────────────────
+export const clearRead = async (orgId, userId) => {
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('org_id', orgId)
+    .or(`user_id.eq.${userId},user_id.is.null`);
+  if (error) throw error;
+};

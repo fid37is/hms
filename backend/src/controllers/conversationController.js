@@ -1,5 +1,8 @@
 // src/controllers/conversationController.js
 import * as conversationService from '../services/conversationService.js';
+import { notify }               from '../services/notificationService.js';
+import { notifyGuest }          from '../services/guestNotificationService.js';
+import { supabase }             from '../config/supabase.js';
 import { sendSuccess, sendCreated } from '../utils/response.js';
 
 // ─── Guest-facing ─────────────────────────────────────────────────────────────
@@ -48,10 +51,42 @@ export const sendMessage = async (req, res, next) => {
       orgId, conversationId: req.params.id, senderType, senderId, senderName, content,
     });
 
+    // Fetch conversation meta for notification targeting
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('guest_id, reservation_id, chat_departments(name)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
     const io = req.app.get('io');
     if (io) {
-      io.to(`dept:${departmentId}`).emit('new_message', { conversationId: req.params.id, message });
       io.to(`conv:${req.params.id}`).emit('new_message', { conversationId: req.params.id, message });
+      io.to(`dept:${departmentId}`).except(`conv:${req.params.id}`).emit('new_message', { conversationId: req.params.id, message });
+    }
+
+    if (isGuest) {
+      // Guest sent a message — notify HMS staff via bell
+      const deptName = conv?.chat_departments?.name || '';
+      notify(req.app, {
+        orgId,
+        type:  'reservation',
+        title: 'New Guest Message',
+        body:  `${senderName || 'Guest'}${deptName ? ` → ${deptName}` : ''}: ${content.slice(0, 80)}${content.length > 80 ? '…' : ''}`,
+        link:  '/chat',
+      });
+    } else {
+      // Staff sent a message — notify the guest via socket
+      if (conv) {
+        notifyGuest(req.app, {
+          guestId:       conv.guest_id       || null,
+          reservationId: conv.reservation_id || null,
+          type:          'new_chat_message',
+          conversationId: req.params.id,
+          senderName:    senderName || 'Hotel Staff',
+          deptName:      conv.chat_departments?.name || '',
+          preview:       content.slice(0, 100),
+        });
+      }
     }
 
     return sendCreated(res, message, 'Message sent.');
