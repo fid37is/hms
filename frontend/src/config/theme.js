@@ -7,7 +7,7 @@
 
 export const lightTokens = {
   // Backgrounds — warm whites, not clinical
-  '--bg-page':      '#FFFDF8',
+  '--bg-page':      '#FFFFFF',
   '--bg-surface':   '#FFFFFF',
   '--bg-subtle':    '#FEF6EC',
   '--bg-muted':     '#FDECD6',

@@ -8,6 +8,7 @@ import {
   CheckCircle2, Circle, ArrowRight, Sparkles, ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import * as authApi     from '../lib/api/authApi';
 import { useQuery } from '@tanstack/react-query';
 import * as roomApi   from '../lib/api/roomApi';
 import * as staffApi  from '../lib/api/staffApi';
@@ -71,7 +72,7 @@ export default function OnboardingPage() {
   const { data: roomTypes }  = useQuery({ queryKey: ['room-types'],    queryFn: () => roomApi.getRoomTypes().then(r => r.data.data), retry: false });
   const { data: roomsRes }   = useQuery({ queryKey: ['rooms'],         queryFn: () => roomApi.getRooms().then(r => r.data.data), retry: false });
   const { data: staffRes }   = useQuery({ queryKey: ['staff'],         queryFn: () => staffApi.getStaff({}, 1, 1).then(r => r.data.data), retry: false });
-  const { data: apiKeysRes } = useQuery({ queryKey: ['api-keys'],      queryFn: () => import('../lib/api/authApi').then(m => m.listApiKeys().then(r => r.data.data)), retry: false });
+  const { data: apiKeysRes } = useQuery({ queryKey: ['api-keys'],      queryFn: () => authApi.listApiKeys().then(r => r.data.data), retry: false });
 
   const checkData = {
     config,

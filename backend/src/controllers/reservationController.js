@@ -2,6 +2,11 @@
 
 import * as reservationService from '../services/reservationService.js';
 import { notify }              from '../services/notificationService.js';
+import {
+  notifyGuestCheckedIn,
+  notifyGuestCheckedOut,
+  notifyGuestCancelled,
+} from '../services/guestNotificationService.js';
 import { sendSuccess, sendCreated, sendPaginated } from '../utils/response.js';
 
 export const getAllReservations = async (req, res, next) => {
@@ -52,13 +57,19 @@ export const checkIn = async (req, res, next) => {
       req.orgId, req.params.id, req.user.sub,
       { payment_mode, paid_amount: Number(paid_amount || 0), payment_method, payment_notes }
     );
+
+    // Notify HMS staff
     notify(req.app, {
       orgId: req.orgId,
       type:  'checkin',
       title: 'Guest Checked In',
-      body:  `${data.guests?.full_name || 'Guest'} checked into Room ${data.rooms?.number || '—'}`,
+      body:  `${data.guest_name || 'Guest'} checked into Room ${data.room_number || '—'}`,
       link:  '/reservations',
     });
+
+    // Notify guest via socket
+    notifyGuestCheckedIn(req.app, data);
+
     return sendSuccess(res, data, 'Guest checked in successfully.');
   } catch (err) { next(err); }
 };
@@ -66,13 +77,19 @@ export const checkIn = async (req, res, next) => {
 export const checkOut = async (req, res, next) => {
   try {
     const data = await reservationService.checkOut(req.orgId, req.params.id, req.user.sub);
+
+    // Notify HMS staff
     notify(req.app, {
       orgId: req.orgId,
       type:  'checkout',
       title: 'Guest Checked Out',
-      body:  `${data.guests?.full_name || 'Guest'} checked out of Room ${data.rooms?.number || '—'}`,
+      body:  `${data.guest_name || 'Guest'} checked out of Room ${data.room_number || '—'}`,
       link:  '/reservations',
     });
+
+    // Notify guest via socket
+    notifyGuestCheckedOut(req.app, data);
+
     return sendSuccess(res, data, 'Guest checked out successfully.');
   } catch (err) { next(err); }
 };
@@ -92,6 +109,8 @@ export const extendStay = async (req, res, next) => {
 export const cancelReservation = async (req, res, next) => {
   try {
     const data = await reservationService.cancelReservation(req.orgId, req.params.id, req.body.reason);
+
+    // Notify HMS staff
     notify(req.app, {
       orgId: req.orgId,
       type:  'reservation',
@@ -99,6 +118,10 @@ export const cancelReservation = async (req, res, next) => {
       body:  `Reservation ${data.reservation_number || data.id?.slice(0,8)} has been cancelled`,
       link:  '/reservations',
     });
+
+    // Notify guest via socket
+    notifyGuestCancelled(req.app, data);
+
     return sendSuccess(res, data, 'Reservation cancelled.');
   } catch (err) { next(err); }
 };

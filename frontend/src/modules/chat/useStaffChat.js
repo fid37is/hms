@@ -74,7 +74,12 @@ export function useStaffChat() {
   const sendMessage = useCallback(async (convId, content) => {
     const res = await conversationApi.sendMessage(convId, content);
     const msg = res.data.data;
-    setMessages(prev => ({ ...prev, [convId]: [...(prev[convId] || []), msg] }));
+    // Add via API response — socket event will be deduped by ID
+    setMessages(prev => {
+      const existing = prev[convId] || [];
+      if (existing.some(m => m.id === msg.id)) return prev;
+      return { ...prev, [convId]: [...existing, msg] };
+    });
     setConversations(prev => prev.map(c =>
       c.id === convId ? { ...c, last_message_at: msg.created_at } : c
     ));
@@ -120,7 +125,7 @@ export function useStaffChat() {
       ));
       loadConversations();
       if (message.sender_type === 'guest') {
-        toast('💬 New guest message', { duration: 3000, id: `msg-${message.id}` });
+        toast('New guest message', { duration: 3000, id: `msg-${message.id}` });
       }
     });
 

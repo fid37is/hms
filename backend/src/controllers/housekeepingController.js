@@ -31,7 +31,7 @@ export const createTask = async (req, res, next) => {
       orgId: req.orgId,
       type:  'housekeeping',
       title: 'New Housekeeping Task',
-      body:  `${req.body.task_type || 'Task'} assigned for Room ${data.rooms?.number || req.body.room_id?.slice(0,8) || '—'}`,
+      body:  `${req.body.task_type || 'Task'} assigned for Room ${data.room_number || '—'}`,
       link:  '/housekeeping',
     });
     return sendCreated(res, data, 'Task created.');
@@ -76,7 +76,7 @@ export const assignTask = async (req, res, next) => {
         userId: req.body.assigned_to,
         type:   'housekeeping',
         title:  'Task Assigned to You',
-        body:   `You have been assigned a ${data.task_type || 'housekeeping'} task for Room ${data.rooms?.number || '—'}`,
+        body:   `You have been assigned a ${data.task_type || 'housekeeping'} task for Room ${data.room_number || '—'}`,
         link:   '/housekeeping',
       });
     }

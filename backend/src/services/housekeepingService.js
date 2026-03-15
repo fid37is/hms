@@ -58,7 +58,7 @@ export const createTask = async (orgId, payload, createdBy) => {
     .select().single();
 
   if (error) throw new AppError(`Failed to create task: ${error.message}`, 500);
-  return data;
+  return { ...data, room_number: room.number };
 };
 
 export const updateTask = async (orgId, id, payload) => {
@@ -104,7 +104,7 @@ export const completeTask = async (orgId, id, notes) => {
 };
 
 export const assignTask = async (orgId, id, assignedTo, assignedBy) => {
-  await getTaskById(orgId, id);
+  const task = await getTaskById(orgId, id);
 
   const { data: user } = await supabase
     .from('users').select('id, full_name').eq('org_id', orgId).eq('id', assignedTo).single();
@@ -116,7 +116,7 @@ export const assignTask = async (orgId, id, assignedTo, assignedBy) => {
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError(`Failed to assign task: ${error.message}`, 500);
-  return data;
+  return { ...data, room_number: task.rooms?.number, task_type: task.task_type };
 };
 
 export const deleteTask = async (orgId, id) => {

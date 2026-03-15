@@ -221,9 +221,9 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
         )}
         {paymentMode !== 'pay_later' && (
           <div className="form-group">
-            <label className="label">Notes</label>
+            <label className="label">Receipt / Reference No.</label>
             <input type="text" className="input" value={paymentNotes}
-              onChange={e => setPaymentNotes(e.target.value)} placeholder="e.g. Receipt #123" />
+              onChange={e => setPaymentNotes(e.target.value)} placeholder="e.g. RCP-001, POS ref, bank teller no." />
           </div>
         )}
       </div>

@@ -28,13 +28,17 @@ export const refreshToken = async (req, res, next) => {
 
 // Guests are NOT org-scoped — they exist globally and may have stayed at
 // multiple hotels. Query by id only, no org_id filter.
+//
+// NOTE: is_deleted may be null on older walk-in guest rows — treat null as false
+// by using neq('is_deleted', true) instead of eq('is_deleted', false) so those
+// rows are not excluded.
 export const getMe = async (req, res, next) => {
   try {
     const { data: guest, error } = await supabase
       .from('guests')
       .select('id, full_name, email, phone, address, nationality, id_type, id_number, date_of_birth, preferences, category, loyalty_points')
       .eq('id', req.guest.sub)
-      .eq('is_deleted', false)
+      .neq('is_deleted', true)   // treat NULL as not-deleted
       .single();
 
     if (error || !guest) throw new AppError('Guest not found.', 404);
