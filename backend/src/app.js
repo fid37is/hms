@@ -5,11 +5,12 @@ import cors      from 'cors';
 import helmet    from 'helmet';
 import rateLimit from 'express-rate-limit';
 
-import { env }           from './config/env.js';
-import { requestLogger } from './middleware/requestLogger.js';
-import { errorHandler }  from './middleware/errorHandler.js';
-import router            from './routes/index.js';
-import publicRoutes      from './routes/publicRoutes.js';
+import { env }             from './config/env.js';
+import { requestLogger }   from './middleware/requestLogger.js';
+import { errorHandler }    from './middleware/errorHandler.js';
+import router              from './routes/index.js';
+import publicRoutes        from './routes/publicRoutes.js';
+import superAdminRoutes    from './routes/superAdminRoutes.js';
 
 const app = express();
 
@@ -73,7 +74,8 @@ app.get('/health', (req, res) => {
 
 // ── 4. Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/v1/public', publicRoutes);  // hotel website (public, guest-facing)
-app.use('/api/v1',        router);        // HMS dashboard (staff, authenticated)
+app.use('/api/v1/super-admin', superAdminRoutes); // platform owner console (separate auth)
+app.use('/api/v1',            router);             // HMS dashboard (staff, authenticated)
 
 // ── 5. 404 & error handler ────────────────────────────────────────────────────
 app.use((req, res) => {

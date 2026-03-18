@@ -7,6 +7,8 @@ import DataTable       from '../../components/shared/DataTable';
 import StatusBadge     from '../../components/shared/StatusBadge';
 import GuestForm       from './components/GuestForm';
 import { formatDate }  from '../../utils/format';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 const PANEL_WIDTH = 440;
 const CATEGORIES = ['all', 'regular', 'vip', 'corporate', 'blacklisted'];
@@ -27,6 +29,9 @@ function useIsMobile() {
 }
 
 export default function GuestsPage() {
+  const { isLocked } = useSubscriptionGate();
+  if (isLocked) return <SubscriptionPaywall />;
+
   const qc       = useQueryClient();
   const navigate = useNavigate();
   const isMobile = useIsMobile();

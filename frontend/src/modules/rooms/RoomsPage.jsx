@@ -10,6 +10,8 @@ import RoomTypesPanel     from './components/RoomTypesPanel';
 import RoomDetailModal    from './components/RoomsDetailModal';
 import Modal              from '../../components/shared/Modal';
 import toast              from 'react-hot-toast';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 const STATUS_FILTERS = [
   { label: 'All',          value: ''             },
@@ -39,6 +41,9 @@ function TabBar({ value, onChange, tabs }) {
 }
 
 export default function RoomsPage() {
+  const { isLocked } = useSubscriptionGate();
+  if (isLocked) return <SubscriptionPaywall />;
+
   const qc = useQueryClient();
   const [pageTab,      setPageTab]      = useState('rooms');
   const [statusFilter, setStatusFilter] = useState('');

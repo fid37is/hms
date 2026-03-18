@@ -8,10 +8,15 @@ import TaskBoard      from './components/TaskBoard';
 import TaskForm       from './components/TaskForm';
 import LostFoundPanel from './components/LostFoundPanel';
 import toast from 'react-hot-toast';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 const TABS = ['Tasks', 'Lost & Found'];
 
 export default function HousekeepingPage() {
+  const { isLocked } = useSubscriptionGate();
+  if (isLocked) return <SubscriptionPaywall />;
+
   const qc = useQueryClient();
   const [tab,            setTab]            = useState('Tasks');
   const [showForm,       setShowForm]       = useState(false);

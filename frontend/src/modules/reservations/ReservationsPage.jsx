@@ -12,6 +12,8 @@ import CheckOutForm       from './components/CheckOutForm';
 import ExtendStayForm     from './components/ExtendStayForm';
 import { formatDate, formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 const STATUS_TABS = [
   { label: 'All',         value: ''            },
@@ -116,6 +118,9 @@ function MoreMenu({ r, onMarkPaid, onCancel }) {
 }
 
 export default function ReservationsPage() {
+  const { isLocked } = useSubscriptionGate();
+  if (isLocked) return <SubscriptionPaywall />;
+
   const qc = useQueryClient();
   const isMobile = useIsMobile();
 

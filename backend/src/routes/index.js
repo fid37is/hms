@@ -1,6 +1,8 @@
 // src/routes/index.js
 
 import { Router }             from 'express';
+import { authenticate }        from '../middleware/auth.js';
+import { subscriptionGate }   from '../middleware/subscriptionGate.js';
 import authRoutes             from './authRoutes.js';
 import roomRoutes             from './roomRoutes.js';
 import guestRoutes            from './guestRoutes.js';
@@ -20,11 +22,16 @@ import fnbRoutes              from './fnbRoutes.js';
 import notificationRoutes     from './notificationRoutes.js';
 import nightAuditRoutes       from './nightAuditRoutes.js';
 import eventRoutes            from './eventRoutes.js';
+import subscriptionRoutes    from './subscriptionRoutes.js';
 
 const router = Router();
 
 // ─── Public (no JWT — resolved via API key / subdomain / dev fallback) ────────
 router.use('/public',           publicRoutes);
+
+// Apply subscription gate to all authenticated routes
+router.use(authenticate);
+router.use(subscriptionGate);
 
 // ─── Authenticated (JWT required) ─────────────────────────────────────────────
 router.use('/auth',             authRoutes);
@@ -45,5 +52,6 @@ router.use('/fnb',              fnbRoutes);
 router.use('/notifications',    notificationRoutes);
 router.use('/night-audit',      nightAuditRoutes);
 router.use('/events',           eventRoutes);
+router.use('/subscriptions',    subscriptionRoutes);
 
 export default router;

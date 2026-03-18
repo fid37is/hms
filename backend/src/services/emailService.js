@@ -307,3 +307,123 @@ export const sendWelcome = async ({ email, fullName }) => {
     html,
   });
 };
+// ─── 6. Trial lifecycle emails ────────────────────────────────
+// type: 'reminder' | 'urgent' | 'ended' | 'suspended' | 'deletion_warning'
+
+export const sendTrialReminder = async ({ email, name, hotelName, daysLeft, type }) => {
+  const subscribeUrl = `${env.FRONTEND_URL}/settings?tab=billing`;
+
+  const configs = {
+    reminder: {
+      subject: `Your Cierlo HMS trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`,
+      heading: `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left on your trial`,
+      message: `Your 14-day free trial for <strong>${hotelName}</strong> ends in <strong>${daysLeft} days</strong>. Subscribe now to keep full access to all modules — reservations, housekeeping, billing, reports, and more.`,
+      ctaText: 'Subscribe Now',
+      ctaColor: '#EA6C0A',
+      urgency: false,
+    },
+    urgent: {
+      subject: `Last day of your Cierlo HMS trial — ${hotelName}`,
+      heading: 'Your trial ends tomorrow',
+      message: `This is your final reminder. Your free trial for <strong>${hotelName}</strong> ends <strong>tomorrow</strong>. After that, you will only be able to view your data — no new reservations, check-ins, or operations until you subscribe.`,
+      ctaText: 'Subscribe Before It Ends',
+      ctaColor: '#dc2626',
+      urgency: true,
+    },
+    ended: {
+      subject: `Your Cierlo HMS trial has ended — ${hotelName}`,
+      heading: 'Your trial has ended',
+      message: `Your free trial for <strong>${hotelName}</strong> has ended. Your data is safe and your account is still accessible, but you will not be able to take new reservations or perform operations until you subscribe. Subscribe now to restore full access immediately.`,
+      ctaText: 'Subscribe to Restore Access',
+      ctaColor: '#dc2626',
+      urgency: true,
+    },
+    suspended: {
+      subject: `Action required — ${hotelName} account suspended`,
+      heading: 'Your account has been suspended',
+      message: `Your Cierlo HMS account for <strong>${hotelName}</strong> has been suspended due to an expired trial with no active subscription. Your data is still retained. Subscribe now to reactivate your account and restore full access.`,
+      ctaText: 'Reactivate Account',
+      ctaColor: '#dc2626',
+      urgency: true,
+    },
+    deletion_warning: {
+      subject: `Important: ${hotelName} data will be deleted in 7 days`,
+      heading: 'Your data will be deleted in 7 days',
+      message: `Your Cierlo HMS account for <strong>${hotelName}</strong> has been inactive for 60 days. <strong>All your data — guests, reservations, reports — will be permanently deleted in 7 days.</strong> Subscribe now to prevent deletion and restore your account.`,
+      ctaText: 'Subscribe and Save My Data',
+      ctaColor: '#dc2626',
+      urgency: true,
+    },
+  };
+
+  const config = configs[type] || configs.reminder;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#0E0805;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0E0805;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#1C1208;border:1px solid #2C1E0F;border-radius:12px;overflow:hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#EA6C0A;padding:20px 32px;text-align:center;">
+            <p style="margin:0;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px;">Cierlo HMS</p>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,.7);font-size:11px;text-transform:uppercase;letter-spacing:.8px;">Hotel Management System</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            ${config.urgency ? `<div style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#FCA5A5;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">⚠ Action Required</div>` : ''}
+
+            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#FFE8CC;letter-spacing:-.3px;">${config.heading}</h1>
+
+            <p style="margin:0 0 8px;font-size:14px;color:#C49060;">Hi ${name || 'there'},</p>
+            <p style="margin:0 0 24px;font-size:14px;color:#C49060;line-height:1.6;">${config.message}</p>
+
+            <!-- CTA -->
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td style="border-radius:8px;background:${config.ctaColor};">
+                  <a href="${subscribeUrl}" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:-.2px;">${config.ctaText}</a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- What's included -->
+            <div style="background:#261809;border:1px solid #2C1E0F;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#7A5535;">Everything included in your subscription</p>
+              <div style="display:grid;font-size:13px;color:#C49060;line-height:1.8;">
+                ✓ Reservations & check-in/out &nbsp;·&nbsp; ✓ Room management<br/>
+                ✓ Billing & payments &nbsp;·&nbsp; ✓ Housekeeping<br/>
+                ✓ Staff management &nbsp;·&nbsp; ✓ Reports & night audit<br/>
+                ✓ Inventory &nbsp;·&nbsp; ✓ Events & F&B
+              </div>
+            </div>
+
+            <p style="margin:0;font-size:12px;color:#7A5535;line-height:1.6;">
+              Questions? Reply to this email and we'll get back to you.<br/>
+              Or visit <a href="${env.FRONTEND_URL}" style="color:#EA6C0A;text-decoration:none;">${env.FRONTEND_URL}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#0E0805;padding:16px 32px;border-top:1px solid #2C1E0F;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#7A5535;">© Cierlo HMS &nbsp;·&nbsp; You're receiving this because you signed up for a trial.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendMail({ to: email, subject: config.subject, html });
+};

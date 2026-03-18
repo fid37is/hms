@@ -22,6 +22,7 @@ export const env = {
 
   SUPABASE_URL:              required('SUPABASE_URL'),
   SUPABASE_SERVICE_ROLE_KEY: required('SUPABASE_SERVICE_ROLE_KEY'),
+  SUPABASE_ANON_KEY:         required('SUPABASE_ANON_KEY'),
 
   JWT_SECRET:             required('JWT_SECRET'),
   JWT_EXPIRES_IN:         optional('JWT_EXPIRES_IN', '8h'),
@@ -30,6 +31,11 @@ export const env = {
   PAYSTACK_SECRET_KEY:    optional('PAYSTACK_SECRET_KEY'),
   PAYSTACK_PUBLIC_KEY:    optional('PAYSTACK_PUBLIC_KEY'),
   FLUTTERWAVE_SECRET_KEY: optional('FLUTTERWAVE_SECRET_KEY'),
+
+  // Dodo Payments
+  DODO_PAYMENTS_API_KEY:      optional('DODO_PAYMENTS_API_KEY'),
+  DODO_PAYMENTS_WEBHOOK_SECRET: optional('DODO_PAYMENTS_WEBHOOK_SECRET'),
+  DODO_PAYMENTS_ENVIRONMENT:  optional('DODO_PAYMENTS_ENVIRONMENT', 'test_mode'),
 
   SMTP_HOST:  optional('SMTP_HOST'),
   SMTP_PORT:  optional('SMTP_PORT', '587'),
