@@ -30,8 +30,9 @@ export const assignWorkOrderSchema = Joi.object({
 });
 
 export const resolveWorkOrderSchema = Joi.object({
-  resolution: Joi.string().trim().required(),
-  cost:       Joi.number().integer().min(0).optional(),
+  resolution:        Joi.string().trim().required(),
+  cost:              Joi.number().integer().min(0).optional(),
+  room_status_after: Joi.string().valid('dirty', 'available', 'out_of_order').optional().allow(null),
 });
 
 export const createAssetSchema = Joi.object({

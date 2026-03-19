@@ -17,7 +17,7 @@ export const INVENTORY_CATEGORIES = [
   { value: 'other',        label: 'Other'             },
 ];
 
-export default function ItemForm({ item, onSuccess }) {
+export default function ItemForm({ item, onSuccess, onClose }) {
   const isEdit = !!item;
 
   const [form, setForm] = useState(() => ({
@@ -159,7 +159,8 @@ export default function ItemForm({ item, onSuccess }) {
           value={form.notes} onChange={handleChange} />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button type="submit" disabled={save.isPending} className="btn-primary">
           {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Item'}
         </button>

@@ -21,42 +21,47 @@ const generateGuestRefreshToken = (guestId) =>
   jwt.sign({ sub: guestId, type: 'guest_refresh' }, env.JWT_SECRET, { expiresIn: '30d' });
 
 // ─── Register ─────────────────────────────────────────────────────────────────
-export const register = async ({ full_name, email, phone, address, password }) => {
-  // 1. Check email not already used as a web account
-  const { data: existing } = await supabase
+// orgId is passed from the controller (req.orgId) so the guest row is scoped
+// to the correct hotel — matching how booking-only guest rows are created.
+export const register = async ({ full_name, email, phone, address, password }, orgId) => {
+  // 1. Check if a web account already exists for this email in this org
+  const { data: existingWebAccount } = await supabase
     .from('guests')
-    .select('id, is_web_account')
+    .select('id')
     .eq('email', email)
     .eq('is_web_account', true)
-    .single();
+    .eq('org_id', orgId)
+    .maybeSingle();
 
-  if (existing) {
+  if (existingWebAccount) {
     throw new AppError('An account with this email already exists.', 409);
   }
 
-  // 2. Check if guest already exists in HMS (walk-in, OTA, etc.) — link rather than duplicate
+  // 2. Check if a booking-only guest row exists for this email in this org.
+  //    If so, upgrade it to a web account rather than creating a duplicate.
   const { data: existingGuest } = await supabase
     .from('guests')
     .select('id')
     .eq('email', email)
+    .eq('org_id', orgId)
     .eq('is_web_account', false)
-    .single();
+    .maybeSingle();
 
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
   let guest;
 
   if (existingGuest) {
-    // Upgrade existing guest profile to web account
+    // Upgrade existing booking-only guest row to a full web account
     const { data, error } = await supabase
       .from('guests')
       .update({
         password_hash,
-        is_web_account:  true,
-        email_verified:  false,
-        full_name:       full_name,
-        phone:           phone    || null,
-        address:         address  || null,
+        is_web_account: true,
+        email_verified: false,
+        full_name,
+        phone:   phone   || null,
+        address: address || null,
       })
       .eq('id', existingGuest.id)
       .select()
@@ -65,10 +70,11 @@ export const register = async ({ full_name, email, phone, address, password }) =
     if (error) throw new AppError('Registration failed.', 500);
     guest = data;
   } else {
-    // Create new guest profile
+    // Create brand new guest profile scoped to this org
     const { data, error } = await supabase
       .from('guests')
       .insert({
+        org_id:         orgId,
         full_name,
         email,
         phone:          phone   || null,
@@ -144,7 +150,6 @@ export const login = async ({ email, password }) => {
 
 // ─── Get my reservations ──────────────────────────────────────────────────────
 export const getMyReservations = async (guestId) => {
-  // Step 1: fetch reservations including room_id
   const { data: reservations, error } = await supabase
     .from('reservations')
     .select('id, reservation_no, room_type_id, room_id, check_in_date, check_out_date, adults, children, status, rate_per_night, total_amount, deposit_amount, deposit_paid, special_requests, cancel_reason, cancelled_at, created_at')
@@ -158,7 +163,6 @@ export const getMyReservations = async (guestId) => {
 
   if (!reservations || reservations.length === 0) return [];
 
-  // Step 2: batch-fetch room type names
   const typeIds = [...new Set(reservations.map(r => r.room_type_id).filter(Boolean))];
   let typeMap = {};
   if (typeIds.length > 0) {
@@ -167,7 +171,6 @@ export const getMyReservations = async (guestId) => {
     (types || []).forEach(t => { typeMap[t.id] = t.name; });
   }
 
-  // Step 3: batch-fetch assigned room numbers
   const roomIds = [...new Set(reservations.map(r => r.room_id).filter(Boolean))];
   let roomMap = {};
   if (roomIds.length > 0) {
@@ -241,17 +244,14 @@ export const forgotPassword = async (email) => {
     .eq('is_deleted', false)
     .single();
 
-  // Always resolve — never reveal if email exists
   if (!guest) return { message: 'If this email is registered, a reset link has been sent.' };
 
-  // Generate a short-lived reset token
   const resetToken = jwt.sign(
     { sub: guest.id, type: 'password_reset' },
     env.JWT_SECRET,
     { expiresIn: '1h' }
   );
 
-  // Store token hash in DB so it can be invalidated after use
   const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
 
   await supabase
@@ -259,7 +259,6 @@ export const forgotPassword = async (email) => {
     .update({ reset_token_hash: tokenHash, reset_token_expires: new Date(Date.now() + 3600000).toISOString() })
     .eq('id', guest.id);
 
-  // Send reset email (non-blocking)
   const resetUrl = `${env.WEBSITE_URL || 'http://localhost:5174'}/reset-password?token=${resetToken}`;
   emailService.sendPasswordReset({
     email:    guest.email,
@@ -267,7 +266,6 @@ export const forgotPassword = async (email) => {
     resetUrl,
   }).catch(e => console.error('[email] password reset failed:', e));
 
-  // Dev fallback — also print to console so you can test without email setup
   console.log(`[DEV] Password reset URL: ${resetUrl}`);
 
   return { message: 'If this email is registered, a reset link has been sent.' };

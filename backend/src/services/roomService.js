@@ -16,9 +16,6 @@ export const getAllRoomTypes = async (orgId) => {
 
   if (error) throw new AppError('Failed to fetch room types.', 500);
 
-  // Each type has its own marketing media (uploaded via TypeMediaSection in HMS).
-  // photos = type-level media only. Individual room photos are loaded separately
-  // when a guest clicks into a specific type on the hotel website.
   return types.map(t => ({
     ...t,
     photos: (t.media || [])
@@ -37,7 +34,6 @@ export const getRoomTypeById = async (orgId, id) => {
 
   if (error || !data) throw new AppError('Room type not found.', 404);
 
-  // Individual rooms belonging to this type — each carries its own media
   const { data: rooms } = await supabase
     .from('rooms')
     .select('id, number, floor, status, notes, media')
@@ -46,15 +42,14 @@ export const getRoomTypeById = async (orgId, id) => {
     .eq('is_blocked', false)
     .order('number');
 
-  // Type-level marketing photos (from type.media — set by admin in HMS)
   const photos = (data.media || [])
     .filter(m => m.type === 'image' || m.type === 'gif')
     .map(m => ({ url: m.url, path: m.path }));
 
   return {
     ...data,
-    photos,           // marketing images for the type hero gallery
-    rooms: rooms || [], // individual rooms with their own media
+    photos,
+    rooms: rooms || [],
   };
 };
 
@@ -105,14 +100,6 @@ export const deleteRoomType = async (orgId, id) => {
 };
 
 // ─── Rate Plans ───────────────────────────────────────────
-//
-// Fields: name, description, base_rate, is_refundable,
-//         cancellation_hours, prepayment_required, prepayment_percent
-//
-// Business rules (enforced server-side):
-//   - Non-refundable rates always have cancellation_hours = 0
-//   - Non-refundable rates always require prepayment
-//   - prepayment_percent defaults to 100 when prepayment is required
 
 const sanitiseRatePlan = (payload) => {
   const d = { ...payload };
@@ -136,7 +123,6 @@ export const getRatePlans = async (orgId, roomTypeId) => {
     .order('name');
 
   if (error) throw new AppError('Failed to fetch rate plans.', 500);
-  // Alias base_rate as rate_per_night for frontend consistency
   return (data || []).map(p => ({ ...p, rate_per_night: p.base_rate }));
 };
 
@@ -324,18 +310,21 @@ export const deleteRoom = async (orgId, id) => {
 // ─── Availability ─────────────────────────────────────────
 //
 // Bookable = everything except out_of_order and maintenance.
-// dirty / ready / clean / available are all fine — they'll be cleaned before check-in.
-// Occupied rooms are excluded via the reservation conflict query, not by status,
-// because a room's status flag may lag during a busy shift.
+// dirty / ready / clean / available are all fine — cleaned before check-in.
+// Occupied rooms are excluded via reservation conflict query, not by status flag.
 //
-// Overlap uses half-open intervals [checkIn, checkOut) so a guest checking out on
-// date X frees the room for a new guest checking in on date X (same-day turnover).
+// Overlap uses half-open intervals [checkIn, checkOut) so same-day turnover works.
+//
+// Two sources of unavailability:
+//   1. Room-level: a specific room_id is tied to a confirmed/checked-in reservation
+//   2. Type-level: all physical rooms of a type are accounted for by confirmed
+//      reservations that have no room_id yet (online bookings pending room assignment)
 
 const UNBOOKABLE = '("out_of_order","maintenance")';
 
 export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null, withMedia = false) => {
-  // Step 1: rooms tied up by confirmed/checked-in reservations overlapping the dates
-  const { data: conflicting } = await supabase
+  // ── Step 1: rooms tied up by checked-in reservations (have room_id) ──────
+  const { data: roomLevelConflicts } = await supabase
     .from('reservations')
     .select('room_id')
     .eq('org_id', orgId)
@@ -344,10 +333,12 @@ export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null,
     .gt('check_out_date', checkIn)
     .not('room_id', 'is', null);
 
-  const conflictingIds = (conflicting || []).map(r => r.room_id).filter(Boolean);
+  const conflictingRoomIds = (roomLevelConflicts || [])
+    .map(r => r.room_id)
+    .filter(Boolean);
 
-  // Step 2: all non-blocked, physically usable rooms
-  let query = supabase
+  // ── Step 2: all bookable physical rooms ───────────────────────────────────
+  let roomQuery = supabase
     .from('rooms')
     .select(`id, number, floor, status, type_id,
       ${withMedia ? 'media,' : ''}
@@ -357,14 +348,57 @@ export const getAvailableRooms = async (orgId, checkIn, checkOut, typeId = null,
     .not('status', 'in', UNBOOKABLE)
     .order('number');
 
-  if (conflictingIds.length > 0) {
-    query = query.not('id', 'in', `(${conflictingIds.join(',')})`);
+  if (conflictingRoomIds.length > 0) {
+    roomQuery = roomQuery.not('id', 'in', `(${conflictingRoomIds.join(',')})`);
   }
-  if (typeId) query = query.eq('type_id', typeId);
+  if (typeId) roomQuery = roomQuery.eq('type_id', typeId);
 
-  const { data, error } = await query;
+  const { data: bookableRooms, error } = await roomQuery;
   if (error) throw new AppError('Failed to fetch available rooms.', 500);
-  return data;
+
+  if (!bookableRooms || bookableRooms.length === 0) return [];
+
+  // ── Step 3: type-level capacity check for unassigned confirmed bookings ───
+  // Online bookings are created with room_id = null (room assigned at check-in).
+  // We must count how many such bookings exist per type and subtract from
+  // available physical rooms — otherwise all rooms show as available even
+  // when the type is fully booked online.
+  const { data: unassignedBookings } = await supabase
+    .from('reservations')
+    .select('room_type_id')
+    .eq('org_id', orgId)
+    .eq('status', 'confirmed')
+    .is('room_id', null)
+    .lt('check_in_date', checkOut)
+    .gt('check_out_date', checkIn);
+
+  // Count unassigned bookings per type
+  const unassignedByType = {};
+  for (const r of (unassignedBookings || [])) {
+    if (r.room_type_id) {
+      unassignedByType[r.room_type_id] = (unassignedByType[r.room_type_id] || 0) + 1;
+    }
+  }
+
+  // Group bookable rooms by type
+  const roomsByType = {};
+  for (const room of bookableRooms) {
+    if (!roomsByType[room.type_id]) roomsByType[room.type_id] = [];
+    roomsByType[room.type_id].push(room);
+  }
+
+  // For each type, remove rooms from the available list equal to the number
+  // of unassigned confirmed bookings — this "virtually" reserves those rooms
+  const availableRooms = [];
+  for (const [tId, rooms] of Object.entries(roomsByType)) {
+    const reserved = unassignedByType[tId] || 0;
+    // Rooms still available = total bookable rooms minus unassigned bookings
+    // If reserved >= rooms.length the type is fully booked — include none
+    const available = rooms.slice(reserved);
+    availableRooms.push(...available);
+  }
+
+  return availableRooms;
 };
 
 // ─── Room Media ───────────────────────────────────────────
@@ -441,7 +475,6 @@ export const uploadRoomTypeMedia = async (orgId, typeId, file) => {
 
   const currentMedia = type.media || [];
 
-  // Room types only have one cover photo — replace existing on new upload
   if (currentMedia.length > 0) {
     const oldPaths = currentMedia.map(m => m.path).filter(Boolean);
     if (oldPaths.length > 0) await supabase.storage.from('room-media').remove(oldPaths);

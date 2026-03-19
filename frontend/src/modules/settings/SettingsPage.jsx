@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import HotelConfig    from './components/HotelConfig';
+import BillingPanel   from './components/BillingPanel';
 import UserManagement from './components/UserManagement';
 import RoleManager    from './components/RoleManager';
 import WebsitePanel   from './components/WebsitePanel';
 import PageHeader     from '../../components/shared/PageHeader';
-import { Settings, Users, Shield, Globe } from 'lucide-react';
+import { Settings, Users, Shield, Globe, CreditCard } from 'lucide-react';
 
 const TABS = [
   { key: 'hotel',   label: 'Hotel Config', icon: Settings },
   { key: 'website', label: 'Website',      icon: Globe    },
   { key: 'users',   label: 'Users',        icon: Users    },
   { key: 'roles',   label: 'Roles',        icon: Shield   },
+  { key: 'billing', label: 'Billing',      icon: CreditCard },
 ];
 
 export default function SettingsPage() {
@@ -76,6 +78,7 @@ export default function SettingsPage() {
           {tab === 'website' && <WebsitePanel />}
           {tab === 'users'   && <UserManagement />}
           {tab === 'roles'   && <RoleManager />}
+          {tab === 'billing' && <BillingPanel />}
         </div>
       </div>
     </div>

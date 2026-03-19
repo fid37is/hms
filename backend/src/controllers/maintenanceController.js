@@ -59,9 +59,16 @@ export const startWorkOrder = async (req, res, next) => {
 
 export const resolveWorkOrder = async (req, res, next) => {
   try {
-    const data = await maintenanceService.resolveWorkOrder(req.orgId, req.params.id, req.body.resolution, req.body.cost);
+    const data = await maintenanceService.resolveWorkOrder(req.orgId, req.params.id, req.body.resolution, req.body.cost, req.body.room_status_after);
     return sendSuccess(res, data, 'Work order resolved.');
   } catch (err) { next(err); }
+};
+
+export const reopenWorkOrder = async (req, res, next) => {
+  try {
+    const data = await maintenanceService.reopenWorkOrder(req.orgId, req.params.id, req.body.reason);
+    return sendSuccess(res, data, 'Work order reopened.');
+  } catch (e) { next(e); }
 };
 
 export const closeWorkOrder = async (req, res, next) => {

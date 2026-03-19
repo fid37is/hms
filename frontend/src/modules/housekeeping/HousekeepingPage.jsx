@@ -1,22 +1,27 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import * as hkApi     from '../../lib/api/housekeepingApi';
-import Modal          from '../../components/shared/Modal';
-import LoadingSpinner from '../../components/shared/LoadingSpinner';
-import TaskBoard      from './components/TaskBoard';
-import TaskForm       from './components/TaskForm';
-import LostFoundPanel from './components/LostFoundPanel';
+import SlidePanel            from '../../components/shared/SlidePanel';
+import { usePanelLayout }    from '../../hooks/usePanelLayout';
+import { useSubscriptionGate }   from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall       from '../../components/shared/SubscriptionPaywall';
+import LoadingSpinner        from '../../components/shared/LoadingSpinner';
+import * as hkApi            from '../../lib/api/housekeepingApi';
+import TaskBoard             from './components/TaskBoard';
+import TaskForm              from './components/TaskForm';
+import LostFoundPanel        from './components/LostFoundPanel';
+import LostFoundForm         from './components/LostFoundForm';
 import toast from 'react-hot-toast';
 
 const TABS = ['Tasks', 'Lost & Found'];
 
 export default function HousekeepingPage() {
-  const qc = useQueryClient();
-  const [tab,            setTab]            = useState('Tasks');
-  const [showForm,       setShowForm]       = useState(false);
-  const [editTask,       setEditTask]       = useState(null);
-  const [lostFoundOpen,  setLostFoundOpen]  = useState(false);
+  // ── All hooks before any early returns (Rules of Hooks) ────────────────────
+  const { isLocked }  = useSubscriptionGate();
+  const qc            = useQueryClient();
+  const [panel, setPanel] = useState(null);
+  const [tab,   setTab]   = useState('Tasks');
+  const { contentStyle }  = usePanelLayout(!!panel);
 
   const { data, isLoading } = useQuery({
     queryKey: ['hk-tasks'],
@@ -26,77 +31,96 @@ export default function HousekeepingPage() {
 
   const startTask = useMutation({
     mutationFn: (id) => hkApi.startTask(id),
-    onSuccess: () => qc.invalidateQueries(['hk-tasks']),
+    onSuccess:  () => qc.invalidateQueries(['hk-tasks']),
+    onError:    (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   const completeTask = useMutation({
     mutationFn: (id) => hkApi.completeTask(id, {}),
-    onSuccess: () => { qc.invalidateQueries(['hk-tasks']); toast.success('Task completed'); },
+    onSuccess: () => {
+      toast.success('Room marked as available');
+      qc.invalidateQueries(['hk-tasks']);
+      qc.invalidateQueries(['rooms']);
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
+  // ── Early return after all hooks ───────────────────────────────────────────
+  if (isLocked) return <SubscriptionPaywall />;
+
+  const openPanel  = (type, data = null) => setPanel({ type, data });
+  const closePanel = () => setPanel(null);
+  const panelOpen  = !!panel;
+
+  const panelTitle = {
+    'new-task':  'New Task',
+    'edit-task': 'Edit Task',
+    'log-item':  'Log Lost Item',
+  }[panel?.type] || '';
+
+  const panelContent = () => {
+    if (!panel) return null;
+    if (panel.type === 'log-item')  return <LostFoundForm onSuccess={closePanel} onClose={closePanel} />;
+    if (panel.type === 'new-task')  return <TaskForm onSuccess={() => { closePanel(); qc.invalidateQueries(['hk-tasks']); }} onClose={closePanel} />;
+    if (panel.type === 'edit-task') return <TaskForm task={panel.data} onSuccess={() => { closePanel(); qc.invalidateQueries(['hk-tasks']); }} onClose={closePanel} />;
+    return null;
+  };
+
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', gap: 0, position: 'relative' }}>
 
-      {/* Tabs + action button on same row */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="overflow-x-auto pb-1">
-          <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className="px-4 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
-                style={{
-                  backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent',
-                  color:           tab === t ? 'var(--text-base)'  : 'var(--text-muted)',
-                  boxShadow:       tab === t ? 'var(--shadow-xs)'  : 'none',
-                }}>
-                {t}
+      <div style={{ flex: 1, minWidth: 0, ...contentStyle }}>
+        <div className="space-y-4">
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+              {TABS.map(t => (
+                <button key={t} onClick={() => { setTab(t); closePanel(); }}
+                  className="px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent',
+                    color:           tab === t ? 'var(--text-base)'  : 'var(--text-muted)',
+                    boxShadow:       tab === t ? 'var(--shadow-xs)'  : 'none',
+                  }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div style={{ flex: 1 }} />
+            {tab === 'Tasks' && !panelOpen && (
+              <button onClick={() => openPanel('new-task')} className="btn-primary text-xs flex-shrink-0">
+                <Plus size={14} /> Task
               </button>
-            ))}
+            )}
+            {tab === 'Lost & Found' && !panelOpen && (
+              <button onClick={() => openPanel('log-item')} className="btn-primary text-xs flex-shrink-0">
+                <Plus size={14} /> Log Item
+              </button>
+            )}
           </div>
-        </div>
 
-        {tab === 'Tasks' && (
-          <button
-            onClick={() => { setEditTask(null); setShowForm(true); }}
-            className="btn-primary text-xs flex-shrink-0"
-          >
-            <Plus size={14} /> Task
-          </button>
-        )}
-        {tab === 'Lost & Found' && (
-          <button
-            onClick={() => setLostFoundOpen(true)}
-            className="btn-primary text-xs flex-shrink-0"
-          >
-            <Plus size={14} /> Log Item
-          </button>
-        )}
+          {/* Tasks tab */}
+          {tab === 'Tasks' && (
+            isLoading
+              ? <LoadingSpinner center />
+              : <TaskBoard
+                  tasks={data || []}
+                  onStart={id => startTask.mutate(id)}
+                  onComplete={id => completeTask.mutate(id)}
+                  onEdit={task => openPanel('edit-task', task)}
+                />
+          )}
+
+          {/* Lost & Found tab */}
+          {tab === 'Lost & Found' && <LostFoundPanel />}
+
+        </div>
       </div>
 
-      {tab === 'Tasks' && (
-        isLoading
-          ? <LoadingSpinner center />
-          : <TaskBoard
-              tasks={data || []}
-              onStart={id => startTask.mutate(id)}
-              onComplete={id => completeTask.mutate(id)}
-              onEdit={task => { setEditTask(task); setShowForm(true); }}
-            />
-      )}
-
-      {tab === 'Lost & Found' && (
-        <LostFoundPanel
-          openForm={lostFoundOpen}
-          onFormClose={() => setLostFoundOpen(false)}
-        />
-      )}
-
-      <Modal open={showForm} onClose={() => setShowForm(false)} title={editTask ? 'Edit Task' : 'New Task'}>
-        <TaskForm
-          task={editTask}
-          onSuccess={() => { setShowForm(false); qc.invalidateQueries(['hk-tasks']); }}
-        />
-      </Modal>
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        {panelContent()}
+      </SlidePanel>
     </div>
   );
 }

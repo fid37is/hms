@@ -38,7 +38,7 @@ const BLANK = () => ({
   notes:            '',
 });
 
-export default function AssetForm({ asset, onSuccess }) {
+export default function AssetForm({ asset, onSuccess, onClose }) {
   const isEdit = !!asset;
   const qc = useQueryClient();
 
@@ -186,7 +186,8 @@ export default function AssetForm({ asset, onSuccess }) {
           value={form.notes} onChange={handleChange} />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button type="submit" disabled={save.isPending} className="btn-primary">
           {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Asset'}
         </button>

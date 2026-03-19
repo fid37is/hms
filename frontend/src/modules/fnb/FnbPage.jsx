@@ -1,62 +1,66 @@
 // src/frontend/src/modules/fnb/FnbPage.jsx
 import { useState } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout } from '../../hooks/usePanelLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, X, UtensilsCrossed, ChevronRight } from 'lucide-react';
 import * as fnbApi from '../../lib/api/fnbApi';
-import DataTable   from '../../components/shared/DataTable';
+import DataTable from '../../components/shared/DataTable';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { formatCurrency, formatDateTime } from '../../utils/format';
 import toast from 'react-hot-toast';
 
 const TABS = ['Orders', 'Tables', 'Menu', 'Outlets'];
 
+
 const TABLE_STATUS_COLORS = {
   available: 'var(--s-green-text)',
-  occupied:  'var(--s-red-text)',
-  reserved:  'var(--s-yellow-text)',
-  closed:    'var(--text-muted)',
+  occupied: 'var(--s-red-text)',
+  reserved: 'var(--s-yellow-text)',
+  closed: 'var(--text-muted)',
 };
 
-const ORDER_STATUS_STEPS = ['open','sent','preparing','ready','served','billed'];
+const ORDER_STATUS_STEPS = ['open', 'sent', 'preparing', 'ready', 'served', 'billed'];
 
 export default function FnbPage() {
   const qc = useQueryClient();
-  const [tab,           setTab]           = useState('Orders');
-  const [panel,         setPanel]         = useState(null);
+  const [tab, setTab] = useState('Orders');
+  const [panel, setPanel] = useState(null);
+  const { contentStyle } = usePanelLayout(!!panel);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [orderFilter,   setOrderFilter]   = useState('');
-  const [activeOutlet,  setActiveOutlet]  = useState('');
+  const [orderFilter, setOrderFilter] = useState('');
+  const [activeOutlet, setActiveOutlet] = useState('');
 
   const closePanel = () => { setPanel(null); setSelectedOrder(null); };
 
   // ── Queries ──────────────────────────────────────────────
-  const { data: outlets }  = useQuery({ queryKey: ['fnb-outlets'],  queryFn: () => fnbApi.getOutlets().then(r => r.data.data) });
-  const { data: tables, isLoading: tablesLoading } = useQuery({ queryKey: ['fnb-tables', activeOutlet],  queryFn: () => fnbApi.getTables(activeOutlet ? { outlet_id: activeOutlet } : {}).then(r => r.data.data), enabled: tab === 'Tables' });
-  const { data: menuItems, isLoading: menuLoading } = useQuery({ queryKey: ['fnb-menu', activeOutlet],   queryFn: () => fnbApi.getMenu(activeOutlet ? { outlet_id: activeOutlet } : {}).then(r => r.data.data),   enabled: tab === 'Menu' });
+  const { data: outlets } = useQuery({ queryKey: ['fnb-outlets'], queryFn: () => fnbApi.getOutlets().then(r => r.data.data) });
+  const { data: tables, isLoading: tablesLoading } = useQuery({ queryKey: ['fnb-tables', activeOutlet], queryFn: () => fnbApi.getTables(activeOutlet ? { outlet_id: activeOutlet } : {}).then(r => r.data.data), enabled: tab === 'Tables' });
+  const { data: menuItems, isLoading: menuLoading } = useQuery({ queryKey: ['fnb-menu', activeOutlet], queryFn: () => fnbApi.getMenu(activeOutlet ? { outlet_id: activeOutlet } : {}).then(r => r.data.data), enabled: tab === 'Menu' });
   const { data: categories } = useQuery({ queryKey: ['fnb-categories'], queryFn: () => fnbApi.getCategories({}).then(r => r.data.data) });
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['fnb-orders', orderFilter, activeOutlet],
-    queryFn:  () => fnbApi.getOrders({ ...(orderFilter ? { status: orderFilter } : {}), ...(activeOutlet ? { outlet_id: activeOutlet } : {}) }).then(r => r.data.data),
+    queryFn: () => fnbApi.getOrders({ ...(orderFilter ? { status: orderFilter } : {}), ...(activeOutlet ? { outlet_id: activeOutlet } : {}) }).then(r => r.data.data),
     enabled: tab === 'Orders',
   });
 
   // ── Panel content ─────────────────────────────────────────
   const panelTitle = {
-    'new-order':    'New Order',
-    'view-order':   selectedOrder ? `Order ${selectedOrder.order_no || ''}` : 'Order',
-    'new-menu':     'Add Menu Item',
-    'new-outlet':   'Add Outlet',
-    'new-table':    'Add Table',
+    'new-order': 'New Order',
+    'view-order': selectedOrder ? `Order ${selectedOrder.order_no || ''}` : 'Order',
+    'new-menu': 'Add Menu Item',
+    'new-outlet': 'Add Outlet',
+    'new-table': 'Add Table',
   }[panel] || '';
 
   // ── Order columns ─────────────────────────────────────────
   const orderColumns = [
     { key: 'order_no', label: 'Order #', render: r => <span className="font-mono text-xs font-semibold" style={{ color: 'var(--brand)' }}>{r.order_no || '—'}</span> },
-    { key: 'outlet',   label: 'Outlet',  render: r => r.fnb_outlets?.name || '—' },
-    { key: 'table',    label: 'Table',   render: r => r.fnb_tables?.number ? `Table ${r.fnb_tables.number}` : '—' },
-    { key: 'total',    label: 'Total',   render: r => formatCurrency(r.total || 0) },
-    { key: 'opened',   label: 'Opened',  render: r => formatDateTime(r.created_at) },
-    { key: 'status',   label: 'Status',  render: r => <StatusBadge status={r.status} /> },
+    { key: 'outlet', label: 'Outlet', render: r => r.fnb_outlets?.name || '—' },
+    { key: 'table', label: 'Table', render: r => r.fnb_tables?.number ? `Table ${r.fnb_tables.number}` : '—' },
+    { key: 'total', label: 'Total', render: r => formatCurrency(r.total || 0) },
+    { key: 'opened', label: 'Opened', render: r => formatDateTime(r.created_at) },
+    { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
   ];
 
   // ── Table grid ────────────────────────────────────────────
@@ -81,7 +85,8 @@ export default function FnbPage() {
 
   // ── Menu list ─────────────────────────────────────────────
   const menuColumns = [
-    { key: 'name',     label: 'Item',     render: r => (
+    {
+      key: 'name', label: 'Item', render: r => (
         <div>
           <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{r.name}</p>
           {r.description && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.description}</p>}
@@ -89,8 +94,8 @@ export default function FnbPage() {
       )
     },
     { key: 'category', label: 'Category', render: r => r.fnb_categories?.name || '—' },
-    { key: 'price',    label: 'Price',    render: r => formatCurrency(r.price) },
-    { key: 'status',   label: 'Status',   render: r => <StatusBadge status={r.status} /> },
+    { key: 'price', label: 'Price', render: r => formatCurrency(r.price) },
+    { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
   ];
 
   // ── Forms (inline in panel) ───────────────────────────────
@@ -181,17 +186,17 @@ export default function FnbPage() {
     };
 
     const nextStatus = ORDER_STATUS_STEPS[ORDER_STATUS_STEPS.indexOf(order.status) + 1];
-    const isActive = !['billed','cancelled'].includes(order.status);
+    const isActive = !['billed', 'cancelled'].includes(order.status);
 
     return (
       <div className="space-y-5">
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            ['Outlet',  order.fnb_outlets?.name || '—'],
-            ['Table',   order.fnb_tables?.number ? `Table ${order.fnb_tables.number}` : '—'],
-            ['Status',  <StatusBadge status={order.status} />],
-            ['Total',   formatCurrency(order.total || 0)],
+            ['Outlet', order.fnb_outlets?.name || '—'],
+            ['Table', order.fnb_tables?.number ? `Table ${order.fnb_tables.number}` : '—'],
+            ['Status', <StatusBadge status={order.status} />],
+            ['Total', formatCurrency(order.total || 0)],
           ].map(([l, v]) => (
             <div key={l}><p className="label mb-0.5">{l}</p><p className="text-sm" style={{ color: 'var(--text-sub)' }}>{v}</p></div>
           ))}
@@ -239,7 +244,7 @@ export default function FnbPage() {
                 </div>
                 <div className="col-span-1 flex justify-center">
                   {items.length > 1 && (
-                    <button type="button" onClick={() => setItems(p => p.filter((_,idx) => idx !== i))}
+                    <button type="button" onClick={() => setItems(p => p.filter((_, idx) => idx !== i))}
                       className="btn-ghost p-1" style={{ color: 'var(--s-red-text)' }}>
                       <X size={13} />
                     </button>
@@ -349,7 +354,7 @@ export default function FnbPage() {
         <div className="form-group">
           <label className="label">Type</label>
           <select className="input" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
-            {['restaurant','bar','room_service','cafe','other'].map(t => <option key={t} value={t} className="capitalize">{t.replace('_',' ')}</option>)}
+            {['restaurant', 'bar', 'room_service', 'cafe', 'other'].map(t => <option key={t} value={t} className="capitalize">{t.replace('_', ' ')}</option>)}
           </select>
         </div>
         <div className="form-group">
@@ -397,102 +402,104 @@ export default function FnbPage() {
   };
 
   const panelContent = () => {
-    if (panel === 'new-order')  return <NewOrderForm />;
+    if (panel === 'new-order') return <NewOrderForm />;
     if (panel === 'view-order' && selectedOrder) return <OrderDetail order={selectedOrder} />;
-    if (panel === 'new-menu')   return <NewMenuItemForm />;
+    if (panel === 'new-menu') return <NewMenuItemForm />;
     if (panel === 'new-outlet') return <NewOutletForm />;
-    if (panel === 'new-table')  return <NewTableForm />;
+    if (panel === 'new-table') return <NewTableForm />;
     return null;
   };
 
   const tabAction = () => {
-    if (tab === 'Orders')  return <button onClick={() => setPanel('new-order')}  className="btn-primary text-xs"><Plus size={14}/> New Order</button>;
-    if (tab === 'Menu')    return <button onClick={() => setPanel('new-menu')}   className="btn-primary text-xs"><Plus size={14}/> Add Item</button>;
-    if (tab === 'Outlets') return <button onClick={() => setPanel('new-outlet')} className="btn-primary text-xs"><Plus size={14}/> Add Outlet</button>;
-    if (tab === 'Tables')  return <button onClick={() => setPanel('new-table')}  className="btn-primary text-xs"><Plus size={14}/> Add Table</button>;
+    if (panel) return null;
+    if (tab === 'Orders') return <button onClick={() => setPanel('new-order')} className="btn-primary text-xs"><Plus size={14} /> New Order</button>;
+    if (tab === 'Menu') return <button onClick={() => setPanel('new-menu')} className="btn-primary text-xs"><Plus size={14} /> Add Item</button>;
+    if (tab === 'Outlets') return <button onClick={() => setPanel('new-outlet')} className="btn-primary text-xs"><Plus size={14} /> Add Outlet</button>;
+    if (tab === 'Tables') return <button onClick={() => setPanel('new-table')} className="btn-primary text-xs"><Plus size={14} /> Add Table</button>;
   };
 
-  const ORDER_FILTERS = ['','open','sent','preparing','ready','served','billed','cancelled'];
+  const ORDER_FILTERS = ['', 'open', 'sent', 'preparing', 'ready', 'served', 'billed', 'cancelled'];
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 min-w-0 space-y-4">
-        {/* Tabs + action */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => { setTab(t); closePanel(); }}
-                className="px-4 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
-                style={{ backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent', color: tab === t ? 'var(--text-base)' : 'var(--text-muted)', boxShadow: tab === t ? 'var(--shadow-xs)' : 'none' }}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div style={{ flex: 1 }} />
-          {tabAction()}
-
-          {(outlets || []).length > 0 && (
-            <select className="input text-xs py-1 w-auto" value={activeOutlet} onChange={e => setActiveOutlet(e.target.value)}>
-              <option value="">All Outlets</option>
-              {(outlets || []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-          )}
-        </div>
-
-        {/* Orders tab */}
-        {tab === 'Orders' && (
-          <>
-            <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-              {ORDER_FILTERS.map(f => (
-                <button key={f || 'all'} onClick={() => setOrderFilter(f)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md capitalize whitespace-nowrap"
-                  style={{ backgroundColor: orderFilter === f ? 'var(--bg-surface)' : 'transparent', color: orderFilter === f ? 'var(--text-base)' : 'var(--text-muted)', boxShadow: orderFilter === f ? 'var(--shadow-xs)' : 'none' }}>
-                  {f || 'All'}
+    <div style={{ display: 'flex', gap: 0, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        flex: 1, minWidth: 0,
+        ...contentStyle,
+      }}>
+        <div className="space-y-4">
+          {/* Tabs + action */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+              {TABS.map(t => (
+                <button key={t} onClick={() => { setTab(t); closePanel(); }}
+                  className="px-4 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap"
+                  style={{ backgroundColor: tab === t ? 'var(--bg-surface)' : 'transparent', color: tab === t ? 'var(--text-base)' : 'var(--text-muted)', boxShadow: tab === t ? 'var(--shadow-xs)' : 'none' }}>
+                  {t}
                 </button>
               ))}
             </div>
-            <DataTable columns={orderColumns} data={ordersData || []} loading={ordersLoading}
-              emptyTitle="No orders" onRowClick={r => { setSelectedOrder(r); setPanel('view-order'); }} />
-          </>
-        )}
+            <div style={{ flex: 1 }} />
+            {tabAction()}
 
-        {/* Tables tab */}
-        {tab === 'Tables' && <TableGrid />}
-
-        {/* Menu tab */}
-        {tab === 'Menu' && (
-          <DataTable columns={menuColumns} data={menuItems || []} loading={menuLoading} emptyTitle="No menu items" />
-        )}
-
-        {/* Outlets tab */}
-        {tab === 'Outlets' && (
-          <div className="space-y-2">
-            {(outlets || []).map(o => (
-              <div key={o.id} className="card px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{o.name}</p>
-                  <p className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{o.type.replace('_',' ')}</p>
-                </div>
-                <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
-              </div>
-            ))}
-            {(outlets || []).length === 0 && (
-              <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>No outlets created yet — add your first outlet to get started.</p>
+            {(outlets || []).length > 0 && (
+              <select className="input text-xs py-1 w-auto" value={activeOutlet} onChange={e => setActiveOutlet(e.target.value)}>
+                <option value="">All Outlets</option>
+                {(outlets || []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Slide panel */}
-      {panel && (
-        <div className="flex-shrink-0 border-l" style={{ width: '480px', backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-base)', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border-base)' }}>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h3>
-            <button onClick={closePanel} className="btn-ghost p-1.5 rounded-lg"><X size={16} /></button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-5">{panelContent()}</div>
+          {/* Orders tab */}
+          {tab === 'Orders' && (
+            <>
+              <div className="flex gap-1 p-1 rounded-lg w-max" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                {ORDER_FILTERS.map(f => (
+                  <button key={f || 'all'} onClick={() => setOrderFilter(f)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-md capitalize whitespace-nowrap"
+                    style={{ backgroundColor: orderFilter === f ? 'var(--bg-surface)' : 'transparent', color: orderFilter === f ? 'var(--text-base)' : 'var(--text-muted)', boxShadow: orderFilter === f ? 'var(--shadow-xs)' : 'none' }}>
+                    {f || 'All'}
+                  </button>
+                ))}
+              </div>
+              <DataTable columns={orderColumns} data={ordersData || []} loading={ordersLoading}
+                emptyTitle="No orders" onRowClick={r => { setSelectedOrder(r); setPanel('view-order'); }} />
+            </>
+          )}
+
+          {/* Tables tab */}
+          {tab === 'Tables' && <TableGrid />}
+
+          {/* Menu tab */}
+          {tab === 'Menu' && (
+            <DataTable columns={menuColumns} data={menuItems || []} loading={menuLoading} emptyTitle="No menu items" />
+          )}
+
+          {/* Outlets tab */}
+          {tab === 'Outlets' && (
+            <div className="space-y-2">
+              {(outlets || []).map(o => (
+                <div key={o.id} className="card px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-base)' }}>{o.name}</p>
+                    <p className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{o.type.replace('_', ' ')}</p>
+                  </div>
+                  <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              ))}
+              {(outlets || []).length === 0 && (
+                <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>No outlets created yet — add your first outlet to get started.</p>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+
+        {/* Mobile backdrop */}
+        {/* Slide-in panel */}
+        <SlidePanel open={panel} onClose={closePanel} title={panelTitle}>
+          {panelContent()}
+        </SlidePanel>
+      </div>
     </div>
   );
 }

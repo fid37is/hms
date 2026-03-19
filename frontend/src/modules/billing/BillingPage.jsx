@@ -12,8 +12,13 @@ import PaymentForm from './components/PaymentForm';
 import AddChargeForm from './components/AddChargeForm';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/format';
 import toast from 'react-hot-toast';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 export default function BillingPage() {
+  const { isLocked } = useSubscriptionGate();
+  if (isLocked) return <SubscriptionPaywall />;
+
   const navigate   = useNavigate();
   const qc         = useQueryClient();
   const [page,     setPage]     = useState(1);

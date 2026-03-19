@@ -60,6 +60,13 @@ export const login = async (email, password) => {
     permissions,
   };
 
+  // Fetch org subscription status for frontend gate
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('subscription_status, trial_ends_at, name')
+    .eq('id', orgId)
+    .maybeSingle();
+
   return {
     access_token:  generateAccessToken(tokenPayload),
     refresh_token: generateRefreshToken({ sub: user.id, org_id: orgId }),
@@ -74,6 +81,12 @@ export const login = async (email, password) => {
       department:  user.department,
       permissions,
       must_change_password: user.must_change_password || false,
+    },
+    org: {
+      id:                  orgId,
+      name:                orgData?.name,
+      subscription_status: orgData?.subscription_status || 'trial',
+      trial_ends_at:       orgData?.trial_ends_at || null,
     },
   };
 };
@@ -127,7 +140,14 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
   // 3. Create organization
   const { data: org, error: orgError } = await supabase
     .from('organizations')
-    .insert({ name: org_name, slug, plan: 'trial', status: 'active' })
+    .insert({
+      name:                org_name,
+      slug,
+      plan:                'trial',
+      status:              'active',
+      subscription_status: 'trial',
+      trial_ends_at:       new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    })
     .select().single();
   if (orgError) throw new AppError('Failed to create organization.', 500);
 

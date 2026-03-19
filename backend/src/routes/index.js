@@ -20,6 +20,7 @@ import fnbRoutes              from './fnbRoutes.js';
 import notificationRoutes     from './notificationRoutes.js';
 import nightAuditRoutes       from './nightAuditRoutes.js';
 import eventRoutes            from './eventRoutes.js';
+import subscriptionRoutes    from './subscriptionRoutes.js';
 
 const router = Router();
 
@@ -27,6 +28,8 @@ const router = Router();
 router.use('/public',           publicRoutes);
 
 // ─── Authenticated (JWT required) ─────────────────────────────────────────────
+// authenticate + subscriptionGate are applied per-route inside each route file.
+// Do NOT add them globally here — /auth/login must remain unauthenticated.
 router.use('/auth',             authRoutes);
 router.use('/chat-departments', chatDepartmentRoutes);
 router.use('/conversations',    conversationRoutes);
@@ -45,5 +48,6 @@ router.use('/fnb',              fnbRoutes);
 router.use('/notifications',    notificationRoutes);
 router.use('/night-audit',      nightAuditRoutes);
 router.use('/events',           eventRoutes);
+router.use('/subscriptions',    subscriptionRoutes);
 
 export default router;

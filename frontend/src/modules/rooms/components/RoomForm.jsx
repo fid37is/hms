@@ -69,7 +69,7 @@ function SavedThumb({ item, onDelete, deleting }) {
   );
 }
 
-export default function RoomForm({ room, types = [], onSuccess }) {
+export default function RoomForm({ room, types = [], onSuccess, onClose }) {
   const isEdit = !!room;
   const qc     = useQueryClient();
   const inputRef = useRef();
@@ -284,16 +284,19 @@ export default function RoomForm({ room, types = [], onSuccess }) {
       </div>
 
       {/* Single submit button */}
-      <button type="submit" disabled={uploading} className="btn-primary w-full justify-center py-2.5">
-        {uploading ? (
-          <span className="flex items-center gap-2">
-            <Loader2 size={15} className="animate-spin" />
-            {staged.length > 0 ? `Saving & uploading ${staged.length} file${staged.length !== 1 ? 's' : ''}…` : 'Saving…'}
-          </span>
-        ) : (
-          isEdit ? 'Save Changes' : 'Create Room'
-        )}
-      </button>
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+        <button type="submit" disabled={uploading} className="btn-primary">
+          {uploading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 size={15} className="animate-spin" />
+              {staged.length > 0 ? `Saving & uploading ${staged.length} file${staged.length !== 1 ? 's' : ''}…` : 'Saving…'}
+            </span>
+          ) : (
+            isEdit ? 'Save Changes' : 'Create Room'
+          )}
+        </button>
+      </div>
     </form>
   );
 }

@@ -3,7 +3,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar    from './Sidebar';
 import BottomNav  from './BottomNav';
 import Header     from './Header';
-import { useUIStore } from '../../store/uiStore';
+import { useUIStore }   from '../../store/uiStore';
+import TrialBanner     from '../shared/TrialBanner';
 
 export default function AppShell() {
   const { sidebarOpen, setSidebar } = useUIStore();
@@ -46,6 +47,7 @@ export default function AppShell() {
       {/* ── Main content — takes remaining flex space ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />
+        <TrialBanner />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 page-enter">
           <Outlet />
         </main>

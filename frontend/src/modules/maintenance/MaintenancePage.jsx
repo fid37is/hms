@@ -1,7 +1,9 @@
 // src/modules/maintenance/MaintenancePage.jsx
 import { useState, useRef, useEffect } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, AlertTriangle, X, ChevronDown } from 'lucide-react';
+import { Plus, AlertTriangle, ChevronDown } from 'lucide-react';
 import * as maintApi      from '../../lib/api/maintenanceApi';
 import DataTable          from '../../components/shared/DataTable';
 import StatusBadge        from '../../components/shared/StatusBadge';
@@ -11,7 +13,8 @@ import AssetForm          from './components/AssetForm';
 import { formatDate }     from '../../utils/format';
 import toast              from 'react-hot-toast';
 
-const TABS = ['Work Orders', 'Assets'];
+const TABS        = ['Work Orders', 'Assets'];
+
 const STATUS_FILTERS = [
   { label: 'All statuses', value: '' },
   { label: 'Open',         value: 'open' },
@@ -71,7 +74,7 @@ function StatusDropdown({ value, onChange }) {
 }
 
 export default function MaintenancePage() {
-  const qc = useQueryClient();
+  const qc       = useQueryClient();
   const [tab,          setTab]          = useState('Work Orders');
   const [status,       setStatus]       = useState('');
   const [panel,        setPanel]        = useState(null);
@@ -148,17 +151,25 @@ export default function MaintenancePage() {
 
   const panelTitle = { 'new-wo':'New Work Order', 'view-wo':'Work Order Detail', 'new-asset':'Add Asset', 'edit-asset':'Edit Asset' }[panel];
   const panelContent = () => {
-    if (panel === 'new-wo')     return <WorkOrderForm onSuccess={() => { closePanel(); qc.invalidateQueries(['work-orders']); }} />;
+    if (panel === 'new-wo')     return <WorkOrderForm onSuccess={() => { closePanel(); qc.invalidateQueries(['work-orders']); }} onClose={closePanel} />;
     if (panel === 'view-wo')    return selectedWO    ? <WorkOrderDetail workOrder={selectedWO} onClose={closePanel} /> : null;
-    if (panel === 'new-asset')  return <AssetForm onSuccess={closePanel} />;
-    if (panel === 'edit-asset') return selectedAsset ? <AssetForm asset={selectedAsset} onSuccess={closePanel} /> : null;
+    if (panel === 'new-asset')  return <AssetForm onSuccess={closePanel} onClose={closePanel} />;
+    if (panel === 'edit-asset') return selectedAsset ? <AssetForm asset={selectedAsset} onSuccess={closePanel} onClose={closePanel} /> : null;
     return null;
   };
 
+  const panelOpen = !!panel;
+  const { contentStyle } = usePanelLayout(panelOpen);
+
   return (
-    <div className="flex h-full">
+    <div style={{ display: 'flex', gap: 0, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
+
       {/* Main content */}
-      <div className="flex-1 min-w-0 space-y-4">
+      <div style={{
+        flex: 1, minWidth: 0,
+        ...contentStyle,
+      }}>
+        <div className="space-y-4">
 
         {/* ── Toolbar: tabs + filter + action in one row ── */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -186,10 +197,10 @@ export default function MaintenancePage() {
           <div style={{ flex: 1 }} />
 
           {/* Action button */}
-          {tab === 'Work Orders'
+          {!panelOpen && (tab === 'Work Orders'
             ? <button onClick={() => setPanel('new-wo')}    className="btn-primary text-xs"><Plus size={14} /> New WO</button>
             : <button onClick={() => setPanel('new-asset')} className="btn-primary text-xs"><Plus size={14} /> Add Asset</button>
-          }
+          )}
         </div>
 
         {/* ── Table ── */}
@@ -206,19 +217,12 @@ export default function MaintenancePage() {
             emptyTitle="No assets registered"
           />
         )}
+        </div>
       </div>
 
-      {/* ── Slide panel ── */}
-      {panel && (
-        <div className="flex-shrink-0 border-l"
-          style={{ width: '480px', backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-base)', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border-base)' }}>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h3>
-            <button onClick={closePanel} className="btn-ghost p-1.5 rounded-lg"><X size={16} /></button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-5">{panelContent()}</div>
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        {panelContent()}
+      </SlidePanel>
     </div>
   );
 }

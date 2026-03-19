@@ -2,6 +2,17 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import AppShell from './components/layout/AppShell';
+// Super-Admin module
+import SuperAdminLoginPage       from './modules/superAdmin/SuperAdminLoginPage';
+import SuperAdminShell           from './modules/superAdmin/SuperAdminShell';
+import OverviewPage              from './modules/superAdmin/OverviewPage';
+import OrganizationsPage         from './modules/superAdmin/OrganizationsPage';
+import OrganizationDetailPage    from './modules/superAdmin/OrganizationDetailPage';
+import ActivityPage              from './modules/superAdmin/ActivityPage';
+import SystemPage                     from './modules/superAdmin/SystemPage';
+import FinancialsPage                from './modules/superAdmin/FinancialsPage';
+import SuperAdminForgotPasswordPage  from './modules/superAdmin/SuperAdminForgotPasswordPage';
+import SuperAdminResetPasswordPage   from './modules/superAdmin/SuperAdminResetPasswordPage';
 
 // Pages
 import LandingPage             from './pages/LandingPage';
@@ -13,6 +24,7 @@ import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import OnboardingPage          from './pages/OnboardingPage';
 import DashboardPage           from './pages/DashboardPage';
 import NotFoundPage            from './pages/NotFoundPage';
+import BillingCallbackPage     from './pages/BillingCallbackPage';
 import TermsPage               from './pages/TermsPage';
 import PrivacyPage             from './pages/PrivacyPage';
 
@@ -133,7 +145,21 @@ export default function App() {
         </Route>
 
         {/* Full-screen customizer — protected but no AppShell */}
-        <Route path="/settings/customize" element={<Guard><CustomizePage /></Guard>} />
+        <Route path="/settings/customize"   element={<Guard><CustomizePage /></Guard>} />
+        <Route path="/billing/callback"      element={<Guard><BillingCallbackPage /></Guard>} />
+
+        {/* Super-Admin Console — completely separate from tenant auth */}
+        <Route path="/super-admin/login"            element={<SuperAdminLoginPage />} />
+        <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPasswordPage />} />
+        <Route path="/super-admin/reset-password"  element={<SuperAdminResetPasswordPage />} />
+        <Route path="/super-admin" element={<SuperAdminShell />}>
+          <Route index element={<OverviewPage />} />
+          <Route path="organizations" element={<OrganizationsPage />} />
+          <Route path="organizations/:orgId" element={<OrganizationDetailPage />} />
+          <Route path="financials" element={<FinancialsPage />} />
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="system"   element={<SystemPage />} />
+        </Route>
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

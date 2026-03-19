@@ -7,7 +7,9 @@ import { sendSuccess, sendCreated } from '../utils/response.js';
 
 export const register = async (req, res, next) => {
   try {
-    const data = await guestAccountService.register(req.body);
+    // Pass req.orgId so the guest row is scoped to the correct hotel,
+    // matching how booking-only guest rows are created in publicReservationController.
+    const data = await guestAccountService.register(req.body, req.orgId);
     return sendCreated(res, data, 'Account created successfully.');
   } catch (err) { next(err); }
 };
@@ -38,7 +40,7 @@ export const getMe = async (req, res, next) => {
       .from('guests')
       .select('id, full_name, email, phone, address, nationality, id_type, id_number, date_of_birth, preferences, category, loyalty_points')
       .eq('id', req.guest.sub)
-      .neq('is_deleted', true)   // treat NULL as not-deleted
+      .neq('is_deleted', true)
       .single();
 
     if (error || !guest) throw new AppError('Guest not found.', 404);

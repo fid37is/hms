@@ -21,7 +21,11 @@ import {
 
 // ─── Reservations ─────────────────────────────────────────────────────────────
 import { getReservationById } from '../controllers/reservationController.js';
-import { publicCreateReservation, publicCancelReservation } from '../controllers/publicReservationController.js';
+import {
+  publicCreateReservation,
+  publicCancelReservation,
+  lookupReservation,
+} from '../controllers/publicReservationController.js';
 
 // ─── Folio ────────────────────────────────────────────────────────────────────
 import { getFolioByReservation, getFolioSummary, addPayment } from '../controllers/folioController.js';
@@ -70,6 +74,7 @@ router.get('/rooms/types/:id',               rateLimiter, getRoomTypeById);
 router.get('/rooms/availability',            availabilityLimiter, validate(publicAvailabilitySchema, 'query'), getAvailableRooms);
 router.get('/rooms/:id',                     rateLimiter, getRoomById);
 router.post('/reservations',                 bookingLimiter, validate(publicCreateReservationSchema), publicCreateReservation);
+router.post('/reservations/lookup',          rateLimiter, lookupReservation);
 router.get('/chat-departments',              rateLimiter, getActiveDepartments);
 
 // =============================================================================

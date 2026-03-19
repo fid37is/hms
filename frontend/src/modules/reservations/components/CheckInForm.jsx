@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 const PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'mobile_money'];
 const today = () => new Date().toISOString().split('T')[0];
 
-export default function CheckInForm({ reservation: res, onSuccess }) {
+export default function CheckInForm({ reservation: res, onSuccess, onClose }) {
   const [roomId,        setRoomId]        = useState(res.rooms?.id || '');
   const [paymentMode,   setPaymentMode]   = useState('pay_later');
   const [paidAmount,    setPaidAmount]    = useState('');
@@ -43,10 +43,11 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
   const isDatesStale = res.check_in_date < today() || checkOutIsPast;
 
   const { data: availableRooms } = useQuery({
-    queryKey: ['rooms-available-checkin', effectiveCheckIn, checkOutDate],
+    queryKey: ['rooms-available-checkin', effectiveCheckIn, checkOutDate, res.room_type_id],
     queryFn:  () => roomApi.checkAvailability({
       check_in_date:  effectiveCheckIn,
       check_out_date: checkOutDate,
+      type_id:        res.room_type_id || undefined,
     }).then(r => r.data.data),
     enabled: !res.rooms?.id,
   });
@@ -88,6 +89,11 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
     });
   };
 
+  // Derive booked room type name — from assigned room, available rooms list, or reservation join
+  const bookedTypeName = res.rooms?.room_types?.name
+    || availableRooms?.[0]?.room_types?.name
+    || null;
+
   const selectedRoom = res.rooms?.id
     ? res.rooms
     : (availableRooms || []).find(r => r.id === roomId) || null;
@@ -116,7 +122,9 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
         {[
           ['Guest',       res.guests?.full_name],
           ['Reservation', res.reservation_no],
-          ['Room',        selectedRoom ? `Room ${selectedRoom.number}${selectedRoom.room_types?.name ? ` — ${selectedRoom.room_types.name}` : ''}` : '—'],
+          ['Room',        selectedRoom
+            ? `Room ${selectedRoom.number}${selectedRoom.room_types?.name ? ` — ${selectedRoom.room_types.name}` : ''}`
+            : bookedTypeName ? `${bookedTypeName} · unassigned` : '—'],
           ['Check-in',    formatDate(effectiveCheckIn)],
           ['Check-out',   formatDate(checkOutDate)],
           ['Duration',    `${nights} night${nights > 1 ? 's' : ''} @ ${formatCurrency(res.rate_per_night)}/night`],
@@ -150,15 +158,28 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
       {/* Room assignment */}
       {!res.rooms?.id && (
         <div className="form-group">
-          <label className="label">Assign Room *</label>
+          <label className="label">
+            Assign Room *
+            {bookedTypeName && (
+              <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}>
+                {bookedTypeName} only
+              </span>
+            )}
+          </label>
           <select className="input" value={roomId} onChange={e => setRoomId(e.target.value)} required>
             <option value="">Select room…</option>
             {(availableRooms || []).map(r => (
               <option key={r.id} value={r.id}>
-                Room {r.number} — {r.room_types?.name}
+                Room {r.number}{r.floor ? ` · Floor ${r.floor}` : ''} — {r.room_types?.name}
               </option>
             ))}
           </select>
+          {availableRooms?.length === 0 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--s-red-text)' }}>
+              No available rooms of the booked type for these dates
+            </p>
+          )}
         </div>
       )}
 
@@ -239,7 +260,8 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
         </span>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button onClick={handleCheckIn} disabled={isBusy || !canCheckIn}
           className="btn-primary">
           {isBusy ? 'Processing…' : 'Confirm Check-in'}

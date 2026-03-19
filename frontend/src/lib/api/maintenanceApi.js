@@ -7,6 +7,7 @@ export const assignWO         = (id, d)  => api.patch(`/maintenance/work-orders/
 export const startWO          = (id)     => api.patch(`/maintenance/work-orders/${id}/start`);
 export const resolveWO        = (id, d)  => api.patch(`/maintenance/work-orders/${id}/resolve`, d);
 export const closeWO          = (id)     => api.patch(`/maintenance/work-orders/${id}/close`);
+export const reopenWO         = (id, d)  => api.patch(`/maintenance/work-orders/${id}/reopen`, d);
 export const getAssets        = (params) => api.get('/maintenance/assets', { params });
 export const getAssetById     = (id)     => api.get(`/maintenance/assets/${id}`);
 export const getAssetsDue     = ()       => api.get('/maintenance/assets/due-for-service');

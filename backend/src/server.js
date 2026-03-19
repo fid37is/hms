@@ -2,6 +2,7 @@
 
 import { createServer } from 'http';
 import { seedPermissions } from './services/userService.js';
+import { initTrialJob }    from './jobs/trialJob.js';
 import app     from './app.js';
 import { env } from './config/env.js';
 import { initSocket } from './socket.js';
@@ -17,6 +18,9 @@ initSocket(httpServer, app);
 seedPermissions()
   .then(() => console.log('Permissions seeded.'))
   .catch(e  => console.error('Permission seed error:', e.message));
+
+// Start trial lifecycle job
+initTrialJob();
 
 httpServer.listen(PORT, () => {
   console.log('--------------------------------------------------');

@@ -4,7 +4,7 @@ import * as staffApi from '../../../lib/api/staffApi';
 import { useAuthStore } from '../../../store/authStore';
 import toast from 'react-hot-toast';
 
-export default function StaffForm({ staff, onSuccess }) {
+export default function StaffForm({ staff, onSuccess, onClose }) {
   const isEdit   = !!staff;
   const { user } = useAuthStore();
 
@@ -13,7 +13,7 @@ export default function StaffForm({ staff, onSuccess }) {
     email:           staff?.email           ?? '',
     phone:           staff?.phone           ?? '',
     job_title:       staff?.job_title       ?? '',
-    department_id:   staff?.department_id   ?? '',
+    department_id:   staff?.department_id ?? staff?.departments?.id ?? '',
     employment_type: staff?.employment_type ?? 'full_time',
     employment_date: staff?.employment_date ?? new Date().toISOString().split('T')[0],
     salary:          staff?.salary != null   ? String(staff.salary / 100) : '',
@@ -120,9 +120,12 @@ export default function StaffForm({ staff, onSuccess }) {
         </div>
       </div>
 
-      <button type="submit" disabled={save.isPending} className="btn-primary w-full justify-center py-2.5">
-        {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Staff Member'}
-      </button>
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+        <button type="submit" disabled={save.isPending} className="btn-primary">
+          {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Staff Member'}
+        </button>
+      </div>
     </form>
   );
 }

@@ -8,8 +8,11 @@ import RoomForm           from './components/RoomForm';
 import RoomTypeForm       from './components/RoomTypeForm';
 import RoomTypesPanel     from './components/RoomTypesPanel';
 import RoomDetailModal    from './components/RoomsDetailModal';
-import Modal              from '../../components/shared/Modal';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }       from '../../hooks/usePanelLayout';
 import toast              from 'react-hot-toast';
+import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
 const STATUS_FILTERS = [
   { label: 'All',          value: ''             },
@@ -39,13 +42,19 @@ function TabBar({ value, onChange, tabs }) {
 }
 
 export default function RoomsPage() {
-  const qc = useQueryClient();
+  // All hooks must be declared before any early returns (Rules of Hooks)
+  const { isLocked } = useSubscriptionGate();
   const [pageTab,      setPageTab]      = useState('rooms');
   const [statusFilter, setStatusFilter] = useState('');
   const [showRoomForm, setShowRoomForm] = useState(false);
   const [showTypeForm, setShowTypeForm] = useState(false);
   const [editRoom,     setEditRoom]     = useState(null);
   const [viewRoomId,   setViewRoomId]   = useState(null);
+  const panelOpen = showRoomForm || showTypeForm;
+  const { contentStyle } = usePanelLayout(panelOpen);
+  const qc = useQueryClient();
+  if (isLocked) return <SubscriptionPaywall />;
+
 
   const { data: roomsRes, isLoading: loadingRooms } = useQuery({
     queryKey: ['rooms', statusFilter],
@@ -73,7 +82,9 @@ export default function RoomsPage() {
   const viewRoom = viewRoomId ? rooms.find(r => r.id === viewRoomId) ?? null : null;
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', gap: 0, position: 'relative' }}>
+      <div style={{ flex: 1, minWidth: 0, ...contentStyle }}>
+      <div className="space-y-4">
 
       {/* Top bar — page tabs + action */}
       <div className="flex items-center justify-between gap-4">
@@ -82,11 +93,12 @@ export default function RoomsPage() {
           onChange={(v) => { setPageTab(v); setStatusFilter(''); }}
           tabs={[{ label: 'Rooms', value: 'rooms' }, { label: 'Room Types', value: 'types' }]}
         />
-        {pageTab === 'rooms' ? (
+        {pageTab === 'rooms' && !panelOpen && (
           <button onClick={() => { setEditRoom(null); setShowRoomForm(true); }} className="btn-primary text-xs">
             <Plus size={14} /> Add Room
           </button>
-        ) : (
+        )}
+        {pageTab === 'types' && !panelOpen && (
           <button onClick={() => setShowTypeForm(true)} className="btn-primary text-xs">
             <Plus size={14} /> Add Type
           </button>
@@ -127,15 +139,21 @@ export default function RoomsPage() {
         />
       )}
 
-      <Modal open={showRoomForm} onClose={() => { setShowRoomForm(false); setEditRoom(null); }}
+      </div>  {/* end space-y-4 */}
+      </div>  {/* end contentStyle wrapper */}
+
+      <SlidePanel open={showRoomForm} onClose={() => { setShowRoomForm(false); setEditRoom(null); }}
         title={editRoom ? 'Edit Room' : 'Add Room'}>
         <RoomForm room={editRoom} types={types}
-          onSuccess={() => { setShowRoomForm(false); setEditRoom(null); qc.invalidateQueries(['rooms']); }} />
-      </Modal>
+          onSuccess={() => { setShowRoomForm(false); setEditRoom(null); qc.invalidateQueries(['rooms']); }}
+          onClose={() => { setShowRoomForm(false); setEditRoom(null); }} />
+      </SlidePanel>
 
-      <Modal open={showTypeForm} onClose={() => setShowTypeForm(false)} title="New Room Type">
-        <RoomTypeForm onSuccess={() => setShowTypeForm(false)} />
-      </Modal>
+      <SlidePanel open={showTypeForm} onClose={() => setShowTypeForm(false)} title="New Room Type">
+        <RoomTypeForm
+          onSuccess={() => setShowTypeForm(false)}
+          onClose={() => setShowTypeForm(false)} />
+      </SlidePanel>
     </div>
   );
 }

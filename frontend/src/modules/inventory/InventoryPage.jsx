@@ -1,7 +1,9 @@
 // src/modules/inventory/InventoryPage.jsx
 import { useState, useEffect } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, AlertTriangle, Search, X, Pencil, Trash2, Phone, Mail, MapPin, Building2 } from 'lucide-react';
+import { Plus, AlertTriangle, Search, Pencil, Trash2, Phone, Mail, MapPin, Building2 } from 'lucide-react';
 import * as invApi      from '../../lib/api/inventoryApi';
 import DataTable        from '../../components/shared/DataTable';
 import StatusBadge      from '../../components/shared/StatusBadge';
@@ -16,7 +18,6 @@ import { formatDate, formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
 
 const TABS        = ['Stock', 'Purchase Orders', 'Suppliers'];
-const PANEL_WIDTH = 480;
 
 const CAT_LABELS = {
   linen: 'Linen', toiletries: 'Toiletries', cleaning: 'Cleaning',
@@ -29,8 +30,7 @@ const TERM_LABELS = {
 };
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  useEffect(() => {
+    useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
@@ -40,7 +40,6 @@ function useIsMobile() {
 
 export default function InventoryPage() {
   const qc       = useQueryClient();
-  const isMobile = useIsMobile();
 
   const [tab,          setTab]          = useState('Stock');
   const [panel,        setPanel]        = useState(null); // { type, data }
@@ -126,11 +125,11 @@ export default function InventoryPage() {
     if (!panel) return null;
     switch (panel.type) {
       case 'new-item':
-        return <ItemForm onSuccess={() => onDone(['inventory-items'])} />;
+        return <ItemForm onSuccess={() => onDone(['inventory-items'])} onClose={closePanel} />;
       case 'edit-item':
-        return <ItemForm item={panel.data} onSuccess={() => onDone(['inventory-items'])} />;
+        return <ItemForm item={panel.data} onSuccess={() => onDone(['inventory-items'])} onClose={closePanel} />;
       case 'movement':
-        return <MovementForm item={panel.data} onSuccess={() => onDone(['inventory-items'])} />;
+        return <MovementForm item={panel.data} onSuccess={() => onDone(['inventory-items'])} onClose={closePanel} />;
       case 'new-supplier':
         return <SupplierForm onSuccess={() => onDone(['suppliers'])} />;
       case 'edit-supplier':
@@ -230,6 +229,7 @@ export default function InventoryPage() {
   ];
 
   const panelOpen = !!panel;
+  const { contentStyle } = usePanelLayout(panelOpen);
 
   return (
     <div style={{ display: 'flex', gap: 0, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
@@ -238,8 +238,7 @@ export default function InventoryPage() {
       <div style={{
         flex: 1,
         minWidth: 0,
-        marginRight: panelOpen && !isMobile ? PANEL_WIDTH + 16 : 0,
-        transition: 'margin-right 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+        ...contentStyle,
       }}>
         <div className="space-y-4">
 
@@ -295,17 +294,19 @@ export default function InventoryPage() {
                   }}>
                   <AlertTriangle size={12} /> Low Stock
                 </button>
+                {!panelOpen && (
                 <button onClick={() => openPanel('new-item')} className="btn-primary text-xs">
                   <Plus size={14} /> Add Item
                 </button>
+                )}
               </>
             )}
-            {tab === 'Purchase Orders' && (
+            {tab === 'Purchase Orders' && !panelOpen && (
               <button onClick={() => openPanel('new-po')} className="btn-primary text-xs">
                 <Plus size={14} /> New PO
               </button>
             )}
-            {tab === 'Suppliers' && (
+            {tab === 'Suppliers' && !panelOpen && (
               <button onClick={() => openPanel('new-supplier')} className="btn-primary text-xs">
                 <Plus size={14} /> Add Supplier
               </button>
@@ -412,55 +413,10 @@ export default function InventoryPage() {
       </div>
 
       {/* ── Mobile backdrop ── */}
-      {isMobile && (
-        <div
-          onClick={closePanel}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 49,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            opacity: panelOpen ? 1 : 0,
-            pointerEvents: panelOpen ? 'auto' : 'none',
-            transition: 'opacity 280ms ease',
-          }}
-        />
-      )}
-
       {/* ── Right: slide-in panel ── */}
-      {panelOpen && (
-        <div style={{
-          position: 'fixed',
-          top:    isMobile ? 0 : 56,
-          right:  0,
-          bottom: 0,
-          left:   isMobile ? 0 : 'auto',
-          width:  isMobile ? '100%' : PANEL_WIDTH,
-          zIndex: isMobile ? 50 : 30,
-          backgroundColor: 'var(--bg-surface)',
-          borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
-          boxShadow: isMobile ? 'none' : '-6px 0 24px rgba(0,0,0,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'slideInPanel 240ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-5 flex-shrink-0"
-            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-            <button
-              onClick={closePanel}
-              className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-          {/* Panel body */}
-          <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ paddingTop: 16 }}>
-            {panelContent()}
-          </div>
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        {panelContent()}
+      </SlidePanel>
 
       {/* Delete supplier confirm */}
       <ConfirmDialog
