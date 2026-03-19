@@ -1,12 +1,12 @@
+import SlidePanel, { PANEL_WIDTH } from '../../../components/shared/SlidePanel';
 // src/modules/events/components/VenuesPanel.jsx
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, X, MapPin, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Users } from 'lucide-react';
 import * as eventApi from '../../../lib/api/eventApi';
 import { formatCurrency } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
-const PANEL_WIDTH = 460;
 const STATUS_OPTS = ['available','maintenance','blocked'];
 const AMENITY_SUGGESTIONS = [
   'Air Conditioning','Wi-Fi','Projector','Screen','Microphone','Stage',
@@ -272,49 +272,13 @@ export default function VenuesPanel({ panel, setPanel }) {
         </div>
       </div>
 
-      {/* Mobile backdrop */}
-      {isMobile && panelOpen && (
-        <div onClick={closePanel} style={{
-          position: 'fixed', inset: 0, zIndex: 49,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-        }} />
-      )}
-
-      {/* Right: slide panel */}
-      {panelOpen && (
-        <div style={{
-          position: 'fixed',
-          top: isMobile ? 0 : 56,
-          right: 0, bottom: 0,
-          left: isMobile ? 0 : 'auto',
-          width: isMobile ? '100%' : PANEL_WIDTH,
-          zIndex: isMobile ? 50 : 30,
-          backgroundColor: 'var(--bg-surface)',
-          borderLeft: '1px solid var(--border-soft)',
-          boxShadow: '-6px 0 24px rgba(0,0,0,0.08)',
-          display: 'flex', flexDirection: 'column',
-          animation: 'slideInPanel 240ms cubic-bezier(0.4,0,0.2,1)',
-        }}>
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-5 flex-shrink-0"
-            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-            <button onClick={closePanel}
-              className="w-7 h-7 flex items-center justify-center rounded-md"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-
-          <VenueForm
-            venue={panel.venue}
-            onClose={closePanel}
-            onSaved={() => { closePanel(); qc.invalidateQueries(['event-venues']); }}
-          />
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        <VenueForm
+          venue={panel?.venue}
+          onClose={closePanel}
+          onSaved={() => { closePanel(); qc.invalidateQueries(['event-venues']); }}
+        />
+      </SlidePanel>
     </div>
   );
 }

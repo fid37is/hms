@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as invApi from '../../../lib/api/inventoryApi';
 import toast from 'react-hot-toast';
 
-export default function MovementForm({ item, onSuccess }) {
+export default function MovementForm({ item, onSuccess, onClose }) {
   const qc = useQueryClient();
 
   const [form, setForm] = useState({
@@ -92,7 +92,8 @@ export default function MovementForm({ item, onSuccess }) {
           value={form.notes} onChange={handleChange} />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button type="submit" disabled={save.isPending} className="btn-primary">
           {save.isPending ? 'Saving…' : 'Record Movement'}
         </button>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import SlidePanel, { PANEL_WIDTH } from '../../../components/shared/SlidePanel';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, ShieldOff, Trash2, Search, UserCheck,
-  KeyRound, UserPlus, X, ChevronRight, Eye, EyeOff,
+  KeyRound, UserPlus, ChevronRight, Eye, EyeOff,
 } from 'lucide-react';
 import * as userApi  from '../../../lib/api/userApi';
 import * as staffApi from '../../../lib/api/staffApi';
@@ -13,7 +14,6 @@ import ConfirmDialog from '../../../components/shared/ConfirmDialog';
 import { formatDate } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
-const PANEL_WIDTH = 440;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -442,71 +442,25 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* Mobile backdrop */}
-      {isMobile && (
-        <div onClick={closePanel} style={{
-          position: 'fixed', inset: 0, zIndex: 49,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          opacity: panelOpen ? 1 : 0,
-          pointerEvents: panelOpen ? 'auto' : 'none',
-          transition: 'opacity 280ms ease',
-        }} />
-      )}
-
-      {/* ── Slide-in panel ────────────────────────────────────────────────── */}
-      {panelOpen && (
-        <div style={{
-          position: 'fixed',
-          top:    isMobile ? 0 : 56,
-          right:  0,
-          bottom: 0,
-          left:   isMobile ? 0 : 'auto',
-          width:  isMobile ? '100%' : PANEL_WIDTH,
-          zIndex: isMobile ? 50 : 30,
-          backgroundColor: 'var(--bg-surface)',
-          borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
-          boxShadow:  isMobile ? 'none' : '-6px 0 24px rgba(0,0,0,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'slideInPanel 240ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-5 flex-shrink-0"
-            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>
-              {panelTitle}
-            </h2>
-            <button onClick={closePanel}
-              className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-
-          {/* Panel body */}
-          <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ paddingTop: 16 }}>
-            {panel === 'grant' && (
-              <GrantAccessForm
-                existingUsers={users || []}
-                onSuccess={() => {
-                  closePanel();
-                  qc.invalidateQueries(['users']);
-                  qc.invalidateQueries(['staff']);
-                  qc.invalidateQueries(['staff-no-access']);
-                }}
-              />
-            )}
-            {panel === 'reset' && resetTarget && (
-              <ResetPasswordForm
-                user={resetTarget}
-                onSuccess={closePanel}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        {panel === 'grant' && (
+          <GrantAccessForm
+            existingUsers={users || []}
+            onSuccess={() => {
+              closePanel();
+              qc.invalidateQueries(['users']);
+              qc.invalidateQueries(['staff']);
+              qc.invalidateQueries(['staff-no-access']);
+            }}
+          />
+        )}
+        {panel === 'reset' && resetTarget && (
+          <ResetPasswordForm
+            user={resetTarget}
+            onSuccess={closePanel}
+          />
+        )}
+      </SlidePanel>
 
       {/* Delete confirm */}
       <ConfirmDialog

@@ -9,7 +9,7 @@ export const getAllWorkOrders = async (orgId, filters = {}, page = 1, limit = 20
   const from = (page - 1) * limit;
 
   let q = supabase.from('maintenance_orders')
-    .select(`id, wo_number, asset_id, location, category, description, priority, status,
+    .select(`id, wo_number, room_id, asset_id, location, category, description, priority, status,
       resolution, cost, started_at, resolved_at, created_at,
       rooms!room_id ( id, number, floor ),
       assets!asset_id ( id, name, serial_number ),
@@ -31,7 +31,7 @@ export const getAllWorkOrders = async (orgId, filters = {}, page = 1, limit = 20
 export const getWorkOrderById = async (orgId, id) => {
   const { data, error } = await supabase
     .from('maintenance_orders')
-    .select(`id, wo_number, location, category, description, priority, status,
+    .select(`id, wo_number, room_id, location, category, description, priority, status,
       resolution, cost, started_at, resolved_at, created_at, updated_at,
       rooms!room_id ( id, number, floor ),
       reporter:reported_by ( id, full_name ),
@@ -75,9 +75,9 @@ export const updateWorkOrder = async (orgId, id, payload) => {
 export const assignWorkOrder = async (orgId, id, assignedTo) => {
   await getWorkOrderById(orgId, id);
 
-  const { data: user } = await supabase
-    .from('users').select('id').eq('org_id', orgId).eq('id', assignedTo).single();
-  if (!user) throw new AppError('User not found.', 404);
+  const { data: staffMember } = await supabase
+    .from('staff').select('id').eq('org_id', orgId).eq('id', assignedTo).single();
+  if (!staffMember) throw new AppError('Staff member not found.', 404);
 
   const { data, error } = await supabase
     .from('maintenance_orders').update({ assigned_to: assignedTo })
@@ -99,7 +99,7 @@ export const startWorkOrder = async (orgId, id) => {
   return data;
 };
 
-export const resolveWorkOrder = async (orgId, id, resolution, cost) => {
+export const resolveWorkOrder = async (orgId, id, resolution, cost, roomStatusAfter) => {
   const wo = await getWorkOrderById(orgId, id);
   if (!['open', 'in_progress'].includes(wo.status))
     throw new AppError(`Cannot resolve WO with status: ${wo.status}.`, 409);
@@ -110,6 +110,38 @@ export const resolveWorkOrder = async (orgId, id, resolution, cost) => {
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError(`Failed to resolve work order: ${error.message}`, 500);
+
+  // Update room status if this WO was linked to a room
+  const targetRoomId = wo.room_id;
+  if (targetRoomId) {
+    const newStatus = ['dirty', 'available', 'out_of_order'].includes(roomStatusAfter)
+      ? roomStatusAfter
+      : 'dirty'; // default to dirty so housekeeping is triggered
+    await supabase
+      .from('rooms').update({ status: newStatus })
+      .eq('org_id', orgId).eq('id', targetRoomId);
+  }
+
+  return data;
+};
+
+export const reopenWorkOrder = async (orgId, id, reason) => {
+  const wo = await getWorkOrderById(orgId, id);
+  if (!['resolved', 'closed'].includes(wo.status))
+    throw new AppError(`Cannot reopen WO with status: ${wo.status}.`, 409);
+
+  const { data, error } = await supabase
+    .from('maintenance_orders')
+    .update({
+      status:      'open',
+      resolved_at: null,
+      resolution:  null,
+      // Append reopen reason to description so history is preserved
+      description: [wo.description, `[Reopened] ${reason || 'No reason given'}`].filter(Boolean).join('\n\n'),
+    })
+    .eq('org_id', orgId).eq('id', id).select().single();
+
+  if (error) throw new AppError(`Failed to reopen work order: ${error.message}`, 500);
   return data;
 };
 

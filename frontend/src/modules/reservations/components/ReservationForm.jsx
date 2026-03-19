@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 const SOURCES = ['walk_in','phone','online','ota_booking_com','ota_expedia','corporate','referral'];
 
-export default function ReservationForm({ onSuccess }) {
+export default function ReservationForm({ onSuccess, onClose }) {
   const [form, setForm] = useState(() => ({
     guest_id: '', room_id: '', check_in_date: '', check_out_date: '',
     adults: '1', children: '0', booking_source: 'walk_in', special_requests: '',
@@ -248,13 +248,16 @@ export default function ReservationForm({ onSuccess }) {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={create.isPending || !form.guest_id || !form.room_id || !form.check_in_date || !form.check_out_date}
-        className="btn-primary ml-auto block"
-      >
-        {create.isPending ? 'Creating…' : 'Create Reservation'}
-      </button>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+        <button
+          type="submit"
+          disabled={create.isPending || !form.guest_id || !form.room_id || !form.check_in_date || !form.check_out_date}
+          className="btn-primary"
+        >
+          {create.isPending ? 'Creating…' : 'Create Reservation'}
+        </button>
+      </div>
     </form>
   );
 }

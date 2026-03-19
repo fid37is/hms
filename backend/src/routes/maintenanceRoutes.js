@@ -13,7 +13,7 @@ import {
 import {
   getAllWorkOrders, getWorkOrderById, createWorkOrder,
   updateWorkOrder, assignWorkOrder, startWorkOrder,
-  resolveWorkOrder, closeWorkOrder,
+  resolveWorkOrder, closeWorkOrder, reopenWorkOrder,
   getAllAssets, getAssetById, createAsset,
   updateAsset, deleteAsset, getAssetsDueForService,
 } from '../controllers/maintenanceController.js';
@@ -49,6 +49,9 @@ router.patch('/work-orders/:id/resolve',
 
 router.patch('/work-orders/:id/close',
   requirePermission(PERMISSIONS.MAINTENANCE.UPDATE), closeWorkOrder);
+
+router.patch('/work-orders/:id/reopen',
+  requirePermission(PERMISSIONS.MAINTENANCE.UPDATE), reopenWorkOrder);
 
 // ─── Assets ───────────────────────────────────────────────
 router.get('/assets/due-for-service',

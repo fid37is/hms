@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Plus, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as guestApi  from '../../lib/api/guestApi';
 import DataTable       from '../../components/shared/DataTable';
@@ -10,7 +12,6 @@ import { formatDate }  from '../../utils/format';
 import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
 import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
 
-const PANEL_WIDTH = 440;
 const CATEGORIES = ['all', 'regular', 'vip', 'corporate', 'blacklisted'];
 const SORT_OPTIONS = [
   { value: 'full_name',    label: 'Name'   },
@@ -18,23 +19,15 @@ const SORT_OPTIONS = [
   { value: 'total_visits',label: 'Visits' },
 ];
 
-function useIsMobile() {
-  const [m, setM] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const h = () => setM(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  return m;
-}
 
 export default function GuestsPage() {
   const { isLocked } = useSubscriptionGate();
+  const [panel, setPanel] = useState(null);
+  const { contentStyle } = usePanelLayout(!!panel);
   if (isLocked) return <SubscriptionPaywall />;
 
   const qc       = useQueryClient();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   const [search,   setSearch]   = useState('');
   const [category, setCategory] = useState('all');
@@ -42,11 +35,10 @@ export default function GuestsPage() {
   const [order,    setOrder]    = useState('asc');
   const [page,     setPage]     = useState(1);
   // panel: { type: 'new' | 'edit', guest: null | {...} }
-  const [panel, setPanel] = useState(null);
 
   const openNew  = ()      => setPanel({ type: 'new',  guest: null });
   const openEdit = (guest) => setPanel({ type: 'edit', guest });
-  const close    = ()      => setPanel(null);
+  const closePanel = ()      => setPanel(null);
 
   const params = {
     page, limit: 25,
@@ -139,8 +131,7 @@ export default function GuestsPage() {
       {/* Left: table */}
       <div style={{
         flex: 1, minWidth: 0,
-        marginRight: panelOpen && !isMobile ? PANEL_WIDTH + 16 : 0,
-        transition: 'margin-right 280ms cubic-bezier(0.4,0,0.2,1)',
+        ...contentStyle,
       }}>
         <div className="space-y-4">
           {/* Toolbar */}
@@ -196,46 +187,13 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* Mobile backdrop */}
-      {isMobile && panelOpen && (
-        <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 49, backgroundColor: 'rgba(0,0,0,0.4)' }} />
-      )}
-
-      {/* Slide panel */}
-      {panelOpen && (
-        <div style={{
-          position: 'fixed',
-          top: isMobile ? 0 : 56,
-          right: 0, bottom: 0,
-          left: isMobile ? 0 : 'auto',
-          width: isMobile ? '100%' : PANEL_WIDTH,
-          zIndex: isMobile ? 50 : 30,
-          backgroundColor: 'var(--bg-surface)',
-          borderLeft: '1px solid var(--border-soft)',
-          boxShadow: '-6px 0 24px rgba(0,0,0,0.08)',
-          display: 'flex', flexDirection: 'column',
-          animation: 'slideInPanel 240ms cubic-bezier(0.4,0,0.2,1)',
-        }}>
-          <div className="flex items-center justify-between px-5 flex-shrink-0"
-            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold truncate" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-            <button onClick={close}
-              className="w-7 h-7 flex items-center justify-center rounded-md"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <GuestForm
-              guest={panel.guest}
-              onSuccess={() => { close(); qc.invalidateQueries(['guests']); }}
-              onClose={close}
-            />
-          </div>
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        <GuestForm
+          guest={panel?.guest}
+          onSuccess={() => { closePanel(); qc.invalidateQueries(['guests']); }}
+          onClose={closePanel}
+        />
+      </SlidePanel>
     </div>
   );
 }

@@ -73,7 +73,6 @@
     background-color: var(--bg-surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md, 10px);
-    box-shadow: var(--shadow-sm);
   }
   .card-header {
     @apply flex items-center justify-between px-5 py-4;
@@ -211,6 +210,12 @@
 }
 
 /* ─── Panel slide-in animation ────────────────────────────── */
+
+/* ─── SlidePanel backdrop: hidden on desktop, shown on mobile ── */
+@media (max-width: 767px) {
+  .slide-panel-backdrop { --backdrop-display: block !important; }
+}
+
 @keyframes slideInPanel {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }

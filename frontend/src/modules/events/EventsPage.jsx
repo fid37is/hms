@@ -1,7 +1,9 @@
 // src/modules/events/EventsPage.jsx
 import { useState, useRef, useEffect } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 import { useQuery, useQueryClient }    from '@tanstack/react-query';
-import { Plus, Search, ChevronDown, Users, X, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, ChevronDown, Users } from 'lucide-react';
 import * as eventApi    from '../../lib/api/eventApi';
 import DataTable        from '../../components/shared/DataTable';
 import StatusBadge      from '../../components/shared/StatusBadge';
@@ -12,7 +14,6 @@ import VenuesPanel      from './components/VenuesPanel';
 import EventCalendar    from './components/EventCalendar';
 import toast            from 'react-hot-toast';
 
-const PANEL_WIDTH = 480;
 const TABS = ['Events', 'Calendar', 'Venues'];
 
 const STATUS_OPTS = [
@@ -44,15 +45,6 @@ const EVENT_TYPE_COLORS = {
   meeting: 'var(--text-muted)', workshop: '#5c6bc0', other: 'var(--text-muted)',
 };
 
-function useIsMobile() {
-  const [m, setM] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const h = () => setM(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
-  return m;
-}
 
 function Dropdown({ value, options, onChange }) {
   const [open, setOpen] = useState(false);
@@ -87,7 +79,6 @@ function Dropdown({ value, options, onChange }) {
 
 export default function EventsPage() {
   const qc      = useQueryClient();
-  const isMobile = useIsMobile();
   const [tab, setTab]       = useState(0);
   const [status, setStatus] = useState('');
   const [type, setType]     = useState('');
@@ -95,6 +86,7 @@ export default function EventsPage() {
   const [page, setPage]     = useState(1);
   // Single panel state: { type: 'detail'|'form', data: event|null }
   const [panel, setPanel]       = useState(null);
+  const { contentStyle } = usePanelLayout(!!panel);
   // Venue panel state — lifted up so button lives in main toolbar
   const [venuePanel, setVenuePanel] = useState(null);
 
@@ -203,8 +195,7 @@ export default function EventsPage() {
           {/* Left: table */}
           <div style={{
             flex: 1, minWidth: 0,
-            marginRight: panelOpen && !isMobile ? PANEL_WIDTH + 16 : 0,
-            transition: 'margin-right 280ms cubic-bezier(0.4,0,0.2,1)',
+            ...contentStyle,
           }}>
             <div className="space-y-4">
               {/* Filters */}
@@ -220,15 +211,13 @@ export default function EventsPage() {
               </div>
 
               {/* Table */}
-              <div className="card overflow-hidden">
-                <DataTable
-                  columns={COLUMNS}
-                  data={events}
-                  loading={isLoading}
-                  emptyTitle="No events found"
-                  onRowClick={r => openPanel('detail', r)}
-                />
-              </div>
+              <DataTable
+                columns={COLUMNS}
+                data={events}
+                loading={isLoading}
+                emptyTitle="No events found"
+                onRowClick={r => openPanel('detail', r)}
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (
@@ -244,63 +233,23 @@ export default function EventsPage() {
             </div>
           </div>
 
-          {/* Mobile backdrop */}
-          {isMobile && panelOpen && (
-            <div onClick={closePanel} style={{
-              position: 'fixed', inset: 0, zIndex: 49,
-              backgroundColor: 'rgba(0,0,0,0.4)',
-              transition: 'opacity 280ms ease',
-            }} />
-          )}
-
-          {/* Right: slide panel */}
-          {panelOpen && (
-            <div style={{
-              position: 'fixed',
-              top: isMobile ? 0 : 56,
-              right: 0, bottom: 0,
-              left: isMobile ? 0 : 'auto',
-              width: isMobile ? '100%' : PANEL_WIDTH,
-              zIndex: isMobile ? 50 : 30,
-              backgroundColor: 'var(--bg-surface)',
-              borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
-              boxShadow: '-6px 0 24px rgba(0,0,0,0.08)',
-              display: 'flex', flexDirection: 'column',
-              animation: 'slideInPanel 240ms cubic-bezier(0.4,0,0.2,1)',
-            }}>
-              {/* Panel header */}
-              <div className="flex items-center justify-between px-5 flex-shrink-0"
-                style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-                <h2 className="text-sm font-semibold truncate" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-                <button onClick={closePanel}
-                  className="w-7 h-7 flex items-center justify-center rounded-md flex-shrink-0"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                  <X size={15} />
-                </button>
-              </div>
-
-              {/* Panel content */}
-              <div className="flex-1 overflow-y-auto">
-                {panel.type === 'detail' && (
-                  <EventDetail
-                    eventId={panel.data.id}
-                    onClose={closePanel}
-                    onEdit={ev => openPanel('form', ev)}
-                    onRefresh={refresh}
-                  />
-                )}
-                {panel.type === 'form' && (
-                  <EventForm
-                    event={panel.data}
-                    onClose={closePanel}
-                    onSaved={() => { closePanel(); refresh(); }}
-                  />
-                )}
-              </div>
-            </div>
-          )}
+          <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+            {panel?.type === 'detail' && (
+              <EventDetail
+                eventId={panel.data.id}
+                onClose={closePanel}
+                onEdit={ev => openPanel('form', ev)}
+                onRefresh={refresh}
+              />
+            )}
+            {panel?.type === 'form' && (
+              <EventForm
+                event={panel.data}
+                onClose={closePanel}
+                onSaved={() => { closePanel(); refresh(); }}
+              />
+            )}
+          </SlidePanel>
         </div>
       )}
 

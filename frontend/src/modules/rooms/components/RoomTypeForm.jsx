@@ -15,7 +15,7 @@ const CANCEL_OPTIONS = [
   { value: 'none', label: 'No free cancellation'  },
 ];
 
-export default function RoomTypeForm({ onSuccess }) {
+export default function RoomTypeForm({ onSuccess, onClose }) {
   const qc      = useQueryClient();
   const [step,  setStep]  = useState(1); // 1 = details, 2 = rate plans
   const [form,  setForm]  = useState(BLANK_DETAILS());
@@ -109,7 +109,8 @@ export default function RoomTypeForm({ onSuccess }) {
         <input className="input" placeholder="WiFi, AC, TV, Mini Bar (comma-separated)"
           value={form.amenities} onChange={e => setForm(p => ({ ...p, amenities: e.target.value }))} />
       </div>
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button type="submit" disabled={createType.isPending} className="btn-primary flex items-center gap-1.5">
           {createType.isPending ? 'Creating…' : <> Next: Rate Plans <ChevronRight size={14} /> </>}
         </button>

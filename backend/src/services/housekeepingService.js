@@ -9,7 +9,7 @@ export const getAllTasks = async (orgId, filters = {}, page = 1, limit = 20) => 
 
   let q = supabase
     .from('housekeeping_tasks')
-    .select(`id, task_type, priority, status, notes, started_at, completed_at,
+    .select(`id, room_id, task_type, priority, status, notes, started_at, completed_at,
       rooms ( id, number, floor, room_types ( name ) ),
       assigned:assigned_to ( id, full_name ),
       assigner:assigned_by ( id, full_name )`, { count: 'exact' })
@@ -30,7 +30,7 @@ export const getAllTasks = async (orgId, filters = {}, page = 1, limit = 20) => 
 export const getTaskById = async (orgId, id) => {
   const { data, error } = await supabase
     .from('housekeeping_tasks')
-    .select(`id, task_type, priority, status, notes, started_at, completed_at,
+    .select(`id, room_id, task_type, priority, status, notes, started_at, completed_at,
       rooms ( id, number, floor, room_types ( name ) ),
       assigned:assigned_to ( id, full_name ),
       assigner:assigned_by ( id, full_name )`)
@@ -53,7 +53,7 @@ export const createTask = async (orgId, payload, createdBy) => {
     .from('housekeeping_tasks')
     .insert({ org_id: orgId, room_id, task_type: task_type || 'cleaning',
               priority: priority || 'normal', status: 'pending',
-              assigned_to: assigned_to || null, assigned_by: createdBy,
+              assigned_to: assigned_to || null, assigned_by: null,
               notes: notes || null })
     .select().single();
 
@@ -91,13 +91,13 @@ export const completeTask = async (orgId, id, notes) => {
 
   const { data, error } = await supabase
     .from('housekeeping_tasks')
-    .update({ status: 'completed', completed_at: new Date().toISOString(), notes: notes || task.notes })
+    .update({ status: 'done', completed_at: new Date().toISOString(), notes: notes || task.notes })
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError(`Failed to complete task: ${error.message}`, 500);
 
   if (task.rooms?.id)
-    await supabase.from('rooms').update({ status: ROOM_STATUS.CLEAN })
+    await supabase.from('rooms').update({ status: ROOM_STATUS.AVAILABLE })
       .eq('org_id', orgId).eq('id', task.rooms.id);
 
   return data;
@@ -106,13 +106,17 @@ export const completeTask = async (orgId, id, notes) => {
 export const assignTask = async (orgId, id, assignedTo, assignedBy) => {
   const task = await getTaskById(orgId, id);
 
-  const { data: user } = await supabase
-    .from('users').select('id, full_name').eq('org_id', orgId).eq('id', assignedTo).single();
-  if (!user) throw new AppError('Assigned user not found.', 404);
+  const { data: staffMember } = await supabase
+    .from('staff').select('id').eq('org_id', orgId).eq('id', assignedTo).single();
+  if (!staffMember) throw new AppError('Staff member not found.', 404);
+
+  // assigned_by: resolve the requesting user's staff record (assignedBy is users.id)
+  const { data: assignerStaff } = await supabase
+    .from('staff').select('id').eq('org_id', orgId).eq('user_id', assignedBy).single();
 
   const { data, error } = await supabase
     .from('housekeeping_tasks')
-    .update({ assigned_to: assignedTo, assigned_by: assignedBy })
+    .update({ assigned_to: assignedTo, assigned_by: assignerStaff?.id || null })
     .eq('org_id', orgId).eq('id', id).select().single();
 
   if (error) throw new AppError(`Failed to assign task: ${error.message}`, 500);

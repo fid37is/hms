@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Phone, Mail, Flag, Building2, CreditCard, Calendar, MapPin, Edit3, BedDouble, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Flag, Building2, CreditCard, Calendar, MapPin, Edit3, BedDouble, ChevronRight } from 'lucide-react';
 import * as guestApi from '../../lib/api/guestApi';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import GuestForm from './components/GuestForm';
 import ReservationDetail from '../reservations/components/ReservationDetail';
 import { formatDate, formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 
-const PANEL_WIDTH = 440;
 
 function useIsMobile() {
   const [m, setM] = useState(window.innerWidth < 768);
@@ -118,7 +119,7 @@ export default function GuestProfilePage() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const qc       = useQueryClient();
-  const isMobile = useIsMobile();
+  const { contentStyle } = usePanelLayout(!!(showEdit || selectedRes));
   const [showEdit,    setShowEdit]    = useState(false);
   const [selectedRes, setSelectedRes] = useState(null);
   const [activeTab,   setActiveTab]   = useState('all');
@@ -169,7 +170,7 @@ export default function GuestProfilePage() {
     <div style={{ display:'flex', position:'relative' }}>
 
       {/* Main content */}
-      <div style={{ flex:1, minWidth:0, marginRight: (showEdit || selectedRes) && !isMobile ? PANEL_WIDTH + 16 : 0, transition:'margin-right 280ms cubic-bezier(0.4,0,0.2,1)' }}>
+      <div style={{ ...contentStyle }}>
         <div className="space-y-5">
 
           <button onClick={() => navigate('/guests')} className="btn-ghost text-sm gap-1.5" style={{ color:'var(--text-muted)' }}>
@@ -318,44 +319,17 @@ export default function GuestProfilePage() {
         </div>
       </div>
 
-      {/* Mobile backdrop */}
-      {isMobile && showEdit && (
-        <div onClick={() => setShowEdit(false)} style={{ position:'fixed', inset:0, zIndex:49, backgroundColor:'rgba(0,0,0,0.4)' }} />
-      )}
+      <SlidePanel open={!!selectedRes} onClose={() => setSelectedRes(null)} title="Reservation">
+        <ReservationDetail reservation={selectedRes} onAction={() => {}} />
+      </SlidePanel>
 
-      {/* Reservation detail slide panel */}
-      {selectedRes && (
-        <div style={{ position:'fixed', top: isMobile ? 0 : 56, right:0, bottom:0, left: isMobile ? 0 : 'auto', width: isMobile ? '100%' : PANEL_WIDTH, zIndex: isMobile ? 50 : 30, backgroundColor:'var(--bg-surface)', borderLeft:'1px solid var(--border-soft)', boxShadow:'-6px 0 24px rgba(0,0,0,0.08)', display:'flex', flexDirection:'column', animation:'slideInPanel 240ms cubic-bezier(0.4,0,0.2,1)' }}>
-          <div className="flex items-center justify-between px-5 flex-shrink-0" style={{ height:44, borderBottom:'1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color:'var(--text-base)' }}>Reservation</h2>
-            <button onClick={() => setSelectedRes(null)} className="w-7 h-7 flex items-center justify-center rounded-md" style={{ color:'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <ReservationDetail reservation={selectedRes} onAction={() => {}} />
-          </div>
-        </div>
-      )}
-
-      {/* Edit slide panel */}
-      {showEdit && (
-        <div style={{ position:'fixed', top: isMobile ? 0 : 56, right:0, bottom:0, left: isMobile ? 0 : 'auto', width: isMobile ? '100%' : PANEL_WIDTH, zIndex: isMobile ? 50 : 30, backgroundColor:'var(--bg-surface)', borderLeft:'1px solid var(--border-soft)', boxShadow:'-6px 0 24px rgba(0,0,0,0.08)', display:'flex', flexDirection:'column', animation:'slideInPanel 240ms cubic-bezier(0.4,0,0.2,1)' }}>
-          <div className="flex items-center justify-between px-5 flex-shrink-0" style={{ height:44, borderBottom:'1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color:'var(--text-base)' }}>Edit · {guest.full_name}</h2>
-            <button onClick={() => setShowEdit(false)} className="w-7 h-7 flex items-center justify-center rounded-md" style={{ color:'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <GuestForm guest={guest} onClose={() => setShowEdit(false)} onSuccess={() => { setShowEdit(false); qc.invalidateQueries(['guest', id]); qc.invalidateQueries(['guests']); }} />
-          </div>
-        </div>
-      )}
+      <SlidePanel open={showEdit} onClose={() => setShowEdit(false)} title={`Edit · ${guest?.full_name}`}>
+        <GuestForm
+          guest={guest}
+          onClose={() => setShowEdit(false)}
+          onSuccess={() => { setShowEdit(false); qc.invalidateQueries(['guest', id]); qc.invalidateQueries(['guests']); }}
+        />
+      </SlidePanel>
 
     </div>
   );

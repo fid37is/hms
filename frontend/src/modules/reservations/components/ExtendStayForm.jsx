@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 const PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'mobile_money'];
 
-export default function ExtendStayForm({ reservation: res, onSuccess }) {
+export default function ExtendStayForm({ reservation: res, onSuccess, onClose }) {
   const currentCheckOut = res.check_out_date;
 
   // Default new checkout = current checkout + 1 day
@@ -139,13 +139,16 @@ export default function ExtendStayForm({ reservation: res, onSuccess }) {
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={extend.isPending || extraNights === 0}
-        className="btn-primary ml-auto block"
-      >
-        {extend.isPending ? 'Extending…' : `Extend Stay to ${formatDate(newCheckOut)}`}
-      </button>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+        <button
+          onClick={handleSubmit}
+          disabled={extend.isPending || extraNights === 0}
+          className="btn-primary"
+        >
+          {extend.isPending ? 'Extending…' : `Extend Stay to ${formatDate(newCheckOut)}`}
+        </button>
+      </div>
     </div>
   );
 }

@@ -44,18 +44,21 @@ function TaskCard({ task, onStart, onComplete, onEdit }) {
         <p className="text-xs line-clamp-2" style={{ color: 'var(--text-muted)' }}>{task.notes}</p>
       )}
 
-      {task.assigned_to_user && (
+      {(task.assigned?.full_name) && (
         <div className="flex items-center gap-1.5">
           <div
             className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold"
             style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)', fontSize: '9px' }}
           >
-            {task.assigned_to_user?.full_name?.charAt(0)}
+            {task.assigned.full_name.charAt(0)}
           </div>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {task.assigned_to_user?.full_name}
+            {task.assigned.full_name}
           </span>
         </div>
+      )}
+      {!task.assigned?.full_name && (
+        <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>Unassigned</span>
       )}
 
       <div className="flex items-center justify-between pt-1">

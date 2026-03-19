@@ -9,18 +9,7 @@ import {
   Monitor, Tablet, Smartphone,
 } from 'lucide-react';
 
-import { PreviewContext } from '../preview/PreviewContext.jsx';
 
-import HeroSection      from '../../../../../../hotel-website/src/components/sections/HeroSection.jsx';
-import AmenitiesSection from '../../../../../../hotel-website/src/components/sections/AmenitiesSection.jsx';
-import RoomsSection     from '../../../../../../hotel-website/src/components/sections/RoomsSection.jsx';
-import WhyStaySection   from '../../../../../../hotel-website/src/components/sections/WhyStaySection.jsx';
-import StorySection     from '../../../../../../hotel-website/src/components/sections/StorySection.jsx';
-import OffersSection    from '../../../../../../hotel-website/src/components/sections/OffersSection.jsx';
-import EventsSection    from '../../../../../../hotel-website/src/components/sections/EventsSection.jsx';
-import ReviewsSection   from '../../../../../../hotel-website/src/components/sections/ReviewsSection.jsx';
-import CtaSection       from '../../../../../../hotel-website/src/components/sections/CtaSection.jsx';
-import { CustomSection1, CustomSection2 } from '../../../../../../hotel-website/src/components/sections/CustomSection.jsx';
 
 const FONT_PAIRS = {
   cormorant_dmsans:        { label: 'Cormorant + DM Sans',       sub: 'Luxury serif + clean sans'  },
@@ -467,57 +456,89 @@ export default function CustomizePage() {
     onSuccess: () => {
       setLayout({ ...DEFAULT_LAYOUT });
       setColors({ primary_color: '#1a1a1a', accent_color: '#c9a96e', nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '' });
-      setContent(JSON.parse(JSON.stringify(DEFAULT_CONTENT)));
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+      setContent(fresh);
       setActiveSection(null);
+      syncContentToIframe(fresh);
       toast.success('Reset to defaults — click Save & Deploy to publish');
     },
     onError: () => toast.error('Reset failed'),
   });
 
-  const previewCtx = {
-    isPreview:       true,
-    content,
-    layout,
-    hotelConfigBase: data || {},
-    activeSection,
-    setField:        updateContent,
-  };
+  // ── iframe edit mode ─────────────────────────────────────────────────────
+  // Generate a one-time token for this session and pass it to the iframe.
+  // The hotel website validates it via postMessage before activating edit mode.
+  const editToken  = useRef(Math.random().toString(36).slice(2));
+  const iframeRef  = useRef(null);
+  const [iframeReady, setIframeReady] = useState(false);
 
-  const renderSection = id => {
-    const isActive = activeSection === id;
-    const wrap = children => (
-      <div key={id} onClick={() => setActiveSection(id)} style={{
-        position: 'relative',
-        outline: isActive ? '3px solid rgba(99,102,241,0.8)' : '3px solid transparent',
-        outlineOffset: '-3px',
-        transition: 'outline-color 0.15s',
-        cursor: isActive ? 'default' : 'pointer',
-      }}>
-        {children}
-        {isActive && (
-          <div style={{
-            position: 'absolute', top: 10, right: 10,
-            background: 'rgba(99,102,241,0.9)', color: 'white',
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-            padding: '3px 10px', borderRadius: 4, pointerEvents: 'none', zIndex: 10,
-          }}>Editing</div>
-        )}
-      </div>
-    );
-    switch (id) {
-      case 'hero':        return wrap(<><HeroSection checkin="" setCheckin={() => {}} checkout="" setCheckout={() => {}} onSearch={() => {}} /><AmenitiesSection /></>);
-      case 'booking_bar': return null;
-      case 'rooms':       return wrap(<RoomsSection />);
-      case 'why_stay':    return wrap(<WhyStaySection />);
-      case 'story':       return wrap(<StorySection />);
-      case 'offers':      return wrap(<OffersSection />);
-      case 'events':      return wrap(<EventsSection />);
-      case 'reviews':     return wrap(<ReviewsSection />);
-      case 'cta':         return wrap(<CtaSection />);
-      case 'custom_1':    return wrap(<CustomSection1 />);
-      case 'custom_2':    return wrap(<CustomSection2 />);
-      default:            return null;
-    }
+  const HOTEL_URL = import.meta.env.VITE_HOTEL_URL || 'http://localhost:5174';
+
+  // Build the iframe src — appends the edit token so the hotel website
+  // activates edit mode, and sends current colors/layout as HMS_PREVIEW
+  const iframeSrc = `${HOTEL_URL}?hms_edit=${editToken.current}`;
+
+  // Listen for messages from the iframe
+  useEffect(() => {
+    const handler = (e) => {
+      if (!e.data?.type) return;
+
+      // Hotel website is ready and requesting edit mode validation
+      if (e.data.type === 'HMS_EDIT_REQUEST' && e.data.token === editToken.current) {
+        setIframeReady(true);
+        iframeRef.current?.contentWindow?.postMessage({
+          type:    'HMS_EDIT_READY',
+          token:   editToken.current,
+          content, // send current saved content to the iframe
+        }, '*');
+      }
+
+      // Hotel website reports a field was edited — sync into our state
+      if (e.data.type === 'HMS_CONTENT_UPDATE') {
+        const { sectionId, field, value } = e.data;
+        updateContent(sectionId, field, value);
+      }
+
+      // Hotel website reports which section the admin activated
+      if (e.data.type === 'HMS_SECTION_ACTIVE') {
+        setActiveSection(e.data.sectionId);
+      }
+
+      // Hotel website reports editing done
+      if (e.data.type === 'HMS_SECTION_DONE') {
+        setActiveSection(null);
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [content]);
+
+  // When sidebar selects a section, tell the iframe to scroll to it
+  useEffect(() => {
+    if (!iframeReady || !activeSection) return;
+    iframeRef.current?.contentWindow?.postMessage({
+      type:      'HMS_SCROLL_TO',
+      sectionId: activeSection,
+    }, '*');
+  }, [activeSection, iframeReady]);
+
+  // When colors/layout change, push a live preview update to the iframe
+  useEffect(() => {
+    if (!iframeReady) return;
+    iframeRef.current?.contentWindow?.postMessage({
+      type:   'HMS_PREVIEW',
+      colors,
+      layout,
+    }, '*');
+  }, [colors, layout, iframeReady]);
+
+  // When content is reset, sync the new defaults into the iframe
+  const syncContentToIframe = (newContent) => {
+    iframeRef.current?.contentWindow?.postMessage({
+      type:    'HMS_CONTENT_SYNC',
+      content: newContent,
+    }, '*');
   };
 
   if (isLoading) return (
@@ -531,7 +552,7 @@ export default function CustomizePage() {
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', zIndex: 9999, background: '#0d0d0d' }}>
 
-      {/* Sidebar */}
+      {/* ── Sidebar ── */}
       <div style={{
         width: collapsed ? 0 : 300, minWidth: collapsed ? 0 : 300,
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
@@ -607,11 +628,11 @@ export default function CustomizePage() {
                         onDragEnd={handleDragEnd}
                         onDragOver={e => handleDragOver(e, i)}
                         onDrop={e => handleDrop(e, i)}
-                        onClick={() => setActiveSection(id)}
+                        onClick={() => { setActiveSection(id); iframeRef.current?.contentWindow?.postMessage({ type: 'HMS_SCROLL_TO', sectionId: id }, '*'); }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px', borderRadius: 8,
-                          background: dragActive === i ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${dragActive === i ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                          background: dragActive === i ? 'rgba(255,255,255,0.1)' : activeSection === id ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${dragActive === i ? 'rgba(255,255,255,0.2)' : activeSection === id ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`,
                           opacity: sectHidden ? 0.4 : 1, cursor: fixed ? 'pointer' : 'grab', userSelect: 'none',
                         }}>
                         <span style={{ color: fixed ? 'transparent' : 'rgba(255,255,255,0.18)', display: 'flex' }}><GripVertical size={14} /></span>
@@ -713,6 +734,7 @@ export default function CustomizePage() {
           </>
         )}
 
+        {/* Footer — viewport toggles + Save & Deploy */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '12px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             {[['100%', <Monitor size={12} />, 'Desktop'], ['768px', <Tablet size={12} />, 'Tablet'], ['390px', <Smartphone size={12} />, 'Mobile']].map(([w, icon, label]) => (
@@ -746,7 +768,7 @@ export default function CustomizePage() {
         </div>
       </div>
 
-      {/* Collapse toggle */}
+      {/* ── Collapse toggle ── */}
       <button type="button" onClick={() => setCollapsed(c => !c)} style={{
         position: 'absolute', left: collapsed ? 0 : 300, top: '50%', transform: 'translateY(-50%)',
         zIndex: 20, width: 20, height: 48, background: '#181818', border: 'none',
@@ -756,21 +778,33 @@ export default function CustomizePage() {
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      {/* Preview */}
+      {/* ── Live preview iframe ── */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', background: '#0d0d0d', overflow: 'hidden', padding: previewWidth === '100%' ? 0 : 16 }}>
         <div style={{
           width: previewWidth, transition: 'width 0.3s', display: 'flex', flexDirection: 'column',
           borderRadius: previewWidth === '100%' ? 0 : 10, overflow: 'hidden',
           boxShadow: previewWidth === '100%' ? 'none' : '0 8px 48px rgba(0,0,0,0.6)',
           flex: previewWidth === '100%' ? 1 : undefined,
+          position: 'relative',
         }}>
-          <div ref={previewRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-page, #fafaf8)' }}>
-            <PreviewContext.Provider value={previewCtx}>
-              {layout.section_order
-                .filter(id => id === 'hero' || !isHidden(id))
-                .map(id => renderSection(id))}
-            </PreviewContext.Provider>
-          </div>
+          {/* Loading overlay while iframe initialises */}
+          {!iframeReady && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#fafaf8', flexDirection: 'column', gap: 12,
+            }}>
+              <div style={{ width: 32, height: 32, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: 'rgba(99,102,241,0.8)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              <p style={{ fontSize: 12, color: '#999', fontFamily: 'sans-serif', margin: 0 }}>Loading preview…</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+          <iframe
+            ref={iframeRef}
+            src={iframeSrc}
+            style={{ flex: 1, border: 'none', width: '100%', height: '100%', display: 'block', opacity: iframeReady ? 1 : 0, transition: 'opacity 0.3s' }}
+            title="Hotel website preview"
+          />
         </div>
       </div>
 

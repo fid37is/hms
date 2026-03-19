@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import SlidePanel from '../../components/shared/SlidePanel';
+import { usePanelLayout }             from '../../hooks/usePanelLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, ChevronUp, ChevronDown, X, CreditCard } from 'lucide-react';
+import { Plus, Search, ChevronUp, ChevronDown, CreditCard } from 'lucide-react';
 import * as resApi        from '../../lib/api/reservationApi';
 import DataTable          from '../../components/shared/DataTable';
 import StatusBadge        from '../../components/shared/StatusBadge';
@@ -30,7 +32,6 @@ const SORT_OPTIONS = [
   { value: 'created_at',     label: 'Created'   },
 ];
 
-const PANEL_WIDTH = 440;
 
 const PAYMENT_METHOD_LABEL = {
   on_arrival:    'On Arrival',
@@ -56,8 +57,7 @@ function PaymentBadge({ status }) {
 }
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  useEffect(() => {
+    useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', fn);
     return () => window.removeEventListener('resize', fn);
@@ -119,16 +119,16 @@ function MoreMenu({ r, onMarkPaid, onCancel }) {
 
 export default function ReservationsPage() {
   const { isLocked } = useSubscriptionGate();
+  const [panel,    setPanel]    = useState(null);
+  const { contentStyle } = usePanelLayout(!!panel);
   if (isLocked) return <SubscriptionPaywall />;
 
   const qc = useQueryClient();
-  const isMobile = useIsMobile();
 
   const [status,   setStatus]   = useState('');
   const [search,   setSearch]   = useState('');
   const [sort,     setSort]     = useState('check_in_date');
   const [order,    setOrder]    = useState('desc');
-  const [panel,    setPanel]    = useState(null); // { type, res }
   const [cancel,   setCancel]   = useState(null);
   const [markPaid, setMarkPaid] = useState(null);
 
@@ -178,10 +178,10 @@ export default function ReservationsPage() {
     if (!panel) return null;
     switch (panel.type) {
       case 'detail':   return <ReservationDetail reservation={panel.res} onAction={(type) => openPanel(type, panel.res)} />;
-      case 'new':      return <ReservationForm onSuccess={onDone} />;
-      case 'checkin':  return <CheckInForm reservation={panel.res} onSuccess={onDone} />;
+      case 'new':      return <ReservationForm onSuccess={onDone} onClose={closePanel} />;
+      case 'checkin':  return <CheckInForm reservation={panel.res} onSuccess={onDone} onClose={closePanel} />;
       case 'checkout': return <CheckOutForm reservation={panel.res} onSuccess={onDone} onExtend={() => openPanel('extend', panel.res)} />;
-      case 'extend':   return <ExtendStayForm reservation={panel.res} onSuccess={onDone} />;
+      case 'extend':   return <ExtendStayForm reservation={panel.res} onSuccess={onDone} onClose={closePanel} />;
       default:         return null;
     }
   };
@@ -312,8 +312,7 @@ export default function ReservationsPage() {
       <div style={{
         flex: 1,
         minWidth: 0,
-        marginRight: panelOpen && !isMobile ? PANEL_WIDTH + 16 : 0,
-        transition: 'margin-right 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+        ...contentStyle,
       }}>
         <div className="space-y-4">
 
@@ -358,7 +357,7 @@ export default function ReservationsPage() {
               {reservations.length} record{reservations.length !== 1 ? 's' : ''}
             </span>
 
-            {panel?.type !== 'new' && (
+            {!panelOpen && (
               <button onClick={() => openPanel('new')} className="btn-primary text-xs">
                 <Plus size={14} /> New
               </button>
@@ -377,52 +376,10 @@ export default function ReservationsPage() {
       </div>
 
       {/* Mobile backdrop */}
-      {isMobile && (
-        <div
-          onClick={closePanel}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 49,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            opacity: panelOpen ? 1 : 0,
-            pointerEvents: panelOpen ? 'auto' : 'none',
-            transition: 'opacity 280ms ease',
-          }}
-        />
-      )}
-
       {/* ── Right: slide-in panel ── */}
-      {panelOpen && (
-        <div style={{
-          position: 'fixed',
-          top: isMobile ? 0 : 56,
-          right: 0,
-          bottom: 0,
-          left: isMobile ? 0 : 'auto',
-          width: isMobile ? '100%' : PANEL_WIDTH,
-          zIndex: isMobile ? 50 : 30,
-          backgroundColor: 'var(--bg-surface)',
-          borderLeft: isMobile ? 'none' : '1px solid var(--border-soft)',
-          boxShadow: isMobile ? 'none' : '-6px 0 24px rgba(0,0,0,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'slideInPanel 240ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
-          <div className="flex items-center justify-between px-5 flex-shrink-0"
-            style={{ height: 44, borderBottom: '1px solid var(--border-soft)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{panelTitle}</h2>
-            <button onClick={closePanel}
-              className="w-7 h-7 flex items-center justify-center rounded-md transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-subtle)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <X size={15} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ paddingTop: 12 }}>
-            {panelContent()}
-          </div>
-        </div>
-      )}
+      <SlidePanel open={panelOpen} onClose={closePanel} title={panelTitle}>
+        {panelContent()}
+      </SlidePanel>
 
       {/* Cancel confirm */}
       <ConfirmDialog

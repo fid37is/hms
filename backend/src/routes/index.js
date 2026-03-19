@@ -1,8 +1,6 @@
 // src/routes/index.js
 
 import { Router }             from 'express';
-import { authenticate }        from '../middleware/auth.js';
-import { subscriptionGate }   from '../middleware/subscriptionGate.js';
 import authRoutes             from './authRoutes.js';
 import roomRoutes             from './roomRoutes.js';
 import guestRoutes            from './guestRoutes.js';
@@ -29,11 +27,9 @@ const router = Router();
 // ─── Public (no JWT — resolved via API key / subdomain / dev fallback) ────────
 router.use('/public',           publicRoutes);
 
-// Apply subscription gate to all authenticated routes
-router.use(authenticate);
-router.use(subscriptionGate);
-
 // ─── Authenticated (JWT required) ─────────────────────────────────────────────
+// authenticate + subscriptionGate are applied per-route inside each route file.
+// Do NOT add them globally here — /auth/login must remain unauthenticated.
 router.use('/auth',             authRoutes);
 router.use('/chat-departments', chatDepartmentRoutes);
 router.use('/conversations',    conversationRoutes);

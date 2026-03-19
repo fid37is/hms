@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 const PAYMENT_METHODS = ['cash', 'card', 'bank_transfer', 'mobile_money'];
 const today = () => new Date().toISOString().split('T')[0];
 
-export default function CheckInForm({ reservation: res, onSuccess }) {
+export default function CheckInForm({ reservation: res, onSuccess, onClose }) {
   const [roomId,        setRoomId]        = useState(res.rooms?.id || '');
   const [paymentMode,   setPaymentMode]   = useState('pay_later');
   const [paidAmount,    setPaidAmount]    = useState('');
@@ -260,7 +260,8 @@ export default function CheckInForm({ reservation: res, onSuccess }) {
         </span>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button onClick={handleCheckIn} disabled={isBusy || !canCheckIn}
           className="btn-primary">
           {isBusy ? 'Processing…' : 'Confirm Check-in'}

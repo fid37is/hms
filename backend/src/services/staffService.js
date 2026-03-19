@@ -36,7 +36,7 @@ export const getAllStaff = async (orgId, filters = {}, page = 1, limit = 20) => 
 
   let q = supabase.from('staff')
     .select(`id, full_name, email, phone, job_title, employment_type,
-      employment_date, status, created_at,
+      employment_date, status, department_id, user_id, created_at,
       departments ( id, name )`, { count: 'exact' })
     .eq('org_id', orgId).eq('is_deleted', false).order('full_name');
 

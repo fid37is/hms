@@ -1,14 +1,25 @@
 // src/frontend/src/modules/maintenance/components/WorkOrderForm.jsx
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link2Off } from 'lucide-react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Link2Off, AlertTriangle } from 'lucide-react';
 import * as maintApi from '../../../lib/api/maintenanceApi';
 import * as roomApi  from '../../../lib/api/roomApi';
+import * as staffApi from '../../../lib/api/staffApi';
 import toast from 'react-hot-toast';
+
+const ROOM_STATUS_LABEL = {
+  available:    'Available',
+  occupied:     'Occupied',
+  dirty:        'Dirty',
+  clean:        'Ready',
+  maintenance:  'Maintenance',
+  out_of_order: 'Out of Order',
+};
 
 const WO_CATEGORIES = ['general','electrical','plumbing','hvac','furniture','appliance','structural','other'];
 
-export default function WorkOrderForm({ onSuccess }) {
+export default function WorkOrderForm({ onSuccess, onClose }) {
+  const qc = useQueryClient();
   const [assetLinked, setAssetLinked] = useState(true); // encouraged by default
   const [form, setForm] = useState({
     asset_id:    '',
@@ -18,6 +29,7 @@ export default function WorkOrderForm({ onSuccess }) {
     category:    'general',
     room_id:     '',
     location:    '',
+    assigned_to: '',
   });
 
   const { data: assets } = useQuery({
@@ -30,8 +42,41 @@ export default function WorkOrderForm({ onSuccess }) {
     queryFn:  () => roomApi.getRooms({}).then(r => r.data.data),
   });
 
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn:  () => staffApi.getDepartments().then(r => r.data.data),
+  });
+
+  // Find all department IDs whose name contains "maintenance" (case-insensitive)
+  const maintDeptIds = (departments || [])
+    .filter(d => d.name?.toLowerCase().includes('maintenance'))
+    .map(d => d.id);
+
+  const { data: allStaff } = useQuery({
+    queryKey: ['staff', 'maintenance-only'],
+    queryFn:  () => staffApi.getStaff({ limit: 500, status: 'active' }).then(r => r.data.data),
+  });
+
+  // Filter to only staff in a maintenance department
+  // Note: staff object has departments:{id,name} join, not a flat department_id field
+  const maintStaff = (allStaff || []).filter(s =>
+    maintDeptIds.length > 0
+      ? maintDeptIds.includes(s.departments?.id)
+      : s.departments?.name?.toLowerCase().includes('maintenance')
+  );
+
+  const [markRoomMaintenance, setMarkRoomMaintenance] = useState(true);
+
   const save = useMutation({
-    mutationFn: (d) => maintApi.createWO(d),
+    mutationFn: async (d) => {
+      const wo = await maintApi.createWO(d);
+      // Optionally mark the room as under maintenance
+      if (d.room_id && markRoomMaintenance) {
+        await roomApi.updateRoomStatus(d.room_id, { status: 'maintenance' });
+        qc.invalidateQueries(['rooms']);
+      }
+      return wo;
+    },
     onSuccess: () => { toast.success('Work order created'); onSuccess(); },
     onError:   (e) => toast.error(e.response?.data?.message || 'Failed to create work order'),
   });
@@ -56,9 +101,10 @@ export default function WorkOrderForm({ onSuccess }) {
     e.preventDefault();
     save.mutate({
       ...form,
-      asset_id: assetLinked ? (form.asset_id || null) : null,
-      room_id:  form.room_id  || null,
-      location: form.location || null,
+      asset_id:    assetLinked ? (form.asset_id || null) : null,
+      room_id:     form.room_id  || null,
+      location:    form.location || null,
+      assigned_to: form.assigned_to || null,
     });
   };
 
@@ -153,15 +199,90 @@ export default function WorkOrderForm({ onSuccess }) {
           </select>
         </div>
 
+        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+          <label className="label" htmlFor="wo-assigned_to">
+            Assignee
+            <span className="ml-1.5 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+              — maintenance staff only
+            </span>
+          </label>
+          <select id="wo-assigned_to" name="assigned_to" className="input"
+            value={form.assigned_to} onChange={handleChange}>
+            <option value="">Unassigned</option>
+            {maintStaff.length === 0
+              ? <option disabled value="">No maintenance staff found</option>
+              : maintStaff.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}{s.job_title ? ` — ${s.job_title}` : ''}
+                  </option>
+                ))
+            }
+          </select>
+          {allStaff && maintStaff.length === 0 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              No staff found with a department named "Maintenance".
+              Make sure your maintenance staff are assigned to a department whose name includes that word.
+            </p>
+          )}
+        </div>
+
         <div className="form-group">
           <label className="label" htmlFor="wo-room_id">Room</label>
           <select id="wo-room_id" name="room_id" className="input"
             value={form.room_id} onChange={handleChange}>
             <option value="">None / Other area</option>
-            {(rooms || []).map(r => (
-              <option key={r.id} value={r.id}>Room {r.number}</option>
-            ))}
+            {/* Maintenance rooms first */}
+            {(rooms || []).filter(r => r.status === 'maintenance' || r.status === 'out_of_order').length > 0 && (
+              <optgroup label="⚠ Already flagged">
+                {(rooms || [])
+                  .filter(r => r.status === 'maintenance' || r.status === 'out_of_order')
+                  .map(r => (
+                    <option key={r.id} value={r.id}>
+                      Room {r.number} — {ROOM_STATUS_LABEL[r.status] || r.status}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+            <optgroup label="Other rooms">
+              {(rooms || [])
+                .filter(r => r.status !== 'maintenance' && r.status !== 'out_of_order')
+                .map(r => (
+                  <option key={r.id} value={r.id}>
+                    Room {r.number} — {ROOM_STATUS_LABEL[r.status] || r.status}
+                  </option>
+                ))}
+            </optgroup>
           </select>
+
+          {/* Mark room as maintenance toggle — only show when a room is selected and not already in maintenance */}
+          {form.room_id && (() => {
+            const sel = (rooms || []).find(r => r.id === form.room_id);
+            if (!sel || sel.status === 'maintenance') return null;
+            return (
+              <label className="flex items-center gap-2 mt-2 cursor-pointer select-none"
+                style={{ color: 'var(--text-sub)', fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={markRoomMaintenance}
+                  onChange={e => setMarkRoomMaintenance(e.target.checked)}
+                  style={{ accentColor: 'var(--brand)', width: 13, height: 13 }}
+                />
+                <AlertTriangle size={11} style={{ color: 'var(--s-yellow-text)', flexShrink: 0 }} />
+                Mark Room {sel.number} as <strong style={{ color: 'var(--text-base)' }}>Under Maintenance</strong>
+              </label>
+            );
+          })()}
+
+          {/* Info when room already in maintenance */}
+          {form.room_id && (() => {
+            const sel = (rooms || []).find(r => r.id === form.room_id);
+            if (!sel || sel.status !== 'maintenance') return null;
+            return (
+              <p className="mt-1.5 text-xs" style={{ color: 'var(--s-yellow-text)' }}>
+                Room {sel.number} is already marked as Under Maintenance
+              </p>
+            );
+          })()}
         </div>
 
         <div className="form-group">
@@ -180,7 +301,8 @@ export default function WorkOrderForm({ onSuccess }) {
           value={form.description} onChange={handleChange} />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
         <button type="submit" disabled={save.isPending} className="btn-primary">
           {save.isPending ? 'Creating…' : 'Create Work Order'}
         </button>

@@ -4,14 +4,14 @@ import Joi from 'joi';
 
 export const createTaskSchema = Joi.object({
   room_id:     Joi.string().uuid().required(),
-  task_type:   Joi.string().valid('cleaning', 'turndown', 'inspection', 'deep_clean', 'maintenance').default('cleaning'),
+  task_type:   Joi.string().valid('checkout_clean','stayover_clean','deep_clean','turndown','inspection','special_request','maintenance').default('checkout_clean'),
   priority:    Joi.string().valid('low', 'normal', 'high', 'urgent').default('normal'),
   assigned_to: Joi.string().uuid().optional().allow(null),
   notes:       Joi.string().trim().optional().allow('', null),
 });
 
 export const updateTaskSchema = Joi.object({
-  task_type:   Joi.string().valid('cleaning', 'turndown', 'inspection', 'deep_clean', 'maintenance').optional(),
+  task_type:   Joi.string().valid('checkout_clean','stayover_clean','deep_clean','turndown','inspection','special_request','maintenance').optional(),
   priority:    Joi.string().valid('low', 'normal', 'high', 'urgent').optional(),
   notes:       Joi.string().trim().optional().allow('', null),
 });
