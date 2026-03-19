@@ -96,6 +96,24 @@ export const completeTask = async (orgId, id, notes) => {
 
   if (error) throw new AppError(`Failed to complete task: ${error.message}`, 500);
 
+  // Room stays as-is until a supervisor inspects — inspectTask sets it to available
+
+  return data;
+};
+
+export const inspectTask = async (orgId, id, inspectedBy, notes) => {
+  const task = await getTaskById(orgId, id);
+  if (task.status !== 'done')
+    throw new AppError(`Cannot inspect a task with status: ${task.status}.`, 409);
+
+  const { data, error } = await supabase
+    .from('housekeeping_tasks')
+    .update({ status: 'inspected', notes: notes || task.notes })
+    .eq('org_id', orgId).eq('id', id).select().single();
+
+  if (error) throw new AppError(`Failed to inspect task: ${error.message}`, 500);
+
+  // Supervisor confirmed room is clean — mark as available
   if (task.rooms?.id)
     await supabase.from('rooms').update({ status: ROOM_STATUS.AVAILABLE })
       .eq('org_id', orgId).eq('id', task.rooms.id);

@@ -1,4 +1,4 @@
-import { Play, CheckCircle, Pencil } from 'lucide-react';
+import { Play, CheckCircle, ShieldCheck, Pencil } from 'lucide-react';
 
 const COLUMNS = [
   { status: 'pending',     label: 'Pending',     color: 'var(--s-yellow-text)' },
@@ -14,7 +14,7 @@ const PRIORITY_COLOR = {
   low:    'var(--text-muted)',
 };
 
-function TaskCard({ task, onStart, onComplete, onEdit }) {
+function TaskCard({ task, onStart, onComplete, onInspect, onEdit }) {
   return (
     <div
       className="card p-3 space-y-2"
@@ -84,13 +84,22 @@ function TaskCard({ task, onStart, onComplete, onEdit }) {
               <CheckCircle size={10} /> Done
             </button>
           )}
+          {task.status === 'done' && (
+            <button
+              onClick={() => onInspect(task.id)}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors"
+              style={{ backgroundColor: 'var(--brand-subtle)', color: 'var(--brand)' }}
+            >
+              <ShieldCheck size={10} /> Inspect
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default function TaskBoard({ tasks, onStart, onComplete, onEdit }) {
+export default function TaskBoard({ tasks, onStart, onComplete, onInspect, onEdit }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {COLUMNS.map(col => {
@@ -111,7 +120,7 @@ export default function TaskBoard({ tasks, onStart, onComplete, onEdit }) {
             <div className="space-y-2 min-h-24">
               {colTasks.map(task => (
                 <TaskCard key={task.id} task={task}
-                  onStart={onStart} onComplete={onComplete} onEdit={onEdit} />
+                  onStart={onStart} onComplete={onComplete} onInspect={onInspect} onEdit={onEdit} />
               ))}
               {!colTasks.length && (
                 <div
