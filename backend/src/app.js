@@ -13,6 +13,7 @@ import publicRoutes        from './routes/publicRoutes.js';
 import superAdminRoutes    from './routes/superAdminRoutes.js';
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Render, Railway, Heroku etc)
 
 // ── 1. CORS ───────────────────────────────────────────────────────────────────
 const parseOrigins = (val, fallback) =>

@@ -38,6 +38,15 @@ export default function HousekeepingPage() {
   const completeTask = useMutation({
     mutationFn: (id) => hkApi.completeTask(id, {}),
     onSuccess: () => {
+      toast.success('Task marked as done — pending inspection');
+      qc.invalidateQueries(['hk-tasks']);
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+  });
+
+  const inspectTask = useMutation({
+    mutationFn: (id) => hkApi.inspectTask(id, {}),
+    onSuccess: () => {
       toast.success('Room marked as available');
       qc.invalidateQueries(['hk-tasks']);
       qc.invalidateQueries(['rooms']);
@@ -108,6 +117,7 @@ export default function HousekeepingPage() {
                   tasks={data || []}
                   onStart={id => startTask.mutate(id)}
                   onComplete={id => completeTask.mutate(id)}
+                  onInspect={id => inspectTask.mutate(id)}
                   onEdit={task => openPanel('edit-task', task)}
                 />
           )}

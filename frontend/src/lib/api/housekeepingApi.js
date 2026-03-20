@@ -7,6 +7,7 @@ export const updateTask       = (id, d)  => api.patch(`/housekeeping/tasks/${id}
 export const assignTask       = (id, d)  => api.patch(`/housekeeping/tasks/${id}/assign`, d);
 export const startTask        = (id)     => api.patch(`/housekeeping/tasks/${id}/start`);
 export const completeTask     = (id, d)  => api.patch(`/housekeeping/tasks/${id}/complete`, d);
+export const inspectTask      = (id, d)  => api.patch(`/housekeeping/tasks/${id}/inspect`, d);
 export const deleteTask       = (id)     => api.delete(`/housekeeping/tasks/${id}`);
 export const getLostAndFound  = (params) => api.get('/housekeeping/lost-and-found', { params });
 export const getLostAndFoundById = (id)  => api.get(`/housekeeping/lost-and-found/${id}`);
