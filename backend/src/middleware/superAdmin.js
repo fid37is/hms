@@ -34,7 +34,7 @@ export const requireSuperAdmin = async (req, res, next) => {
   // Verify the admin still exists and is active in the DB
   const { data: admin, error } = await supabase
     .from('platform_admins')
-    .select('id, email, full_name, is_active')
+    .select('id, email, full_name, is_active, role')
     .eq('id', decoded.sub)
     .maybeSingle();
 
@@ -45,6 +45,14 @@ export const requireSuperAdmin = async (req, res, next) => {
     return sendForbidden(res, 'Admin account has been deactivated.');
   }
 
-  req.superAdmin = { id: admin.id, email: admin.email, full_name: admin.full_name };
+  req.superAdmin = { id: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role || 'admin' };
+  next();
+};
+
+// Only the super_admin role can manage other admins
+export const requireSuperAdminRole = (req, res, next) => {
+  if (req.superAdmin?.role !== 'super_admin') {
+    return sendForbidden(res, 'Only the primary super admin can manage other admin accounts.');
+  }
   next();
 };

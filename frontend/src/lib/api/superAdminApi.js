@@ -59,3 +59,10 @@ export const updateOrganization = (orgId, data) =>
   saApi.patch(`/organizations/${orgId}`, data);
 
 export default saApi;
+
+// ── Admin Management ──────────────────────────────────────────────────────────
+export const listAdmins         = ()        => saApi.get('/admins');
+export const createAdmin        = (d)       => saApi.post('/admins', d);
+export const toggleAdmin        = (id)      => saApi.patch(`/admins/${id}/toggle`);
+export const deleteAdmin        = (id)      => saApi.delete(`/admins/${id}`);
+export const resetAdminPassword = (id, d)   => saApi.patch(`/admins/${id}/password`, d);

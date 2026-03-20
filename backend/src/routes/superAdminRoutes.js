@@ -1,7 +1,7 @@
 // src/routes/superAdminRoutes.js
 
 import { Router }                from 'express';
-import { requireSuperAdmin }     from '../middleware/superAdmin.js';
+import { requireSuperAdmin, requireSuperAdminRole }     from '../middleware/superAdmin.js';
 import { superAdminLoginLimiter } from '../middleware/rateLimiter.js';
 import * as ctrl                 from '../controllers/superAdminController.js';
 
@@ -21,5 +21,11 @@ router.patch('/organizations/:orgId', ctrl.updateOrganization);
 router.get('/activity',               ctrl.getPlatformActivity);
 router.get('/health',                 ctrl.getSystemHealth);
 router.get('/financials',              ctrl.getPlatformFinancials);
+
+router.get('/admins',                                          ctrl.listAdmins);
+router.post('/admins',                  requireSuperAdminRole, ctrl.createAdmin);
+router.patch('/admins/:id/toggle',      requireSuperAdminRole, ctrl.toggleAdmin);
+router.delete('/admins/:id',            requireSuperAdminRole, ctrl.deleteAdmin);
+router.patch('/admins/:id/password',    ctrl.resetAdminPassword); // any admin can reset own password
 
 export default router;

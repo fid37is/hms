@@ -1,5 +1,6 @@
 // src/services/superAdminService.js
 
+import crypto from 'crypto';
 import jwt          from 'jsonwebtoken';
 import bcrypt       from 'bcryptjs';
 import { supabase } from '../config/supabase.js';
@@ -16,7 +17,7 @@ export const superAdminLogin = async (email, password) => {
   // 1. Fetch admin by email
   const { data: admin, error } = await supabase
     .from('platform_admins')
-    .select('id, email, full_name, is_active, password_hash')
+    .select('id, email, full_name, is_active, role, password_hash')
     .eq('email', email.toLowerCase().trim())
     .maybeSingle();
 
@@ -41,7 +42,7 @@ export const superAdminLogin = async (email, password) => {
 
   // 4. Issue super-admin JWT — no org_id, is_super_admin: true
   const token = jwt.sign(
-    { sub: admin.id, email: admin.email, full_name: admin.full_name, is_super_admin: true },
+    { sub: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role || 'admin', is_super_admin: true },
     env.JWT_SECRET,
     { expiresIn: SA_TOKEN_TTL }
   );
@@ -49,7 +50,7 @@ export const superAdminLogin = async (email, password) => {
   return {
     access_token: token,
     expires_in:   SA_TOKEN_TTL,
-    admin: { id: admin.id, email: admin.email, full_name: admin.full_name },
+    admin: { id: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role || 'admin' },
   };
 };
 
@@ -353,7 +354,7 @@ export const getPlatformFinancials = async () => {
     supabase.from('org_subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'trial'),
     supabase.from('org_subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'cancelled'),
     supabase.from('subscription_payments')
-      .select('id, amount, currency, paid_at, org_id, organizations(name, slug)')
+      .select('id, amount, currency, paid_at, org_id, dodo_payment_id, organizations(name, slug)')
       .eq('status', 'success')
       .order('paid_at', { ascending: false })
       .limit(10),
@@ -406,4 +407,58 @@ export const getPlatformFinancials = async () => {
     revenue_chart:    revenueChart,
     recent_payments:  recentPayments.data || [],
   };
+};
+
+// --- Admin Management -------------------------------------------------------
+
+export const listAdmins = async () => {
+  const { data, error } = await supabase
+    .from('platform_admins')
+    .select('id, email, full_name, is_active, role, last_login, created_at')
+    .order('created_at', { ascending: true });
+  if (error) throw new AppError(`Failed to fetch admins: ${error.message}`, 500);
+  return data || [];
+};
+
+export const createAdmin = async (email, fullName, password) => {
+  const existing = await supabase
+    .from('platform_admins').select('id').eq('email', email.toLowerCase().trim()).maybeSingle();
+  if (existing.data) throw new AppError('An admin with this email already exists.', 409);
+
+  const password_hash = await bcrypt.hash(password, 12);
+  const { data, error } = await supabase
+    .from('platform_admins')
+    .insert({ id: crypto.randomUUID(), email: email.toLowerCase().trim(), full_name: fullName, password_hash, is_active: true, role: 'admin' })
+    .select('id, email, full_name, is_active, role, created_at').single();
+  if (error) throw new AppError(`Failed to create admin: ${error.message}`, 500);
+  return data;
+};
+
+
+export const getSeededAdminId = async () => {
+  const { data } = await supabase
+    .from('platform_admins').select('id').order('created_at', { ascending: true }).limit(1).single();
+  return data?.id || null;
+};
+export const toggleAdmin = async (id) => {
+  // Role check handled at route level by requireSuperAdminRole
+  const { data: admin } = await supabase.from('platform_admins').select('is_active').eq('id', id).single();
+  if (!admin) throw new AppError('Admin not found.', 404);
+  const { data, error } = await supabase
+    .from('platform_admins').update({ is_active: !admin.is_active }).eq('id', id)
+    .select('id, email, full_name, is_active').single();
+  if (error) throw new AppError('Failed to update admin.', 500);
+  return data;
+};
+
+export const deleteAdmin = async (id, requesterId) => {
+  if (id === requesterId) throw new AppError('You cannot delete your own account.', 400);
+  const { error } = await supabase.from('platform_admins').delete().eq('id', id);
+  if (error) throw new AppError('Failed to delete admin.', 500);
+};
+
+export const resetAdminPassword = async (id, newPassword) => {
+  const password_hash = await bcrypt.hash(newPassword, 12);
+  const { error } = await supabase.from('platform_admins').update({ password_hash }).eq('id', id);
+  if (error) throw new AppError('Failed to reset password.', 500);
 };

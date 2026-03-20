@@ -1,8 +1,8 @@
 // src/controllers/superAdminController.js
 
 import * as superAdminService from '../services/superAdminService.js';
-import { sendSuccess, sendCreated, sendError } from '../utils/response.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { sendSuccess, sendCreated, sendError } from '../utils/response.js';
 
 // ─── Auth ─────────────────────────────────────────────────
 
@@ -110,4 +110,43 @@ export const getPlatformFinancials = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+export const listAdmins = async (req, res, next) => {
+  try {
+    const data = await superAdminService.listAdmins();
+    return sendSuccess(res, data, 'Admins retrieved.');
+  } catch (e) { next(e); }
+};
+
+export const createAdmin = async (req, res, next) => {
+  try {
+    const { email, full_name, password } = req.body;
+    if (!email || !full_name || !password) throw new AppError('email, full_name and password are required.', 400);
+    const data = await superAdminService.createAdmin(email, full_name, password);
+    return sendCreated(res, data, 'Admin created.');
+  } catch (e) { next(e); }
+};
+
+export const toggleAdmin = async (req, res, next) => {
+  try {
+    const data = await superAdminService.toggleAdmin(req.params.id);
+    return sendSuccess(res, data, 'Admin status updated.');
+  } catch (e) { next(e); }
+};
+
+export const deleteAdmin = async (req, res, next) => {
+  try {
+    await superAdminService.deleteAdmin(req.params.id, req.admin.id);
+    return sendSuccess(res, null, 'Admin deleted.');
+  } catch (e) { next(e); }
+};
+
+export const resetAdminPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) throw new AppError('Password must be at least 8 characters.', 400);
+    await superAdminService.resetAdminPassword(req.params.id, password);
+    return sendSuccess(res, null, 'Password reset successfully.');
+  } catch (e) { next(e); }
 };

@@ -11,6 +11,7 @@ import OrganizationDetailPage    from './modules/superAdmin/OrganizationDetailPa
 import ActivityPage              from './modules/superAdmin/ActivityPage';
 import SystemPage                     from './modules/superAdmin/SystemPage';
 import FinancialsPage                from './modules/superAdmin/FinancialsPage';
+import AdminsPage                    from './modules/superAdmin/AdminsPage';
 import SuperAdminForgotPasswordPage  from './modules/superAdmin/SuperAdminForgotPasswordPage';
 import SuperAdminResetPasswordPage   from './modules/superAdmin/SuperAdminResetPasswordPage';
 
@@ -159,6 +160,7 @@ export default function App() {
           <Route path="financials" element={<FinancialsPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="system"   element={<SystemPage />} />
+          <Route path="admins"   element={<AdminsPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
