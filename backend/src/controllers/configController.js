@@ -19,6 +19,10 @@ export const initConfig = async (req, res, next) => {
 
 export const updateConfig = async (req, res, next) => {
   try {
+    // Log the raw request body to see exactly what the frontend sends
+    console.log('[updateConfig] raw body keys:', Object.keys(req.body));
+    console.log('[updateConfig] body.content:', req.body.content);
+    console.log('[updateConfig] body.layout:', JSON.stringify(req.body.layout)?.slice(0, 100));
     const data = await configService.updateConfig(req.user.org_id, req.body);
     return sendSuccess(res, data, 'Hotel configuration updated.');
   } catch (err) { next(err); }

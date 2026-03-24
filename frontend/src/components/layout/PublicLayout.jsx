@@ -27,7 +27,7 @@ export default function PublicLayout({ children, scrolled = false, mobileMenu = 
 
   const NAV_LINKS = pathname === '/'
     ? [['#features','Features'],['#modules','Modules'],['#saas','Platform'],['#pricing','Pricing']]
-    : [['/?#features','Features'],['/?#modules','Modules'],['/?#saas','Platform'],['/?#pricing','Pricing']];
+    : [['/#features','Features'],['/#modules','Modules'],['/#saas','Platform'],['/#pricing','Pricing']];
 
   const FOOTER_COLS = [
     {
@@ -49,11 +49,12 @@ export default function PublicLayout({ children, scrolled = false, mobileMenu = 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
 
+        html { scroll-behavior: smooth; }
         .cl-nav-link { text-decoration:none; color:var(--sidebar-text); font-size:14px; font-family:${sans}; transition:color .15s; }
         .cl-nav-link:hover { color:var(--sidebar-text-active); }
 
-        .cl-fl { text-decoration:none; color:var(--sidebar-text); font-size:13px; font-family:${sans}; transition:color .15s; }
-        .cl-fl:hover { color:var(--sidebar-text-active); }
+        .cl-fl { text-decoration:none; color:rgba(255,220,170,0.6); font-size:13px; font-family:${sans}; transition:color .15s; }
+        .cl-fl:hover { color:rgba(255,220,170,1); }
 
         .cl-cta {
           display:inline-flex; align-items:center; gap:8px;
@@ -128,18 +129,18 @@ export default function PublicLayout({ children, scrolled = false, mobileMenu = 
           <div className="cl-footer-grid" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr', gap: 48 }}>
             <div className="cl-footer-brand">
               <Logo size="sm" darkBg={false} noLink />
-              <p style={{ fontSize: 13, color: 'rgba(255,220,170,0.35)', lineHeight: 1.76, maxWidth: 220, marginTop: 14, fontFamily: sans }}>
+              <p style={{ fontSize: 13, color: 'rgba(255,220,170,0.5)', lineHeight: 1.76, maxWidth: 220, marginTop: 14, fontFamily: sans }}>
                 The modern hotel management platform for independent properties and growing groups.
               </p>
-              <p style={{ fontSize: 12, color: 'rgba(255,220,170,0.18)', marginTop: 12, fontStyle: 'italic', fontFamily: serif }}>Your hotel, always on.</p>
+              <p style={{ fontSize: 12, color: '#ffffff', marginTop: 12, fontStyle: 'italic', fontFamily: serif }}>Your hotel, always on.</p>
             </div>
             {FOOTER_COLS.map(col => (
               <div key={col.title}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,220,170,0.28)', marginBottom: 20, fontFamily: sans }}>{col.title}</p>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,220,170,0.55)', marginBottom: 20, fontFamily: sans }}>{col.title}</p>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
                   {col.links.map(([h, l]) => (
                     <li key={l}>
-                      {h.startsWith('mailto') || h.startsWith('http')
+                      {h.startsWith('mailto') || h.startsWith('http') || h.startsWith('#')
                         ? <a href={h} className="cl-fl">{l}</a>
                         : <Link to={h} className="cl-fl">{l}</Link>
                       }
@@ -150,12 +151,8 @@ export default function PublicLayout({ children, scrolled = false, mobileMenu = 
             ))}
           </div>
         </Container>
-        <Container style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,220,170,0.1)', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'rgba(255,220,170,0.2)', fontFamily: sans }}>© 2026 Cierlo. All rights reserved.</span>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Link to="/terms"   className="cl-fl" style={{ fontSize: 12 }}>Terms</Link>
-            <Link to="/privacy" className="cl-fl" style={{ fontSize: 12 }}>Privacy</Link>
-          </div>
+        <Container style={{ padding: '20px 24px', borderTop: '1px solid rgba(255,220,170,0.1)', textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,220,170,0.4)', fontFamily: sans }}>© 2026 Cierlo. All rights reserved.</span>
         </Container>
       </footer>
     </div>

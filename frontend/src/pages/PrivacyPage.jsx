@@ -1,5 +1,8 @@
 import PublicLayout from '../components/layout/PublicLayout';
 
+const sans  = "'DM Sans', system-ui, sans-serif";
+const serif = "'Cormorant Garamond', Georgia, serif";
+
 
 const SECTIONS = [
   { title: 'What data we collect', body: `We collect information you provide directly: hotel and organisation details, staff account information (name, email, role), guest profiles (name, contact, stay history), reservation and billing records, and configuration settings. We also collect usage data such as log files, IP addresses, and feature usage patterns to improve the Service.` },
@@ -20,9 +23,9 @@ export default function PrivacyPage() {
       <div style={{ paddingTop: 64, minHeight: '80vh' }}>
         <div style={{ background:'var(--sidebar-bg)', padding: '64px 24px 56px' }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)', marginBottom: 16, fontFamily: sans }}>Legal</p>
-            <h1 style={{ fontFamily: serif, fontSize: 'clamp(36px,5vw,52px)', fontWeight: 600, color:'var(--text-on-brand)', lineHeight: 1.15, margin: '0 0 12px' }}>Privacy Policy</h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,.4)', fontFamily: sans }}>Last updated: March 2026</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color:'var(--text-muted)', marginBottom: 16, fontFamily: sans }}>Legal</p>
+            <h1 style={{ fontFamily: serif, fontSize: 'clamp(36px,5vw,52px)', fontWeight: 600, color:'var(--text-base)', lineHeight: 1.15, margin: '0 0 12px' }}>Privacy Policy</h1>
+            <p style={{ fontSize: 14, color:'var(--text-muted)', fontFamily: sans }}>Last updated: March 2026</p>
           </div>
         </div>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px 80px' }}>

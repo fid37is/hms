@@ -6,6 +6,7 @@ import { useThemeStore }       from '../../store/themeStore';
 import { useUIStore }          from '../../store/uiStore';
 import { useNotifications }    from '../../hooks/useNotifications';
 import ChangePasswordModal     from '../shared/ChangePasswordModal';
+import OrgSwitcher            from './OrgSwitcher';
 import NotificationPanel       from '../shared/NotificationPanel';
 import * as authApi            from '../../lib/api/authApi';
 import toast from 'react-hot-toast';
@@ -36,7 +37,8 @@ const TITLES = {
 export default function Header() {
   const { pathname }          = useLocation();
   const navigate              = useNavigate();
-  const { user, logout }      = useAuthStore();
+  const { user, logout, org, orgs }  = useAuthStore();
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
   const { mode, toggleTheme } = useThemeStore();
   const { toggleSidebar }     = useUIStore();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
@@ -78,7 +80,10 @@ export default function Header() {
           <h1 className="text-sm font-semibold" style={{ color: 'var(--text-base)' }}>{title}</h1>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* Property switcher + Add property — admin only */}
+          {isAdmin && <OrgSwitcher />}
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}

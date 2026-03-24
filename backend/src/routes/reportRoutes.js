@@ -6,6 +6,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PERMISSIONS }       from '../config/constants.js';
 import {
   getDashboardStats,
+  getGroupSummaryStats,
   getOccupancyReport,
   getRevenueReport,
   getNightAudit,
@@ -19,6 +20,9 @@ router.use(authenticate);
 // GET /api/v1/reports/dashboard
 router.get('/dashboard',
   requirePermission(PERMISSIONS.REPORTS.READ), getDashboardStats);
+
+// GET /api/v1/reports/group-summary?org_ids=id1,id2
+router.get('/group-summary', authenticate, getGroupSummaryStats);
 
 // GET /api/v1/reports/occupancy?date_from=&date_to=
 router.get('/occupancy',

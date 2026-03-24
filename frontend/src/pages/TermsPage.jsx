@@ -1,5 +1,8 @@
 import PublicLayout from '../components/layout/PublicLayout';
 
+const sans  = "'DM Sans', system-ui, sans-serif";
+const serif = "'Cormorant Garamond', Georgia, serif";
+
 
 const SECTIONS = [
   { title: '1. Acceptance of Terms', body: `By accessing or using Cierlo ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the Service. These terms apply to all users, including hotel administrators, staff members, and any third parties who access the platform.` },
@@ -21,9 +24,9 @@ export default function TermsPage() {
       <div style={{ paddingTop: 64, minHeight: '80vh' }}>
         <div style={{ background:'var(--sidebar-bg)', padding: '64px 24px 56px' }}>
           <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)', marginBottom: 16, fontFamily: sans }}>Legal</p>
-            <h1 style={{ fontFamily: serif, fontSize: 'clamp(36px,5vw,52px)', fontWeight: 600, color:'var(--text-on-brand)', lineHeight: 1.15, margin: '0 0 12px' }}>Terms of Service</h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,.4)', fontFamily: sans }}>Last updated: March 2026</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color:'var(--text-muted)', marginBottom: 16, fontFamily: sans }}>Legal</p>
+            <h1 style={{ fontFamily: serif, fontSize: 'clamp(36px,5vw,52px)', fontWeight: 600, color:'var(--text-base)', lineHeight: 1.15, margin: '0 0 12px' }}>Terms of Service</h1>
+            <p style={{ fontSize: 14, color:'var(--text-muted)', fontFamily: sans }}>Last updated: March 2026</p>
           </div>
         </div>
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '56px 24px 80px' }}>

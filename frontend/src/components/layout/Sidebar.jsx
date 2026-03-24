@@ -6,7 +6,7 @@ import {
   LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings,
   ChevronLeft, ChevronRight, LogOut, MessageSquare, UtensilsCrossed,
-  KeyRound, ChevronUp, HelpCircle, Zap, Palette, Moon, CalendarDays,
+  KeyRound, ChevronUp, HelpCircle, Zap, Palette, Moon, CalendarDays, Building2,
 } from 'lucide-react';
 import { useUIStore }     from '../../store/uiStore';
 import { useAuthStore }   from '../../store/authStore';
@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 
 const NAV = [
   { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard',    permission: null },
+  { to: '/group',        icon: Building2,       label: 'Group View',   permission: null, multiOrgOnly: true },
   { to: '/rooms',        icon: BedDouble,       label: 'Rooms',        permission: 'rooms:read' },
   { to: '/reservations', icon: CalendarCheck,   label: 'Reservations', permission: 'reservations:read' },
   { to: '/guests',       icon: Users,           label: 'Guests',       permission: 'guests:read' },
@@ -83,7 +84,7 @@ const getRolePagesByPattern = (roleName) => {
 
 export default function Sidebar() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
-  const { user, logout, hasPermission } = useAuthStore();
+  const { user, logout, hasPermission, orgs } = useAuthStore();
   const navigate    = useNavigate();
   const unreadCount = useUnreadCount();
   const [menuOpen,  setMenuOpen]  = useState(false);
@@ -125,7 +126,10 @@ export default function Sidebar() {
     return rolePages.includes(segment);
   };
 
-  const visibleNav = NAV.filter(canSee);
+  const visibleNav = NAV.filter(item => {
+    if (item.multiOrgOnly && (!orgs || orgs.length <= 1)) return false;
+    return canSee(item);
+  });
 
   const menuItem = (icon, label, onClick, danger = false) => (
     <button

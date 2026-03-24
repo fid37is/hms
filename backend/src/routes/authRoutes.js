@@ -19,6 +19,9 @@ import {
   logoutController,
   forgotPasswordController,
   registerOrgController,
+  getUserOrgsController,
+  switchOrgController,
+  createAdditionalOrgController,
   generateApiKeyController,
   listApiKeysController,
   revokeApiKeyController,
@@ -50,5 +53,10 @@ router.delete('/api-keys/:id',  authenticate, revokeApiKeyController);
 // ─── Organisation profile (slug, custom domain) ───────────
 router.get('/org',              authenticate, getOrgController);
 router.patch('/org',            authenticate, updateOrgController);
+
+// ─── Multi-property ──────────────────────────────────────
+router.get('/orgs',             authenticate, getUserOrgsController);
+router.post('/orgs/switch',     authenticate, switchOrgController);
+router.post('/orgs/create',     authenticate, createAdditionalOrgController);
 
 export default router;

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation }       from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate }                 from 'react-router-dom';
 import * as configApi                  from '../../../lib/api/configApi';
-import toast                           from 'react-hot-toast';
+import toast, { Toaster }              from 'react-hot-toast';
 import {
   Eye, EyeOff, RotateCcw, ChevronUp, ChevronDown,
   ChevronRight, ChevronLeft, GripVertical, Trash2,
@@ -40,14 +40,14 @@ const DEFAULT_LAYOUT = {
   hero_style:     'fullscreen',
   card_style:     'portrait',
   font_pair:      'cormorant_dmsans',
-  section_order:  ['hero','booking_bar','rooms','why_stay','story','offers','events','reviews','cta'],
+  section_order:  ['hero','amenities','why_stay','rooms','story','offers','events','reviews','cta'],
   section_hidden: [],
 };
 
 const ALL_SECTIONS = {
   hero:        { label: 'Hero Banner',      desc: 'Full-width header image',   required: true  },
-  booking_bar: { label: 'Booking Bar',      desc: 'Check availability search', required: false },
   rooms:       { label: 'Rooms & Suites',   desc: 'Room type cards grid',      required: false },
+  amenities:   { label: 'Amenities',         desc: 'Feature amenity cards',     required: false },
   why_stay:    { label: 'Why Stay Here',    desc: 'Service tiles + pillars',   required: false },
   story:       { label: 'Our Story',        desc: 'Split image + copy',        required: false },
   offers:      { label: 'Special Offers',   desc: 'Package / rate cards',      required: false },
@@ -64,9 +64,9 @@ const DEFAULT_CONTENT = {
   why_stay: {
     eyebrow: 'The Experience', headline: 'Life at the Hotel',
     tiles: [
-      { eyebrow: 'Wellness',   title: 'Spa & Rejuvenation',   to: '/wellness' },
-      { eyebrow: 'Dining',     title: 'Culinary Experiences', to: '/dining'   },
-      { eyebrow: 'Recreation', title: 'Pool & Leisure',       to: '/explore'  },
+      { eyebrow: 'Wellness',   title: 'Spa & Rejuvenation',   description: 'Holistic treatments and therapeutic rituals.', to: '/wellness', img: '' },
+      { eyebrow: 'Dining',     title: 'Culinary Experiences', description: 'West African cuisine and signature cocktails.', to: '/dining',   img: '' },
+      { eyebrow: 'Recreation', title: 'Pool & Leisure',       description: 'Rooftop pool, gym, and open-air lounges.',     to: '/explore',  img: '' },
     ],
     pillars: [
       { title: 'Warm Hospitality', body: 'Our team anticipates every need — ensuring your stay is effortless.' },
@@ -102,6 +102,17 @@ const DEFAULT_CONTENT = {
       { name: 'Garden Terrace',      tag: 'Outdoor Celebrations', cap: 'Up to 150 guests' },
     ],
   },
+  amenities: {
+    eyebrow: 'What We Offer', headline: 'Featured Amenities',
+    items: [
+      { id: 'wifi',       title: 'High-Speed Wi-Fi',         body: 'Stay connected effortlessly with fast, reliable internet in every room.' },
+      { id: 'pool',       title: 'Swimming Pool',            body: 'Unwind in our resort-style pool, open daily from 6 am to 10 pm.' },
+      { id: 'restaurant', title: 'In-House Restaurant',      body: 'Savour locally inspired cuisine and international dishes, served all day.' },
+      { id: 'spa',        title: 'Spa & Wellness',           body: 'Rejuvenate with our range of massage, facial, and wellness treatments.' },
+      { id: 'parking',    title: 'Free Parking',             body: 'Secure, complimentary parking available for all hotel guests.' },
+      { id: 'support',    title: '24/7 Support',             body: 'Our front desk and support team are available around the clock.' },
+    ],
+  },
   reviews:  { eyebrow: 'Guest Stories', headline: 'What Our Guests Say' },
   cta:      { eyebrow: 'Direct Booking · Best Rate Guaranteed', headline: 'Begin your', headlineSub: 'stay.', ctaLabel: 'Reserve a Room' },
   custom_1: { eyebrow: '', headline: 'Your Custom Section', subheading: '', body: '', ctaLabel: '', bgColor: '', layout: 'centered' },
@@ -114,10 +125,12 @@ const CARD_SCHEMAS = {
   why_stay: {
     cards: { key: 'tiles', label: 'Service Tiles', itemLabel: i => i.title || 'Tile',
       fields: [
-        { key: 'eyebrow', label: 'Eyebrow', placeholder: 'e.g. Wellness'           },
-        { key: 'title',   label: 'Title',   placeholder: 'e.g. Spa & Rejuvenation' },
-        { key: 'to',      label: 'Link',    placeholder: '/wellness'               },
-      ], addDefault: { eyebrow: 'New', title: 'New Tile', to: '/' },
+        { key: 'eyebrow',      label: 'Eyebrow',      placeholder: 'e.g. Wellness'                          },
+        { key: 'title',        label: 'Title',         placeholder: 'e.g. Spa & Rejuvenation'               },
+        { key: 'description',  label: 'Description',   placeholder: 'Short text shown on the tile'          },
+        { key: 'to',           label: 'Link',          placeholder: '/wellness'                             },
+        { key: 'img',          label: 'Image URL',     placeholder: 'https://… (leave blank for default)'   },
+      ], addDefault: { eyebrow: 'New', title: 'New Tile', description: '', to: '/', img: '' },
     },
     cards2: { key: 'pillars', label: 'Feature Pillars', itemLabel: i => i.title || 'Pillar',
       fields: [
@@ -152,6 +165,14 @@ const CARD_SCHEMAS = {
         { key: 'tag',  label: 'Event type', placeholder: 'e.g. Weddings & Galas' },
         { key: 'cap',  label: 'Capacity',   placeholder: 'e.g. Up to 500 guests' },
       ], addDefault: { name: 'New Venue', tag: 'Events', cap: 'Up to 100 guests' },
+    },
+  },
+  amenities: {
+    cards: { key: 'items', label: 'Amenities', itemLabel: i => i.title || 'Amenity',
+      fields: [
+        { key: 'title', label: 'Title',       placeholder: 'e.g. Swimming Pool'       },
+        { key: 'body',  label: 'Description', placeholder: 'Short description', multiline: true },
+      ], addDefault: { id: 'custom', title: 'New Amenity', body: '' },
     },
   },
 };
@@ -342,7 +363,8 @@ function SectionPanel({ id, content, onContentChange, layout, onLayoutChange }) 
 }
 
 export default function CustomizePage() {
-  const navigate   = useNavigate();
+  const navigate     = useNavigate();
+  const queryClient  = useQueryClient();
   const previewRef = useRef(null);
   const dragIdx    = useRef(null);
   const dragOver   = useRef(null);
@@ -354,7 +376,19 @@ export default function CustomizePage() {
 
   const [layout,        setLayout]        = useState({ ...DEFAULT_LAYOUT });
   const [colors,        setColors]        = useState({ primary_color: '#1a1a1a', accent_color: '#c9a96e', nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '' });
-  const [content,       setContent]       = useState(() => JSON.parse(JSON.stringify(DEFAULT_CONTENT)));
+  const [seo,           setSeo]           = useState({ seo_title: '', seo_description: '', seo_keywords: '', og_image: '', canonical_url: '', robots: 'index,follow' });
+  const contentRef = useRef(JSON.parse(JSON.stringify(DEFAULT_CONTENT)));
+  const layoutRef  = useRef({ ...DEFAULT_LAYOUT });
+  const colorsRef  = useRef({ primary_color: '#1a1a1a', accent_color: '#c9a96e', nav_color: '', btn_color: '', footer_color: '', surface_color: '', bg_color: '' });
+  const dataRef    = useRef(null);
+
+  // Wrap useState setters so refs always stay in sync
+  const [content, _setContent] = useState(() => JSON.parse(JSON.stringify(DEFAULT_CONTENT)));
+  const setContent = (val) => {
+    const next = typeof val === 'function' ? val(contentRef.current) : val;
+    contentRef.current = next;
+    _setContent(next);
+  };
   const [activeSection, setActiveSection] = useState(null);
   const [activeTab,     setActiveTab]     = useState('sections');
   const [dragActive,    setDragActive]    = useState(null);
@@ -362,9 +396,35 @@ export default function CustomizePage() {
   const [showAdd,       setShowAdd]       = useState(false);
   const [previewWidth,  setPreviewWidth]  = useState('100%');
 
+  // Key for persisting content+layout locally in the HMS admin app,
+  // since the API may not return content in GET /config yet.
+  const HMS_DRAFT_KEY = 'hms_customize_draft';
+
+  useEffect(() => { dataRef.current = data; }, [data]);
+
   useEffect(() => {
     if (!data) return;
-    setLayout({ ...DEFAULT_LAYOUT, ...(data.layout || {}) });
+    console.log('[CustomizePage] config loaded from API:', { layout: data.layout, content: data.content, primary_color: data.primary_color });
+    // Always use canonical section_order as the source of truth for ORDER.
+    // Keep any saved sections that exist in canonical, insert missing ones in canonical position.
+    const canonical  = DEFAULT_LAYOUT.section_order;
+    const savedOrder = data.layout?.section_order || canonical;
+    const reconciledOrder = canonical.map(id => id).filter(id =>
+      canonical.includes(id) && !savedOrder.includes(id) ? true :
+      savedOrder.includes(id) ? true : false
+    );
+    // Simpler: just use canonical order always, it has all sections in right order
+    const newLayout = { ...DEFAULT_LAYOUT, ...(data.layout || {}), section_order: canonical };
+    layoutRef.current = newLayout;
+    setLayout(newLayout);
+    setSeo({
+      seo_title:       data.seo_title       || '',
+      seo_description: data.seo_description || '',
+      seo_keywords:    data.seo_keywords    || '',
+      og_image:        data.og_image        || '',
+      canonical_url:   data.canonical_url   || '',
+      robots:          data.robots          || 'index,follow',
+    });
     setColors({
       primary_color: data.primary_color || '#1a1a1a',
       accent_color:  data.accent_color  || '#c9a96e',
@@ -374,10 +434,31 @@ export default function CustomizePage() {
       surface_color: data.surface_color || '',
       bg_color:      data.bg_color      || '',
     });
-    if (data.content) {
+    // Prefer API content if available, otherwise fall back to locally saved draft
+    const apiContent  = data.content;
+    const apiLayout   = data.layout;
+    let draftContent  = null;
+    let draftLayout   = null;
+    try {
+      const draft = JSON.parse(localStorage.getItem(HMS_DRAFT_KEY) || '{}');
+      // Only use draft if it belongs to this hotel (same id)
+      if (draft.hotelId === data.id) {
+        draftContent = draft.content || null;
+        draftLayout  = draft.layout  || null;
+      }
+    } catch {}
+
+    const resolvedContent = apiContent || draftContent;
+    const resolvedLayout  = apiLayout  || draftLayout;
+
+    if (resolvedLayout) {
+      setLayout({ ...DEFAULT_LAYOUT, ...resolvedLayout });
+    }
+    if (resolvedContent) {
       setContent(prev => {
         const next = { ...prev };
-        Object.keys(data.content).forEach(sid => { next[sid] = { ...(prev[sid] || {}), ...data.content[sid] }; });
+        Object.keys(resolvedContent).forEach(sid => { next[sid] = { ...(prev[sid] || {}), ...resolvedContent[sid] }; });
+        contentRef.current = next;
         return next;
       });
     }
@@ -389,9 +470,9 @@ export default function CustomizePage() {
     if (el) previewRef.current.scrollTo({ top: el.offsetTop - 20, behavior: 'smooth' });
   }, [activeSection]);
 
-  const updateLayout  = patch => setLayout(prev => ({ ...prev, ...patch }));
-  const updateColor   = (key, val) => setColors(prev => ({ ...prev, [key]: val }));
-  const updateContent = (sid, key, val) => setContent(prev => ({ ...prev, [sid]: { ...(prev[sid] || {}), [key]: val } }));
+  const updateLayout  = patch => setLayout(prev => { const next = { ...prev, ...patch }; layoutRef.current = next; return next; });
+  const updateColor   = (key, val) => setColors(prev => { const next = { ...prev, [key]: val }; colorsRef.current = next; return next; });
+  const updateContent = (sid, key, val) => setContent(prev => { const next = { ...prev, [sid]: { ...(prev[sid] || {}), [key]: val } }; contentRef.current = next; return next; });
 
   const handleDragStart = i => { dragIdx.current = i; setDragActive(i); };
   const handleDragEnd   = () => setDragActive(null);
@@ -434,21 +515,35 @@ export default function CustomizePage() {
 
   const save = useMutation({
     mutationFn: () => configApi.updateConfig({
-      ...data, ...colors,
-      nav_color:     nullIfEmpty(colors.nav_color),
-      btn_color:     nullIfEmpty(colors.btn_color),
-      footer_color:  nullIfEmpty(colors.footer_color),
-      surface_color: nullIfEmpty(colors.surface_color),
-      bg_color:      nullIfEmpty(colors.bg_color),
-      layout, content,
+      ...(dataRef.current || {}),
+      ...colorsRef.current,
+      nav_color:     nullIfEmpty(colorsRef.current.nav_color),
+      btn_color:     nullIfEmpty(colorsRef.current.btn_color),
+      footer_color:  nullIfEmpty(colorsRef.current.footer_color),
+      surface_color: nullIfEmpty(colorsRef.current.surface_color),
+      bg_color:      nullIfEmpty(colorsRef.current.bg_color),
+      layout:  layoutRef.current,
+      content: contentRef.current,
+      ...seo,
     }),
-    onSuccess: () => toast.success('Website saved and deployed!'),
-    onError:   () => toast.error('Save failed — please try again'),
+    onSuccess: (res) => {
+      // Persist to localStorage so customize page restores on refresh
+      try {
+        localStorage.setItem(HMS_DRAFT_KEY, JSON.stringify({
+          hotelId: data?.id, content, layout, savedAt: Date.now(),
+        }));
+      } catch {}
+      queryClient.invalidateQueries({ queryKey: ['hotel-config'] });
+      toast.success('Website saved and deployed!');
+      iframeRef.current?.contentWindow?.postMessage({ type: 'HMS_CACHE_BUST' }, '*');
+      iframeRef.current?.contentWindow?.postMessage({ type: 'HMS_PREVIEW', colors, layout, content }, '*');
+    },
+    onError: (err) => toast.error(`Save failed — ${err?.message || 'please try again'}`),
   });
 
   const reset = useMutation({
     mutationFn: () => configApi.updateConfig({
-      ...data,
+      ...(data || {}),
       primary_color: null, accent_color: null, nav_color: null, btn_color: null,
       footer_color: null, surface_color: null, bg_color: null,
       layout: DEFAULT_LAYOUT, content: DEFAULT_CONTENT,
@@ -466,45 +561,35 @@ export default function CustomizePage() {
   });
 
   // ── iframe edit mode ─────────────────────────────────────────────────────
-  // Generate a one-time token for this session and pass it to the iframe.
-  // The hotel website validates it via postMessage before activating edit mode.
   const editToken  = useRef(Math.random().toString(36).slice(2));
   const iframeRef  = useRef(null);
   const [iframeReady, setIframeReady] = useState(false);
 
   const HOTEL_URL = import.meta.env.VITE_HOTEL_URL || 'http://localhost:5174';
-
-  // Build the iframe src — appends the edit token so the hotel website
-  // activates edit mode, and sends current colors/layout as HMS_PREVIEW
   const iframeSrc = `${HOTEL_URL}?hms_edit=${editToken.current}`;
 
-  // Listen for messages from the iframe
   useEffect(() => {
     const handler = (e) => {
       if (!e.data?.type) return;
 
-      // Hotel website is ready and requesting edit mode validation
       if (e.data.type === 'HMS_EDIT_REQUEST' && e.data.token === editToken.current) {
         setIframeReady(true);
         iframeRef.current?.contentWindow?.postMessage({
           type:    'HMS_EDIT_READY',
           token:   editToken.current,
-          content, // send current saved content to the iframe
+          content,
         }, '*');
       }
 
-      // Hotel website reports a field was edited — sync into our state
       if (e.data.type === 'HMS_CONTENT_UPDATE') {
         const { sectionId, field, value } = e.data;
         updateContent(sectionId, field, value);
       }
 
-      // Hotel website reports which section the admin activated
       if (e.data.type === 'HMS_SECTION_ACTIVE') {
         setActiveSection(e.data.sectionId);
       }
 
-      // Hotel website reports editing done
       if (e.data.type === 'HMS_SECTION_DONE') {
         setActiveSection(null);
       }
@@ -514,7 +599,6 @@ export default function CustomizePage() {
     return () => window.removeEventListener('message', handler);
   }, [content]);
 
-  // When sidebar selects a section, tell the iframe to scroll to it
   useEffect(() => {
     if (!iframeReady || !activeSection) return;
     iframeRef.current?.contentWindow?.postMessage({
@@ -523,17 +607,16 @@ export default function CustomizePage() {
     }, '*');
   }, [activeSection, iframeReady]);
 
-  // When colors/layout change, push a live preview update to the iframe
   useEffect(() => {
     if (!iframeReady) return;
     iframeRef.current?.contentWindow?.postMessage({
       type:   'HMS_PREVIEW',
       colors,
       layout,
+      content,
     }, '*');
-  }, [colors, layout, iframeReady]);
+  }, [colors, layout, content, iframeReady]);
 
-  // When content is reset, sync the new defaults into the iframe
   const syncContentToIframe = (newContent) => {
     iframeRef.current?.contentWindow?.postMessage({
       type:    'HMS_CONTENT_SYNC',
@@ -551,6 +634,17 @@ export default function CustomizePage() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', zIndex: 9999, background: '#0d0d0d' }}>
+      {/* Toaster must live inside this fixed overlay — the overlay has zIndex:9999
+          which covers the App-level Toaster, so we render our own on top */}
+      <Toaster position="top-right" containerStyle={{ zIndex: 10000 }}
+        toastOptions={{
+          style: {
+            background: '#1e1e1e', color: '#fff',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '8px', fontSize: '13px',
+          },
+        }}
+      />
 
       {/* ── Sidebar ── */}
       <div style={{
@@ -602,7 +696,7 @@ export default function CustomizePage() {
         ) : (
           <>
             <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-              {[['sections', 'Sections'], ['colors', 'Colors'], ['typography', 'Typography']].map(([id, label]) => (
+              {[['sections', 'Sections'], ['colors', 'Colors'], ['typography', 'Typography'], ['seo', 'SEO']].map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setActiveTab(id)} style={{
                   flex: 1, padding: '10px 4px', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -617,7 +711,7 @@ export default function CustomizePage() {
                   <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginBottom: 12, lineHeight: 1.6 }}>
                     Click a section in the preview or here to edit. Drag to reorder.
                   </p>
-                  {layout.section_order.map((id, i) => {
+                  {layout.section_order.filter(id => id !== 'booking_bar').map((id, i) => {
                     const meta       = ALL_SECTIONS[id] || { label: id, desc: '' };
                     const fixed      = !!meta.required;
                     const sectHidden = isHidden(id);
@@ -716,6 +810,67 @@ export default function CustomizePage() {
                 </div>
               )}
 
+              {activeTab === 'seo' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div>
+                    <SectionLabel>Search Engine</SectionLabel>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <FieldRow label="Page Title">
+                        <TextInput value={seo.seo_title} placeholder={`${(data?.hotel_name || 'Hotel Name')} | City — Luxury Hotel`} onChange={v => setSeo(p => ({ ...p, seo_title: v }))} />
+                        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: '4px 0 0' }}>Shown in browser tab and Google results. Leave blank to auto-generate.</p>
+                      </FieldRow>
+                      <FieldRow label="Meta Description">
+                        <TextInput value={seo.seo_description} placeholder="150-160 chars — what searchers see under your link in Google." multiline onChange={v => setSeo(p => ({ ...p, seo_description: v }))} />
+                        {seo.seo_description && <p style={{ fontSize: 10, color: seo.seo_description.length > 160 ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.25)', margin: '4px 0 0' }}>{seo.seo_description.length}/160 characters</p>}
+                      </FieldRow>
+                      <FieldRow label="Keywords">
+                        <TextInput value={seo.seo_keywords} placeholder="luxury hotel Lagos, beachfront resort, business hotel" onChange={v => setSeo(p => ({ ...p, seo_keywords: v }))} />
+                        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', margin: '4px 0 0' }}>Comma-separated. Less important for modern SEO but still useful.</p>
+                      </FieldRow>
+                      <FieldRow label="Search Indexing">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          {[['index,follow', 'Index — appear in search results (recommended)'], ['noindex,nofollow', 'No Index — hide from search engines (use for staging)']].map(([val, label]) => (
+                            <button key={val} type="button" onClick={() => setSeo(p => ({ ...p, robots: val }))} style={{
+                              textAlign: 'left', padding: '9px 12px', borderRadius: 7, cursor: 'pointer', border: 'none',
+                              background: seo.robots === val ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.04)',
+                              color: seo.robots === val ? 'white' : 'rgba(255,255,255,0.5)', fontSize: 12,
+                              outline: seo.robots === val ? '1px solid rgba(255,255,255,0.22)' : '1px solid transparent',
+                            }}>{label}</button>
+                          ))}
+                        </div>
+                      </FieldRow>
+                    </div>
+                  </div>
+
+                  <div>
+                    <SectionLabel>Social Sharing</SectionLabel>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', marginBottom: 12, lineHeight: 1.5 }}>Controls how your site looks when shared on WhatsApp, Twitter, LinkedIn etc.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <FieldRow label="Share Image URL">
+                        <TextInput value={seo.og_image} placeholder="https://… (1200×630px recommended)" onChange={v => setSeo(p => ({ ...p, og_image: v }))} />
+                        {seo.og_image && (
+                          <img src={seo.og_image} alt="OG preview" style={{ marginTop: 8, width: '100%', height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)' }} onError={e => e.target.style.display='none'} />
+                        )}
+                      </FieldRow>
+                    </div>
+                  </div>
+
+                  <div>
+                    <SectionLabel>Domain & Canonical</SectionLabel>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', marginBottom: 12, lineHeight: 1.5 }}>Prevents duplicate content penalties if multiple domains point to the same site.</p>
+                    <FieldRow label="Canonical URL">
+                      <TextInput value={seo.canonical_url} placeholder="https://www.grandmeridian.com" onChange={v => setSeo(p => ({ ...p, canonical_url: v }))} />
+                    </FieldRow>
+                  </div>
+
+                  <div style={{ padding: '12px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,255,0.8)', lineHeight: 1.7 }}>
+                      <strong style={{ color: 'rgba(180,180,255,1)' }}>Hotel structured data</strong> (JSON-LD) is automatically generated from your hotel name, address, phone, and description — no setup needed. This enables Google rich results showing your rating, address and contact directly in search.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'typography' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                   <div>
@@ -747,23 +902,23 @@ export default function CustomizePage() {
               }}>{icon}{label}</button>
             ))}
           </div>
-          <button type="button" onClick={() => save.mutate()} disabled={save.isPending} style={{
+          <button type="button" onClick={() => save.mutate()} disabled={save.isPending ?? save.isLoading} style={{
             width: '100%', padding: '11px', fontSize: 13, fontWeight: 600,
             background: 'white', color: '#111', border: 'none', borderRadius: 8,
-            cursor: save.isPending ? 'not-allowed' : 'pointer', opacity: save.isPending ? 0.6 : 1,
+            cursor: (save.isPending ?? save.isLoading) ? 'not-allowed' : 'pointer', opacity: (save.isPending ?? save.isLoading) ? 0.6 : 1,
           }}>
-            {save.isPending ? 'Deploying…' : 'Save & Deploy'}
+            {(save.isPending ?? save.isLoading) ? 'Deploying…' : 'Save & Deploy'}
           </button>
           <button type="button"
             onClick={() => { if (!window.confirm('Reset all customizations? This cannot be undone.')) return; reset.mutate(); }}
-            disabled={reset.isPending} style={{
+            disabled={reset.isPending ?? reset.isLoading} style={{
               width: '100%', padding: '9px', fontSize: 11, fontWeight: 500, background: 'transparent',
               color: 'rgba(255,255,255,0.38)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
-              cursor: reset.isPending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              cursor: (reset.isPending ?? reset.isLoading) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
             onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,80,80,0.9)'; e.currentTarget.style.borderColor = 'rgba(255,80,80,0.35)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.38)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}>
-            <RotateCcw size={11} /> {reset.isPending ? 'Resetting…' : 'Reset to Defaults'}
+            <RotateCcw size={11} /> {(reset.isPending ?? reset.isLoading) ? 'Resetting…' : 'Reset to Defaults'}
           </button>
         </div>
       </div>
@@ -787,7 +942,6 @@ export default function CustomizePage() {
           flex: previewWidth === '100%' ? 1 : undefined,
           position: 'relative',
         }}>
-          {/* Loading overlay while iframe initialises */}
           {!iframeReady && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 5,
