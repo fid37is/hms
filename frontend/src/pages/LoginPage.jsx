@@ -24,9 +24,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await authApi.login(form);
-      const { access_token, user, must_change_password } = res.data.data;
+      const { access_token, user, must_change_password, org, orgs } = res.data.data;
       const permissions = user.permissions || [];
-      setAuth({ user, token: access_token, permissions, must_change_password, org: res.data?.data?.org || null });
+      setAuth({ user, token: access_token, permissions, must_change_password, org: org || null, orgs: orgs || [] });
       if (must_change_password) {
         navigate('/change-password', { replace: true });
       } else {

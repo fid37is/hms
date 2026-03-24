@@ -100,7 +100,11 @@ export default function SlidePanel({ open, onClose, title, children }) {
           </div>
 
           {/* Body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 32px' }}>
+          <div style={{
+            flex: 1, overflowY: 'auto',
+            // On mobile add extra bottom padding to clear the 60px bottom nav
+            padding: isMobile() ? '16px 20px calc(60px + env(safe-area-inset-bottom, 16px) + 24px)' : '16px 20px 32px',
+          }}>
             {children}
           </div>
         </div>

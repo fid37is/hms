@@ -1,7 +1,8 @@
 // src/controllers/reportController.js
 
 import * as reportService from '../services/reportService.js';
-import { sendSuccess } from '../utils/response.js';
+import { sendSuccess, sendError } from '../utils/response.js';
+import { supabase } from '../config/supabase.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -62,4 +63,24 @@ export const getNightAudit = async (req, res, next) => {
     const data = await reportService.getNightAudit(req.orgId, auditDate);
     return sendSuccess(res, data, 'Night audit retrieved.');
   } catch (err) { next(err); }
+};
+export const getGroupSummaryStats = async (req, res, next) => {
+  try {
+    // org_ids must be passed as comma-separated query param or array
+    // Verify user has membership in each requested org
+    const requestedIds = (req.query.org_ids || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (!requestedIds.length) return sendError(res, 'org_ids query param required.', 400);
+
+    // Get all orgs this user actually belongs to
+    const { data: memberships } = await supabase.from('org_memberships')
+      .select('org_id').eq('user_id', req.user.sub).eq('is_active', true);
+
+    const allowedIds = (memberships || []).map(m => m.org_id);
+    const verifiedIds = requestedIds.filter(id => allowedIds.includes(id));
+
+    if (!verifiedIds.length) return sendError(res, 'No accessible orgs found.', 403);
+
+    const data = await reportService.getGroupSummary(verifiedIds);
+    return sendSuccess(res, data, 'Group summary retrieved.');
+  } catch (e) { next(e); }
 };

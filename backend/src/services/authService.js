@@ -67,6 +67,17 @@ export const login = async (email, password) => {
     .eq('id', orgId)
     .maybeSingle();
 
+  // Fetch all orgs this user belongs to (for org switcher)
+  const { data: memberships } = await supabase
+    .from('org_memberships')
+    .select('org_id, organizations ( id, name, slug, subscription_status, trial_ends_at, status )')
+    .eq('user_id', user.id).eq('is_active', true);
+  const orgs = (memberships || []).map(m => ({
+    org_id: m.organizations.id, name: m.organizations.name,
+    slug: m.organizations.slug, subscription_status: m.organizations.subscription_status,
+    trial_ends_at: m.organizations.trial_ends_at, status: m.organizations.status,
+  }));
+
   return {
     access_token:  generateAccessToken(tokenPayload),
     refresh_token: generateRefreshToken({ sub: user.id, org_id: orgId }),
@@ -88,6 +99,7 @@ export const login = async (email, password) => {
       subscription_status: orgData?.subscription_status || 'trial',
       trial_ends_at:       orgData?.trial_ends_at || null,
     },
+    orgs, // all orgs user belongs to
   };
 };
 
@@ -194,6 +206,12 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
     await supabase.from('organizations').delete().eq('id', org.id);
     throw new AppError('Failed to create user profile.', 500);
   }
+
+  // 6b. Add admin to org_memberships
+  await supabase.from('org_memberships').insert({
+    user_id: authUser.user.id, org_id: org.id,
+    role_id: adminRole?.id || null, is_active: true,
+  });
 
   // 7. Seed hotel_config for this org
   const { error: configError } = await supabase.from('hotel_config').insert({
@@ -339,4 +357,163 @@ export const updateOrgProfile = async (orgId, { custom_domain }) => {
 
   if (error) throw new AppError('Failed to update organisation profile.', 500);
   return data;
+};
+// ─── Get all orgs a user belongs to ──────────────────────
+export const getUserOrgs = async (userId) => {
+  const { data, error } = await supabase
+    .from('org_memberships')
+    .select(`
+      org_id,
+      role_id,
+      is_active,
+      organizations ( id, name, slug, subscription_status, trial_ends_at, status )
+    `)
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  if (error) throw new AppError('Failed to fetch organisations.', 500);
+  return (data || []).map(m => ({
+    org_id:              m.organizations.id,
+    name:                m.organizations.name,
+    slug:                m.organizations.slug,
+    subscription_status: m.organizations.subscription_status,
+    trial_ends_at:       m.organizations.trial_ends_at,
+    status:              m.organizations.status,
+    role_id:             m.role_id,
+  }));
+};
+
+// ─── Switch active organisation ───────────────────────────
+export const switchOrg = async (userId, targetOrgId) => {
+  // Verify user is a member of the target org
+  const { data: membership } = await supabase
+    .from('org_memberships')
+    .select('role_id, is_active')
+    .eq('user_id', userId)
+    .eq('org_id', targetOrgId)
+    .single();
+
+  if (!membership || !membership.is_active)
+    throw new AppError('You do not have access to this organisation.', 403);
+
+  const { data: user } = await supabase
+    .from('users')
+    .select('id, email, full_name, department, is_active, must_change_password')
+    .eq('id', userId).single();
+  if (!user || !user.is_active) throw new AppError('Account not found or deactivated.', 403);
+
+  const { data: role } = await supabase
+    .from('roles').select('*').eq('id', membership.role_id).single();
+
+  let permissions = [];
+  if (role?.name?.toLowerCase() === 'admin') {
+    permissions = ['*'];
+  } else if (role) {
+    const { data: rp } = await supabase
+      .from('role_permissions').select('permission_id').eq('role_id', role.id);
+    if (rp?.length) {
+      const ids = rp.map(r => r.permission_id);
+      const { data: pd } = await supabase.from('permissions').select('module, action').in('id', ids);
+      permissions = (pd || []).map(p => `${p.module}:${p.action}`);
+    }
+  }
+
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('subscription_status, trial_ends_at, name')
+    .eq('id', targetOrgId).maybeSingle();
+
+  const tokenPayload = {
+    sub:        user.id,
+    org_id:     targetOrgId,
+    email:      user.email,
+    full_name:  user.full_name,
+    role:       role?.name,
+    department: user.department,
+    permissions,
+  };
+
+  return {
+    access_token:  generateAccessToken(tokenPayload),
+    refresh_token: generateRefreshToken({ sub: user.id, org_id: targetOrgId }),
+    expires_in:    env.JWT_EXPIRES_IN,
+    user: {
+      id:          user.id,
+      org_id:      targetOrgId,
+      full_name:   user.full_name,
+      email:       user.email,
+      role:        role?.name,
+      department:  user.department,
+      permissions,
+      must_change_password: user.must_change_password || false,
+    },
+    org: {
+      id:                  targetOrgId,
+      name:                orgData?.name,
+      subscription_status: orgData?.subscription_status || 'trial',
+      trial_ends_at:       orgData?.trial_ends_at || null,
+    },
+  };
+};
+
+// ─── Create additional org for existing user ──────────────────
+// Called when a logged-in user wants to add a second/third property.
+// No new Auth user is created — we just create the org + membership.
+export const createAdditionalOrg = async (userId, orgName) => {
+  // 1. Generate slug
+  const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/, '');
+  const { data: existingSlug } = await supabase
+    .from('organizations').select('id').eq('slug', slug).maybeSingle();
+  if (existingSlug) throw new AppError('Organization name already taken. Try a different name.', 409);
+
+  // 2. Create organization
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .insert({
+      name: orgName, slug, plan: 'trial', status: 'active',
+      subscription_status: 'trial',
+      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    }).select().single();
+  if (orgError) throw new AppError('Failed to create organization.', 500);
+
+  // 3. Create Admin role for the new org
+  const { data: adminRole } = await supabase
+    .from('roles').insert({ org_id: org.id, name: 'Admin', description: 'Full system access' })
+    .select('id').single();
+
+  if (adminRole) {
+    const { data: allPerms } = await supabase.from('permissions').select('id');
+    if (allPerms?.length) {
+      await supabase.from('role_permissions').insert(
+        allPerms.map(p => ({ role_id: adminRole.id, permission_id: p.id }))
+      );
+    }
+  }
+
+  // 4. Link existing user to new org via membership
+  const { error: memberError } = await supabase.from('org_memberships').insert({
+    user_id: userId, org_id: org.id,
+    role_id: adminRole?.id || null, is_active: true,
+  });
+  if (memberError) {
+    // Clean up org if membership failed (likely table missing — run migration 013)
+    await supabase.from('organizations').delete().eq('id', org.id);
+    throw new AppError(`Failed to link user to new organisation: ${memberError.message}. Ensure migration 013 has been run.`, 500);
+  }
+
+  // 5. Seed hotel_config
+  await supabase.from('hotel_config').insert({
+    org_id: org.id, hotel_name: orgName,
+    currency: 'NGN', currency_symbol: '₦',
+    tax_rate: 7.5, service_charge: 10,
+    timezone: 'Africa/Lagos',
+    check_in_time: '14:00', check_out_time: '11:00',
+  });
+
+  return {
+    org_id: org.id, name: org.name, slug: org.slug,
+    subscription_status: org.subscription_status,
+    trial_ends_at: org.trial_ends_at, status: org.status,
+    role_id: adminRole?.id,
+  };
 };

@@ -48,6 +48,9 @@ const configFields = {
     section_hidden: Joi.array().items(Joi.string()),
   }).allow(null),
 
+  // Content — free-form JSONB for website section content
+  content: Joi.object().allow(null),
+
   // Location
   address:          Joi.string().trim().allow('', null),
   city:             Joi.string().trim().allow('', null),

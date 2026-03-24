@@ -101,3 +101,27 @@ export const updateOrgController = async (req, res, next) => {
     return sendSuccess(res, data, 'Organisation profile updated.');
   } catch (err) { next(err); }
 };
+export const getUserOrgsController = async (req, res, next) => {
+  try {
+    const data = await authService.getUserOrgs(req.user.sub);
+    return sendSuccess(res, data, 'Organisations retrieved.');
+  } catch (e) { next(e); }
+};
+
+export const switchOrgController = async (req, res, next) => {
+  try {
+    const { org_id } = req.body;
+    if (!org_id) return sendError(res, 'org_id is required.', 400);
+    const data = await authService.switchOrg(req.user.sub, org_id);
+    return sendSuccess(res, data, 'Organisation switched.');
+  } catch (e) { next(e); }
+};
+
+export const createAdditionalOrgController = async (req, res, next) => {
+  try {
+    const { org_name } = req.body;
+    if (!org_name?.trim()) return sendError(res, 'org_name is required.', 400);
+    const data = await authService.createAdditionalOrg(req.user.sub, org_name.trim());
+    return sendSuccess(res, data, 'New property created. Switch to it now.');
+  } catch (e) { next(e); }
+};

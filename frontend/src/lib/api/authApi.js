@@ -17,3 +17,6 @@ export const revokeApiKey = (id)      => api.delete(`/auth/api-keys/${id}`);
 // Organisation profile (slug, custom domain)
 export const getOrg    = ()      => api.get('/auth/org');
 export const updateOrg = (data)  => api.patch('/auth/org', data);
+export const getUserOrgs = ()         => api.get('/auth/orgs');
+export const switchOrg   = (org_id)   => api.post('/auth/orgs/switch', { org_id });
+export const createOrg   = (org_name) => api.post('/auth/orgs/create', { org_name });

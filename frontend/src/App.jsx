@@ -23,6 +23,7 @@ import ForgotPasswordPage      from './pages/ForgotPasswordPage';
 import ResetPasswordPage       from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import OnboardingPage          from './pages/OnboardingPage';
+import GroupDashboardPage  from './pages/GroupDashboardPage';
 import DashboardPage           from './pages/DashboardPage';
 import NotFoundPage            from './pages/NotFoundPage';
 import BillingCallbackPage     from './pages/BillingCallbackPage';
@@ -127,6 +128,7 @@ export default function App() {
         {/* Protected app — inside AppShell */}
         <Route element={<Guard><AppShell /></Guard>}>
           <Route path="/dashboard"    element={<DashboardPage />} />
+          <Route path="/group"        element={<GroupDashboardPage />} />
           <Route path="/rooms"        element={<RoomsPage />} />
           <Route path="/reservations" element={<ReservationsPage />} />
           <Route path="/guests"       element={<GuestsPage />} />

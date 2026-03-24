@@ -354,3 +354,82 @@ export const getNightAudit = async (orgId, date) => {
     },
   };
 };
+
+// ─── Group Summary (multi-property) ───────────────────────
+// Returns lightweight stats for each org the user belongs to.
+// orgIds must all be verified as belonging to the requesting user
+// before calling this — that check happens in the controller.
+
+export const getGroupSummary = async (orgIds) => {
+  const now        = new Date();
+  const today      = toDate(now);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const results = await Promise.all(orgIds.map(async (orgId) => {
+    const [
+      orgData, roomStats, inHouse,
+      arrivalsToday, departurestoday,
+      monthRevenue, pendingHK, maintenanceOpen,
+    ] = await Promise.all([
+      supabase.from('organizations')
+        .select('id, name, slug, subscription_status, trial_ends_at')
+        .eq('id', orgId).single(),
+
+      supabase.from('rooms')
+        .select('status').eq('org_id', orgId),
+
+      supabase.from('reservations')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId).eq('status', 'checked_in'),
+
+      supabase.from('reservations')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId).eq('check_in_date', today)
+        .in('status', ['confirmed', 'checked_in']),
+
+      supabase.from('reservations')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId).eq('check_out_date', today)
+        .eq('status', 'checked_in'),
+
+      supabase.from('payments')
+        .select('amount').eq('org_id', orgId)
+        .eq('status', 'completed').gte('created_at', monthStart),
+
+      supabase.from('housekeeping_tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId).in('status', ['pending', 'in_progress']),
+
+      supabase.from('maintenance_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId).in('status', ['open', 'in_progress']),
+    ]);
+
+    const rooms         = roomStats.data || [];
+    const totalRooms    = rooms.length;
+    const occupiedRooms = rooms.filter(r => r.status === 'occupied' || r.status === 'clean').length;
+    const occupancyRate = totalRooms ? +((occupiedRooms / totalRooms) * 100).toFixed(1) : 0;
+    const monthlyRevenue = (monthRevenue.data || []).reduce((s, p) => s + (p.amount || 0), 0);
+
+    return {
+      org_id:           orgId,
+      name:             orgData.data?.name             || 'Unknown',
+      slug:             orgData.data?.slug             || '',
+      subscription_status: orgData.data?.subscription_status || 'trial',
+      trial_ends_at:    orgData.data?.trial_ends_at    || null,
+      stats: {
+        occupancy_rate:    occupancyRate,
+        total_rooms:       totalRooms,
+        occupied_rooms:    occupiedRooms,
+        in_house:          inHouse.count          || 0,
+        arrivals_today:    arrivalsToday.count    || 0,
+        departures_today:  departurestoday.count  || 0,
+        monthly_revenue:   monthlyRevenue,
+        hk_pending:        pendingHK.count        || 0,
+        maintenance_open:  maintenanceOpen.count  || 0,
+      },
+    };
+  }));
+
+  return results;
+};

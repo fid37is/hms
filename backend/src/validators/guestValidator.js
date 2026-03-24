@@ -16,6 +16,8 @@ export const createGuestSchema = Joi.object({
     .valid('regular', 'vip', 'corporate', 'blacklisted')
     .default('regular'),
   company_name:   Joi.string().trim().optional().allow('', null),
+  date_of_birth:  Joi.date().iso().optional().allow('', null),
+  address:        Joi.string().trim().optional().allow('', null),
   preferences:    Joi.object().optional().default({}),
   notes:          Joi.string().trim().optional().allow('', null),
 });
@@ -34,6 +36,8 @@ export const updateGuestSchema = Joi.object({
     .valid('regular', 'vip', 'corporate', 'blacklisted')
     .optional(),
   company_name:   Joi.string().trim().optional().allow('', null),
+  date_of_birth:  Joi.date().iso().optional().allow('', null),
+  address:        Joi.string().trim().optional().allow('', null),
   preferences:    Joi.object().optional(),
   notes:          Joi.string().trim().optional().allow('', null),
 });

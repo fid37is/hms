@@ -122,12 +122,12 @@ function PricingSection() {
   const feats = [
     { cat:'Operations',   items:['Reservations & check-in/out','Room management & rate plans','Billing, folios & payments','Housekeeping task management'] },
     { cat:'Back office',  items:['Inventory & purchase orders','Maintenance & asset register','Staff, shifts & leave requests','Reports & revenue analytics'] },
-    { cat:'Guest-facing', items:['Booking website included','Guest profiles & stay history','Real-time availability sync','Custom domain support'] },
-    { cat:'Platform',     items:['Unlimited rooms & staff','Role-based access control','Fully isolated workspace','All future modules included'] },
+    { cat:'Guest-facing', items:['Booking website included','Guest profiles & stay history','Real-time availability sync','Guest ↔ department live chat'] },
+    { cat:'Platform',     items:['Unlimited rooms & staff','Multi-property — one account','Role-based access control','All future modules included'] },
   ];
 
   return (
-    <div id="pricing" style={{ background:'var(--sidebar-bg)', padding:'96px 0' }}>
+    <div id="pricing" style={{ background:'var(--bg-page)', padding:'96px 0', borderTop:'1px solid var(--border-soft)' }}>
       <style>{`
         @media(max-width:768px) {
           .cl-pricing-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
@@ -141,11 +141,11 @@ function PricingSection() {
         <Reveal>
           <div style={{ textAlign:'center', marginBottom:64 }}>
             <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>Pricing</p>
-            <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-on-brand)', lineHeight:1.06, marginBottom:12 }}>
-              Simple, honest <em style={{ fontStyle:'italic', color:'rgba(255,255,255,.4)' }}>pricing</em>
+            <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06, marginBottom:12 }}>
+              Simple, honest <em style={{ fontStyle:'italic', color:'var(--text-muted)' }}>pricing</em>
             </h2>
-            <p style={{ fontSize:17, color:'rgba(255,255,255,.45)', maxWidth:440, margin:'0 auto', lineHeight:1.7 }}>
-              One plan. Every module. No add-ons, no upgrade walls, no surprises.
+            <p style={{ fontSize:17, color:'var(--text-sub)', maxWidth:440, margin:'0 auto', lineHeight:1.7 }}>
+              One plan. Every module. No setup fees, no booking engine add-ons, no per-feature upgrades.
             </p>
           </div>
         </Reveal>
@@ -155,10 +155,10 @@ function PricingSection() {
             {/* Left: features */}
             <div>
               <p style={{ fontSize:12, fontWeight:600, color:'var(--accent)', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:14 }}>Everything. One plan.</p>
-              <h3 style={{ fontFamily:serif, fontSize:'clamp(26px,3vw,38px)', fontWeight:400, color:'var(--text-on-brand)', lineHeight:1.1, marginBottom:10 }}>
-                Every module included<br /><em style={{ fontStyle:'italic', color:'rgba(255,255,255,.35)' }}>from day one.</em>
+              <h3 style={{ fontFamily:serif, fontSize:'clamp(26px,3vw,38px)', fontWeight:400, color:'var(--text-base)', lineHeight:1.1, marginBottom:10 }}>
+                Every module included<br /><em style={{ fontStyle:'italic', color:'var(--text-muted)' }}>from day one.</em>
               </h3>
-              <p style={{ fontSize:15, color:'rgba(255,255,255,.45)', lineHeight:1.72, marginBottom:36, maxWidth:380 }}>
+              <p style={{ fontSize:15, color:'var(--text-sub)', lineHeight:1.72, marginBottom:36, maxWidth:380 }}>
                 No starter tiers. No feature walls. The full platform — one flat monthly fee.
               </p>
               <div className="cl-pricing-feats" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'22px 28px' }}>
@@ -167,7 +167,7 @@ function PricingSection() {
                     <p style={{ fontSize:10, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,235,210,0.3)', marginBottom:10 }}>{cat}</p>
                     <ul style={{ listStyle:'none', display:'flex', flexDirection:'column', gap:7 }}>
                       {items.map(f => (
-                        <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'rgba(255,255,255,.55)', lineHeight:1.4 }}>
+                        <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'var(--text-sub)', lineHeight:1.4 }}>
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke='var(--accent)' strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0, marginTop:2 }}><polyline points="3,8 6,11 13,5"/></svg>
                           {f}
                         </li>
@@ -179,13 +179,13 @@ function PricingSection() {
             </div>
 
             {/* Right: price card */}
-            <div style={{ background:'rgba(255,235,210,0.04)', borderRadius:16, padding:'40px 36px', border:'1px solid rgba(255,220,170,0.1)', position:'relative', overflow:'hidden' }}>
+            <div style={{ background:'var(--bg-surface)', borderRadius:16, padding:'40px 36px', border:'1px solid var(--border-soft)', position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:-40, right:-40, width:180, height:180, borderRadius:'50%', background:'rgba(217,119,6,.07)', filter:'blur(40px)', pointerEvents:'none' }} />
               <div style={{ position:'relative', zIndex:1 }}>
                 {/* Trial badge */}
                 <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(217,119,6,.15)', border:'1px solid rgba(217,119,6,.3)', borderRadius:100, padding:'4px 12px', marginBottom:28 }}>
                   <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
-                  <span style={{ fontSize:10, fontWeight:600, color:'var(--sidebar-text-active)', letterSpacing:'.06em', textTransform:'uppercase' }}>14-day free trial</span>
+                  <span style={{ fontSize:10, fontWeight:600, color:'var(--accent)', letterSpacing:'.06em', textTransform:'uppercase' }}>14-day free trial</span>
                 </div>
 
                 {/* Toggle */}
@@ -203,21 +203,21 @@ function PricingSection() {
                 {/* Price */}
                 <div style={{ marginBottom:4 }}>
                   <div style={{ display:'flex', alignItems:'flex-end', gap:5, lineHeight:1 }}>
-                    <span style={{ fontFamily:serif, fontSize:68, fontWeight:400, letterSpacing:'-.03em', color:'var(--text-on-brand)' }}>{p.symbol}{fmt(monthlyDisplay, p.locale)}</span>
-                    <span style={{ fontSize:13, color:'rgba(255,235,210,0.3)', paddingBottom:12 }}>/mo</span>
+                    <span style={{ fontFamily:serif, fontSize:68, fontWeight:400, letterSpacing:'-.03em', color:'var(--text-base)' }}>{p.symbol}{fmt(monthlyDisplay, p.locale)}</span>
+                    <span style={{ fontSize:13, color:'var(--text-muted)', paddingBottom:12 }}>/mo</span>
                   </div>
                 </div>
-                <p style={{ fontSize:12, color:'rgba(255,255,255,.25)', marginBottom:28 }}>
+                <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:28 }}>
                   {annual ? `Billed ${p.symbol}${fmt(p.annual, p.locale)} annually` : `Or ${p.symbol}${fmt(Math.round(p.annual/12), p.locale)}/mo billed annually — save ${p.symbol}${fmt(saving, p.locale)}`}
                 </p>
 
                 <div style={{ height:1, background:'rgba(255,220,170,0.1)', marginBottom:24 }} />
 
                 <div style={{ display:'flex', flexDirection:'column', gap:9, marginBottom:28 }}>
-                  {['All 10 modules, nothing locked','Unlimited rooms & staff accounts','Guest booking website included','No setup fees, cancel any time'].map(f => (
+                  {['All 11 modules, nothing locked','Multi-property support included','Guest booking website included','No setup fees, cancel any time'].map(f => (
                     <div key={f} style={{ display:'flex', alignItems:'center', gap:9 }}>
                       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke='var(--accent)' strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink:0 }}><polyline points="3,8 6,11 13,5"/></svg>
-                      <span style={{ fontSize:13, color:'rgba(255,255,255,.65)' }}>{f}</span>
+                      <span style={{ fontSize:13, color:'var(--text-sub)' }}>{f}</span>
                     </div>
                   ))}
                 </div>
@@ -228,7 +228,7 @@ function PricingSection() {
                   Start free trial
                   <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg>
                 </Link>
-                <p style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,.2)', marginTop:10 }}>No credit card required</p>
+                <p style={{ textAlign:'center', fontSize:11, color:'var(--text-muted)', marginTop:10 }}>No credit card required</p>
               </div>
             </div>
           </div>
@@ -299,6 +299,8 @@ export default function LandingPage() {
         /* ── MOBILE ────────────────────────────────────────── */
         @media(max-width:768px) {
           .cl-hero-grid { grid-template-columns:1fr !important; text-align:center; }
+          .cl-hero-benefits { grid-template-columns:1fr 1fr !important; }
+          .cl-stats-grid { grid-template-columns:repeat(3,1fr) !important; }
           .cl-hero-btns { justify-content:center !important; }
           .cl-hero-badge { justify-content:center !important; }
           .cl-stats-grid { grid-template-columns:repeat(2,1fr) !important; }
@@ -322,84 +324,79 @@ export default function LandingPage() {
         }
         @media(max-width:480px) {
           .cl-stats-grid { grid-template-columns:repeat(2,1fr) !important; }
+          .cl-hero-benefits { grid-template-columns:1fr !important; }
           .cl-modules-grid { grid-template-columns:1fr 1fr !important; }
           .cl-footer-grid { grid-template-columns:1fr !important; }
         }
       `}</style>
 
       {/* ══ HERO ═══════════════════════════════════════════════ */}
-      <section className="cl-hero-section" style={{ background:'var(--sidebar-bg)', paddingTop:140, paddingBottom:0, position:'relative', overflow:'hidden', minHeight:'100vh', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
-        {/* Ambient glow */}
-        <div style={{ position:'absolute', top:'10%', left:'50%', transform:'translateX(-50%)', width:600, height:400, background:'radial-gradient(ellipse,rgba(217,119,6,.12) 0%,transparent 70%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', inset:0, opacity:.025, backgroundImage:`linear-gradient(rgba(255,255,255,.6) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.6) 1px,transparent 1px)`, backgroundSize:'52px 52px', pointerEvents:'none' }} />
+      <section className="cl-hero-section" style={{ background:'var(--bg-page)', paddingTop:0, position:'relative', minHeight:'100vh', display:'flex', flexDirection:'column', borderBottom:'1px solid var(--border-soft)' }}>
 
-        <Container style={{ paddingBottom:80 }}>
-          <div className="cl-hero-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:72, alignItems:'center' }}>
-            {/* Left */}
-            <div>
-              <div className="cl-hero-badge" style={{ display:'inline-flex', alignItems:'center', gap:8, border:'1px solid rgba(217,119,6,.3)', background:'rgba(217,119,6,.08)', borderRadius:100, padding:'5px 14px', marginBottom:28, animation:'clfade .5s ease both' }}>
-                <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
-                <span style={{ fontSize:11, fontWeight:500, color:'var(--sidebar-text-active)', letterSpacing:'.06em', textTransform:'uppercase' }}>Now open for hotels</span>
-              </div>
+        {/* Spacer for nav */}
+        <div style={{ height:80, flexShrink:0 }} />
 
-              <h1 style={{ fontFamily:serif, fontSize:'clamp(52px,6vw,88px)', fontWeight:400, lineHeight:1.0, letterSpacing:'-.025em', color:'var(--text-on-brand)', marginBottom:20, animation:'clfade .5s .08s ease both' }}>
-                Your hotel,<br />
-                <em style={{ fontStyle:'italic', color:'var(--accent)' }}>always on.</em>
+        <div style={{ flex:1, display:'flex', alignItems:'center' }}>
+          <Container style={{ paddingTop:40, paddingBottom:64 }}>
+
+            {/* Eyebrow */}
+            <div style={{ textAlign:'center', marginBottom:24, animation:'clfade .4s ease both' }}>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:12, fontWeight:500, color:'var(--text-muted)', letterSpacing:'.04em' }}>
+                <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
+                Full hotel management · Multi-property · Booking website included
+              </span>
+            </div>
+
+            {/* Headline */}
+            <div style={{ textAlign:'center', marginBottom:24, animation:'clfade .5s .06s ease both' }}>
+              <h1 style={{ fontFamily:serif, fontSize:'clamp(48px,6.5vw,92px)', fontWeight:400, lineHeight:1.02, letterSpacing:'-.03em', color:'var(--text-base)', margin:'0 auto', maxWidth:820 }}>
+                Run your hotel.<br />
+                <em style={{ fontStyle:'italic', color:'var(--accent)' }}>Own your bookings.</em>
               </h1>
+            </div>
 
-              <p style={{ fontSize:18, fontWeight:300, color:'rgba(255,255,255,.5)', lineHeight:1.72, marginBottom:40, maxWidth:420, animation:'clfade .5s .16s ease both' }}>
-                One platform connecting every room, reservation, guest, and department — so nothing is ever missed, and every guest feels welcomed.
-              </p>
-
-              <div className="cl-hero-btns" style={{ display:'flex', gap:12, alignItems:'center', marginBottom:20, animation:'clfade .5s .24s ease both' }}>
-                <Link to="/register" className="cl-cta" style={{ fontSize:16, padding:'14px 32px', borderRadius:10 }}>
-                  Start free trial
-                  <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg>
-                </Link>
-                <a href="#features" style={{ fontSize:16, color:'rgba(255,255,255,.45)', padding:'14px 20px', textDecoration:'none', borderRadius:10, border:'1px solid rgba(255,255,255,.1)', fontFamily:sans, transition:'all .15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(255,255,255,.25)'; e.currentTarget.style.color='rgba(255,255,255,.8)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,.1)'; e.currentTarget.style.color='rgba(255,255,255,.45)'; }}>
-                  See features
-                </a>
-              </div>
-              <p style={{ fontSize:12, color:'rgba(255,255,255,.25)', animation:'clfade .5s .32s ease both' }}>
-                <span style={{ color:'rgba(255,255,255,.5)', fontWeight:500 }}>14-day free trial</span> · No credit card · Cancel anytime
+            {/* Subheading */}
+            <div style={{ textAlign:'center', marginBottom:40, animation:'clfade .5s .14s ease both' }}>
+              <p style={{ fontSize:'clamp(15px,1.8vw,19px)', fontWeight:300, color:'var(--text-sub)', lineHeight:1.72, maxWidth:520, margin:'0 auto' }}>
+                Cierlo is a complete hotel management system — reservations, housekeeping, billing, maintenance, staff, and guest chat all in one place. Your booking website is included. Manage one property or many from a single account.
               </p>
             </div>
 
-            {/* Trust signals — right side on desktop */}
-            <div style={{ animation:'clfade .7s .3s ease both' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                {[
-                  { icon:'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z', title:'10+ Modules', desc:'Every department in one platform' },
-                  { icon:'M22 12h-4l-3 9L9 3l-3 9H2', title:'Real-time', desc:'Live updates across your whole team' },
-                  { icon:'M3 11h18v11H3zM7 11V7a5 5 0 0 1 10 0v4', title:'100% Private', desc:'Your data, fully isolated' },
-                  { icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', title:'Role-based', desc:'10 built-in access levels' },
-                ].map((c,i) => (
-                  <div key={i} style={{ background:'rgba(255,235,210,0.04)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:12, padding:'22px 20px', animation:`clfade .5s ${.3+i*.07}s ease both` }}>
-                    <div style={{ width:34, height:34, background:'rgba(217,119,6,.12)', border:'1px solid rgba(217,119,6,.2)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14, color:'var(--accent)' }}>
-                      <Icon d={c.icon} size={15} />
-                    </div>
-                    <div style={{ fontSize:14, fontWeight:600, color:'var(--text-on-brand)', marginBottom:4 }}>{c.title}</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', lineHeight:1.5 }}>{c.desc}</div>
-                  </div>
-                ))}
-              </div>
+            {/* CTAs */}
+            <div style={{ display:'flex', gap:12, justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:14, animation:'clfade .5s .22s ease both' }}>
+              <Link to="/register" className="cl-cta" style={{ fontSize:16, padding:'14px 32px', borderRadius:10, fontWeight:600 }}>
+                Start free — 14 days
+                <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 6h7M6.5 3l3 3-3 3"/></svg>
+              </Link>
+              <a href="#features" style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:15, padding:'13px 24px', borderRadius:10, border:'1.5px solid var(--border-soft)', color:'var(--text-sub)', textDecoration:'none', fontFamily:sans, transition:'all .15s', background:'transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor='var(--text-base)'; e.currentTarget.style.color='var(--text-base)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border-soft)'; e.currentTarget.style.color='var(--text-sub)'; }}>
+                See how it works
+              </a>
             </div>
-          </div>
-        </Container>
 
-        {/* Stats strip — pinned to bottom of hero */}
-        <div style={{ borderTop:'1px solid rgba(255,220,170,0.1)', position:'relative', zIndex:1 }}>
-          <Container>
-            <div className="cl-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
-              {[['10+','Modules included'],['∞','Rooms supported'],['14','Days free trial'],['100%','Data privacy']].map(([n,l],i) => (
-                <div key={i} style={{ padding:'28px', textAlign:'center', borderRight:i<3?'1px solid rgba(255,220,170,0.1)':'none' }}>
-                  <div style={{ fontFamily:serif, fontSize:'clamp(28px,3vw,44px)', fontWeight:400, color:'var(--text-on-brand)', lineHeight:1 }}>{n}</div>
-                  <div style={{ fontSize:12, color:'rgba(255,220,170,0.4)', marginTop:5 }}>{l}</div>
+            {/* Trust */}
+            <div style={{ textAlign:'center', marginBottom:72, animation:'clfade .5s .28s ease both' }}>
+              <p style={{ fontSize:12, color:'var(--text-muted)' }}>
+                No credit card · Booking website included · Cancel any time
+              </p>
+            </div>
+
+            {/* Three key stats */}
+            <div className="cl-hero-stats" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0, maxWidth:640, margin:'0 auto', border:'1px solid var(--border-soft)', borderRadius:14, overflow:'hidden', animation:'clfade .6s .32s ease both' }}>
+              {[
+                { value:'11+',      label:'Modules included', sub:'Every department, every property' },
+                { value:'< 1 day',  label:'Time to launch',  sub:'Watch demo, add rooms, go live' },
+                { value:'$0',       label:'OTA commission',  sub:'Booking website included, keep 100%' },
+              ].map(({ value, label, sub }, i) => (
+                <div key={i} style={{ padding:'28px 24px', textAlign:'center', borderRight: i < 2 ? '1px solid var(--border-soft)' : 'none', background:'var(--bg-surface)' }}>
+                  <div style={{ fontFamily:serif, fontSize:'clamp(28px,3vw,40px)', fontWeight:400, color:'var(--text-base)', lineHeight:1, marginBottom:6 }}>{value}</div>
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--accent)', marginBottom:5 }}>{label}</div>
+                  <div style={{ fontSize:12, color:'var(--text-muted)', lineHeight:1.5 }}>{sub}</div>
                 </div>
               ))}
             </div>
+
           </Container>
         </div>
       </section>
@@ -438,7 +435,7 @@ export default function LandingPage() {
           <div className="cl-pillars-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:0, background:'var(--border-soft)', border:'1px solid var(--border-soft)', borderRadius:16, overflow:'hidden' }}>
             {[
               { n:'01', t:'Visibility', em:'See your entire operation clearly', d:'A real-time view of every room, booking, staff member, and revenue stream. No blind spots, no surprises.' },
-              { n:'02', t:'Control', em:'One platform, zero chaos', d:'Every department — front desk, housekeeping, maintenance, billing — connected in one seamless system.' },
+              { n:'02', t:'Control', em:'One platform, zero chaos', d:'Every department — front desk, housekeeping, maintenance, billing — connected in one seamless system. Manage multiple properties from a single account.' },
               { n:'03', t:'Growth', em:'Built to scale with you', d:'From your first room to your hundredth, from one property to a group — Cierlo grows alongside your business.' },
             ].map((p,i) => (
               <Reveal key={i} delay={i*.1}>
@@ -459,7 +456,7 @@ export default function LandingPage() {
         <Container>
           <Reveal>
             <div style={{ marginBottom:56 }}>
-              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>All modules</p>
+              <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>All 11 modules</p>
               <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,56px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06, marginBottom:12 }}>
                 Everything your hotel<br /><em style={{ fontStyle:'italic' }}>needs to operate</em>
               </h2>
@@ -478,6 +475,9 @@ export default function LandingPage() {
               { icon:'M4 7h16M4 12h16M4 17h10', n:'Inventory', d:'Keep stock under control. Get alerted before you run out. Raise purchase orders and track deliveries.', tags:['Stock alerts','Purchase orders','Suppliers'] },
               { icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', n:'Maintenance', d:'Log faults, assign technicians, track work orders from open to closed. Keep an asset register.', tags:['Work orders','Asset register','Cost tracking'] },
               { icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', n:'Staff & HR', d:'Manage your whole team from onboarding to shifts to leave requests. Grant exact access levels.', tags:['Departments','Shift scheduling','Leave requests'] },
+              { icon:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', n:'Guest Chat', d:'Checked-in guests message any department directly — housekeeping, front desk, room service — from their room in real time.', tags:['Direct messaging','Any department','In-stay only'] },
+              { icon:'M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3', n:'F&B Management', d:'Track restaurant, bar, and room service orders. Manage menus, sales, and service staff across all outlets.', tags:['Restaurant POS','Room service','Sales reports'] },
+              { icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', n:'Events & Venues', d:'Manage event bookings, venue assignments, and catering. Handle enquiries and track event revenue.', tags:['Venue management','Event bookings','Enquiry tracking'] },
               { icon:'M22 12h-4l-3 9L9 3l-3 9H2', n:'Reports & Analytics', d:'See revenue trends, occupancy rates, and performance at a glance. Pull detailed reports any time.', tags:['Revenue charts','Occupancy rate','Guest analytics'] },
             ].map((f,i) => (
               <Reveal key={i} delay={(i%3)*.08}>
@@ -498,14 +498,14 @@ export default function LandingPage() {
       </div>
 
       {/* ══ HOW IT WORKS ═══════════════════════════════════════ */}
-      <div id="saas" style={{ background:'var(--sidebar-bg)', padding:'96px 0' }}>
+      <div id="saas" style={{ background:'var(--bg-subtle)', padding:'96px 0', borderTop:'1px solid var(--border-soft)', borderBottom:'1px solid var(--border-soft)' }}>
         <Container>
           <div className="cl-steps-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:80, alignItems:'start' }}>
             <div>
               <Reveal>
                 <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:14 }}>Getting started</p>
-                <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,54px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-on-brand)', lineHeight:1.06, marginBottom:48 }}>
-                  Up and running<br /><em style={{ fontStyle:'italic', color:'rgba(255,255,255,.4)' }}>in minutes</em>
+                <h2 style={{ fontFamily:serif, fontSize:'clamp(36px,4vw,54px)', fontWeight:400, letterSpacing:'-.025em', color:'var(--text-base)', lineHeight:1.06, marginBottom:48 }}>
+                  Up and running<br /><em style={{ fontStyle:'italic', color:'var(--text-muted)' }}>in minutes</em>
                 </h2>
               </Reveal>
               {[
@@ -514,13 +514,14 @@ export default function LandingPage() {
                 { n:'3', t:'Add room types & rooms', d:'Create categories with rates and amenities, then add individual rooms with photos.' },
                 { n:'4', t:'Invite your team', d:'Add staff, assign departments, and set access levels — front desk, housekeeping, manager.' },
                 { n:'5', t:'Go live instantly', d:'Your booking website is automatically linked via your unique subdomain. No API keys or setup needed.' },
+                { n:'6', t:'Add more properties anytime', d:'Already on Cierlo? Register a second hotel and switch between properties instantly from the sidebar — same account, separate data.' },
               ].map((s,i) => (
                 <Reveal key={i} delay={i*.07}>
-                  <div style={{ display:'flex', gap:22, padding:'22px 0', borderBottom:i<4?'1px solid rgba(255,220,170,0.1)':'none' }}>
+                  <div style={{ display:'flex', gap:22, padding:'22px 0', borderBottom:i<4?'1px solid var(--border-soft)':'none' }}>
                     <div style={{ fontFamily:serif, fontSize:32, color:'rgba(255,255,255,.12)', lineHeight:1, flexShrink:0, width:28, paddingTop:2 }}>{s.n}</div>
                     <div>
-                      <div style={{ fontSize:16, fontWeight:600, color:'var(--text-on-brand)', marginBottom:5 }}>{s.t}</div>
-                      <div style={{ fontSize:14, color:'rgba(255,255,255,.4)', lineHeight:1.68 }}>{s.d}</div>
+                      <div style={{ fontSize:16, fontWeight:600, color:'var(--text-base)', marginBottom:5 }}>{s.t}</div>
+                      <div style={{ fontSize:14, color:'var(--text-sub)', lineHeight:1.68 }}>{s.d}</div>
                     </div>
                   </div>
                 </Reveal>
@@ -528,8 +529,8 @@ export default function LandingPage() {
             </div>
 
             <Reveal delay={.15}>
-              <div style={{ position:'sticky', top:96, background:'rgba(255,235,210,0.04)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:14, padding:'32px 28px' }}>
-                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'rgba(255,235,210,0.3)', marginBottom:20 }}>Your setup checklist</p>
+              <div style={{ position:'sticky', top:96, background:'var(--bg-surface)', border:'1px solid var(--border-soft)', borderRadius:14, padding:'32px 28px' }}>
+                <p style={{ fontSize:11, fontWeight:600, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--text-muted)', marginBottom:20 }}>Your setup checklist</p>
                 {[
                   { l:'Hotel details configured', done:true },
                   { l:'Room types added', done:true },
@@ -537,18 +538,18 @@ export default function LandingPage() {
                   { l:'Staff members added', done:false },
                   { l:'Booking website connected', done:false },
                 ].map((c,i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,220,170,0.1)', borderRadius:8, marginBottom:7, fontSize:13, color:'var(--text-on-brand)' }}>
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', background:'var(--bg-subtle)', border:'1px solid var(--border-soft)', borderRadius:8, marginBottom:7, fontSize:13, color:'var(--text-base)' }}>
                     <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:c.done?'var(--accent)':'transparent', border:c.done?'none':'1px solid rgba(255,255,255,.15)' }}>
                       {c.done && <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="var(--text-on-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,5 4,7 8,3"/></svg>}
                     </div>
-                    <span style={{ color:c.done?'rgba(255,255,255,.55)':'rgba(255,255,255,.8)' }}>{c.l}</span>
+                    <span style={{ color:c.done?'var(--text-muted)':'var(--text-base)' }}>{c.l}</span>
                   </div>
                 ))}
 
-                <div style={{ marginTop:20, padding:'14px 16px', background:'rgba(217,119,6,.08)', border:'1px solid rgba(217,119,6,.2)', borderRadius:10 }}>
+                <div style={{ marginTop:20, padding:'14px 16px', background:'var(--bg-page)', border:'1px solid var(--border-soft)', borderRadius:10 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
                     <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--accent)', animation:'clpulse 2s infinite' }} />
-                    <span style={{ fontSize:11, fontWeight:600, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--sidebar-text-active)' }}>Your hotel, online</span>
+                    <span style={{ fontSize:11, fontWeight:600, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--accent)' }}>Your hotel, online</span>
                   </div>
                   <span style={{ fontFamily:"'SF Mono','Fira Code',monospace", fontSize:13, color:'#93c5fd' }}>amarahotel.cierlo.io</span>
                 </div>

@@ -1,9 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cierlo — Your hotel, always on.</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── Primary Meta ───────────────────────────────────────────────── -->
+    <title>Cierlo HMS — Your hotel, always on.</title>
+    <meta name="description" content="Cierlo is a modern hotel management system built for hospitality teams — reservations, housekeeping, maintenance, F&B, and more in one place." />
+    <meta name="keywords" content="hotel management system, HMS, property management, reservations, hospitality software, housekeeping, front desk, Cierlo" />
+    <meta name="author" content="Cierlo" />
+    <meta name="theme-color" content="#EA6C0A" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C1208" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="application-name" content="Cierlo HMS" />
+
+    <!-- ── Canonical ──────────────────────────────────────────────────── -->
+    <link rel="canonical" href="https://app.cierlo.com" />
+
+    <!-- ── Favicon & Icons ────────────────────────────────────────────── -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/cierlo_logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/cierlo_logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/cierlo_logo.png" />
+    <link rel="shortcut icon" href="/cierlo_logo.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="msapplication-TileColor" content="#EA6C0A" />
+    <meta name="msapplication-TileImage" content="/cierlo_logo.png" />
+
+    <!-- ── Open Graph ─────────────────────────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cierlo HMS" />
+    <meta property="og:title" content="Cierlo HMS — Your hotel, always on." />
+    <meta property="og:description" content="Modern hotel management software for hospitality teams. Manage reservations, housekeeping, maintenance, F&B, and guests — all in one place." />
+    <meta property="og:image" content="https://app.cierlo.com/cierlo_logo-full.png" />
+    <meta property="og:image:secure_url" content="https://app.cierlo.com/cierlo_logo-full.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Cierlo HMS — Hotel Management System" />
+    <meta property="og:url" content="https://app.cierlo.com" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ── Twitter / X Card ───────────────────────────────────────────── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@cierlo" />
+    <meta name="twitter:creator" content="@cierlo" />
+    <meta name="twitter:title" content="Cierlo HMS — Your hotel, always on." />
+    <meta name="twitter:description" content="Modern hotel management software for hospitality teams. Reservations, housekeeping, maintenance, F&B and more." />
+    <meta name="twitter:image" content="https://app.cierlo.com/cierlo_logo-full.png" />
+    <meta name="twitter:image:alt" content="Cierlo HMS" />
+
+    <!-- ── Robots ─────────────────────────────────────────────────────── -->
+    <!-- SaaS dashboard — keep authenticated pages out of search engines  -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="googlebot" content="noindex, nofollow" />
+
+    <!-- ── Performance: resource hints ───────────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <!-- Preconnect to your Supabase project for faster first API call -->
+    <link rel="preconnect" href="https://YOUR_PROJECT.supabase.co" />
+    <link rel="dns-prefetch" href="https://YOUR_PROJECT.supabase.co" />
+
+    <!-- ── Web App Capable (iOS/Android add-to-homescreen) ────────────── -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cierlo HMS" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- ── Structured Data (JSON-LD) ──────────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Cierlo HMS",
+      "alternateName": "Cierlo Hotel Management System",
+      "description": "Modern hotel management software for hospitality teams. Manage reservations, housekeeping, maintenance, F&B, and guests in one place.",
+      "url": "https://app.cierlo.com",
+      "logo": "https://app.cierlo.com/cierlo_logo.png",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "32",
+        "priceCurrency": "USD",
+        "priceSpecification": {
+          "@type": "UnitPriceSpecification",
+          "price": "32",
+          "priceCurrency": "USD",
+          "billingDuration": "P1M"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Cierlo",
+        "url": "https://app.cierlo.com",
+        "logo": "https://app.cierlo.com/cierlo_logo.png"
+      },
+      "featureList": [
+        "Reservation Management",
+        "Housekeeping Management",
+        "Maintenance Work Orders",
+        "F&B Management",
+        "Front Desk Operations",
+        "Guest Management",
+        "Night Audit",
+        "Staff Management",
+        "Inventory Management",
+        "Events Management"
+      ]
+    }
+    </script>
+
+    <!-- ── Security headers (supplementary — set real ones on server) ─── -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
   </head>
   <body>
     <div id="root"></div>
