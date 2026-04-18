@@ -10,7 +10,7 @@ import {
 import * as authApi from '../../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
-const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'hms-67e.pages.dev';
+const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'cierlo.app';
 
 function CopyButton({ text, size = 'sm' }) {
   const [copied, setCopied] = useState(false);
