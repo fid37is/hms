@@ -10,8 +10,7 @@ import {
 import * as authApi from '../../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
-const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'hms-67e.pages.dev';
-const API_BASE    = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'cierlo.app';
 
 function CopyButton({ text, size = 'sm' }) {
   const [copied, setCopied] = useState(false);
@@ -298,9 +297,6 @@ export default function WebsitePanel() {
   );
 
   const subdomainUrl  = `https://${org.slug}.${BASE_DOMAIN}`;
-  const publicApiUrl  = API_BASE.includes('localhost')
-    ? `${API_BASE}/public`
-    : `${API_BASE.replace('/api/v1', '')}/api/v1/public`;
 
   return (
     <div className="space-y-6">
@@ -342,11 +338,6 @@ export default function WebsitePanel() {
           label="Guest Website"
           url={subdomainUrl}
           hint="Your booking website — share this with guests"
-        />
-        <UrlRow
-          label="Public API Base"
-          url={publicApiUrl}
-          hint="Your website's API base URL — configured automatically via subdomain"
         />
         {org.custom_domain && (
           <UrlRow
