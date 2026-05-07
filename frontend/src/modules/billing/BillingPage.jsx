@@ -12,25 +12,25 @@ import PaymentForm from './components/PaymentForm';
 import AddChargeForm from './components/AddChargeForm';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/format';
 import toast from 'react-hot-toast';
-import { useSubscriptionGate }    from '../../hooks/useSubscriptionGate';
-import SubscriptionPaywall         from '../../components/shared/SubscriptionPaywall';
+import { useSubscriptionGate } from '../../hooks/useSubscriptionGate';
+import SubscriptionPaywall from '../../components/shared/SubscriptionPaywall';
 
 export default function BillingPage() {
   const { isLocked } = useSubscriptionGate();
-  if (isLocked) return <SubscriptionPaywall />;
-
-  const navigate   = useNavigate();
-  const qc         = useQueryClient();
-  const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState('');
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [payFolio, setPayFolio] = useState(null);  // folio to record payment on
   const [chargeFolio, setChargeFolio] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['open-folios', page],
-    queryFn:  () => folioApi.getOpenFolios({ page, limit: 25 }).then(r => r.data.data),
+    queryFn: () => folioApi.getOpenFolios({ page, limit: 25 }).then(r => r.data.data),
     keepPreviousData: true,
   });
+
+  if (isLocked) return <SubscriptionPaywall />;
 
   const folios = (data?.data || []).filter(f => {
     if (!search) return true;
@@ -45,7 +45,7 @@ export default function BillingPage() {
   });
 
   const totalBalance = folios.reduce((sum, f) => sum + (f.balance || 0), 0);
-  const total        = data?.total || 0;
+  const total = data?.total || 0;
 
   return (
     <div className="space-y-5">
@@ -110,10 +110,10 @@ export default function BillingPage() {
             </thead>
             <tbody>
               {folios.map(f => {
-                const res   = f.reservations;
+                const res = f.reservations;
                 const guest = res?.guests;
-                const room  = res?.rooms;
-                const bal   = f.balance || 0;
+                const room = res?.rooms;
+                const bal = f.balance || 0;
 
                 return (
                   <tr key={f.id} className="table-row cursor-pointer"

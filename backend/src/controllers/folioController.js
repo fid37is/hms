@@ -2,6 +2,8 @@
 
 import * as folioService from '../services/folioService.js';
 import { sendSuccess, sendCreated } from '../utils/response.js';
+import { getConfig } from '../services/configService.js';
+import { generateFolioReceipt } from '../utils/generatePDF.js';
 
 export const getFolioByReservation = async (req, res, next) => {
   try {
@@ -72,5 +74,22 @@ export const getOpenFolios = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 25;
     const data = await folioService.getOpenFolios(req.orgId, page, limit);
     res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+export const downloadReceipt = async (req, res, next) => {
+  try {
+    const [folio, config] = await Promise.all([
+      folioService.getFolioById(req.orgId, req.params.id),
+      getConfig(req.orgId),
+    ]);
+
+    const doc = generateFolioReceipt(folio, config);
+    const filename = `receipt-${folio.folio_no || req.params.id}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    doc.pipe(res);
+    doc.end();
   } catch (err) { next(err); }
 };

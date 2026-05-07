@@ -11,7 +11,9 @@
 //   Day 90: Marked inactive + final deletion warning email
 //   Day 97: Hard delete
 //
-// Install node-cron: npm install node-cron
+// FIX: All status transitions now update BOTH `status` AND `subscription_status`
+// columns so they stay in sync. Previously only `subscription_status` was updated,
+// causing a mismatch with resolveOrg which reads `status`.
 
 import cron        from 'node-cron';
 import { supabase } from '../config/supabase.js';
@@ -82,7 +84,6 @@ async function runTrialJob() {
 async function processOrg(org, now) {
   const trialEnd    = new Date(org.trial_ends_at);
   const daysLeft    = daysBetween(now, trialEnd);   // negative = overdue
-  const daysSince   = daysBetween(trialEnd, now);   // days since trial ended
   const admin       = getAdminUser(org);
 
   if (!admin?.email) return;
@@ -136,12 +137,15 @@ async function processOrg(org, now) {
   }
 
   // ── Day 15+: soft lock ────────────────────────────────────
+  // FIX: Also update `status` to keep it in sync with `subscription_status`.
+  // `status` stays 'active' during soft_lock so the guest website still resolves.
   if (daysLeft <= -1) {
     await supabase
       .from('organizations')
       .update({
         subscription_status: 'soft_locked',
-        updated_at: now.toISOString(),
+        status:              'active',        // guest website still accessible; subscriptionGate blocks writes
+        updated_at:          now.toISOString(),
       })
       .eq('id', org.id);
     console.log(`[TrialJob] Soft locked: ${org.name}`);
@@ -149,6 +153,7 @@ async function processOrg(org, now) {
 }
 
 // ── soft_locked → suspended (day 30 after trial end) ─────────
+// FIX: Now also updates `status` column to 'suspended'.
 async function processSoftLocked(now) {
   const { data: orgs } = await supabase
     .from('organizations')
@@ -160,7 +165,11 @@ async function processSoftLocked(now) {
   for (const org of (orgs || [])) {
     await supabase
       .from('organizations')
-      .update({ subscription_status: 'suspended', updated_at: now.toISOString() })
+      .update({
+        subscription_status: 'suspended',
+        status:              'suspended',     // FIX: keep status in sync
+        updated_at:          now.toISOString(),
+      })
       .eq('id', org.id);
 
     const admin = getAdminUser(org);
@@ -178,6 +187,7 @@ async function processSoftLocked(now) {
 }
 
 // ── suspended → inactive → delete warning (day 60+) ──────────
+// FIX: Now also updates `status` column at each transition.
 async function processSuspended(now) {
   // Day 60: mark inactive
   const { data: toInactive } = await supabase
@@ -190,7 +200,11 @@ async function processSuspended(now) {
   for (const org of (toInactive || [])) {
     await supabase
       .from('organizations')
-      .update({ subscription_status: 'inactive', updated_at: now.toISOString() })
+      .update({
+        subscription_status: 'inactive',
+        status:              'inactive',      // FIX: keep status in sync
+        updated_at:          now.toISOString(),
+      })
       .eq('id', org.id);
 
     const admin = getAdminUser(org);

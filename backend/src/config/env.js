@@ -28,6 +28,11 @@ export const env = {
   JWT_EXPIRES_IN:         optional('JWT_EXPIRES_IN', '8h'),
   JWT_REFRESH_EXPIRES_IN: optional('JWT_REFRESH_EXPIRES_IN', '30d'),
 
+  // Separate signing secret for super-admin tokens.
+  // Falls back to JWT_SECRET if not set so existing deployments keep working,
+  // but SHOULD be a different value in production.
+  SUPER_ADMIN_JWT_SECRET: optional('SUPER_ADMIN_JWT_SECRET', ''),
+
   PAYSTACK_SECRET_KEY:    optional('PAYSTACK_SECRET_KEY'),
   PAYSTACK_PUBLIC_KEY:    optional('PAYSTACK_PUBLIC_KEY'),
   FLUTTERWAVE_SECRET_KEY: optional('FLUTTERWAVE_SECRET_KEY'),

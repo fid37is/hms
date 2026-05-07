@@ -19,7 +19,9 @@ export const requireSuperAdmin = async (req, res, next) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(token, env.JWT_SECRET);
+    // Use the dedicated super-admin secret if configured, otherwise fall back.
+  const saSecret = env.SUPER_ADMIN_JWT_SECRET || env.JWT_SECRET;
+  decoded = jwt.verify(token, saSecret);
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
       return sendUnauthorized(res, 'Token expired. Please log in again.');

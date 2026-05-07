@@ -1,16 +1,4 @@
 // src/services/subscriptionService.js
-//
-// Subscription billing via Dodo Payments.
-//
-// Setup (one-time, in Dodo dashboard):
-//   1. Create a Product → copy its product_id → set DODO_PRODUCT_ID in .env
-//   2. Create a Webhook endpoint pointing to /api/v1/subscriptions/webhook/dodo
-//      → copy the webhook secret → set DODO_PAYMENTS_WEBHOOK_SECRET in .env
-//
-// Flow:
-//   Org admin clicks "Subscribe" → backend creates a checkout session
-//   → frontend redirects to Dodo hosted checkout
-//   → on payment, Dodo fires webhook → we activate the org subscription
 
 import DodoPayments          from 'dodopayments';
 import { Webhook }           from 'standardwebhooks';
@@ -18,24 +6,45 @@ import { supabase }          from '../config/supabase.js';
 import { env }               from '../config/env.js';
 import { AppError }          from '../middleware/errorHandler.js';
 
-// Dodo client (singleton)
+// Calculates period end based on the plan's billing interval.
+// Falls back to monthly if the interval is unrecognised.
+const calcPeriodEnd = (from, interval) => {
+  const end = new Date(from);
+  switch (interval) {
+    case 'yearly':
+    case 'annual':
+      end.setFullYear(end.getFullYear() + 1);
+      break;
+    case 'weekly':
+      end.setDate(end.getDate() + 7);
+      break;
+    case 'monthly':
+    default:
+      end.setMonth(end.getMonth() + 1);
+      break;
+  }
+  return end;
+};
+
 const dodo = new DodoPayments({
   bearerToken: env.DODO_PAYMENTS_API_KEY,
-  environment: env.DODO_PAYMENTS_ENVIRONMENT, // 'test_mode' | 'live_mode'
+  environment: env.DODO_PAYMENTS_ENVIRONMENT,
 });
 
-// Get all active plans (monthly + annual)
+// ── Plans ──────────────────────────────────────────────────────
+
 export const getPlans = async () => {
   const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
     .eq('is_active', true)
     .order('created_at');
-  if (error || !data?.length) throw new AppError('No subscription plans found.', 404);
-  return data;
+
+  // Return empty array instead of throwing — frontend handles empty state
+  if (error) throw new AppError('Failed to fetch subscription plans.', 500);
+  return data || [];
 };
 
-// Get a specific plan by id, or fall back to monthly
 export const getPlanById = async (planId) => {
   if (planId) {
     const { data } = await supabase
@@ -46,7 +55,7 @@ export const getPlanById = async (planId) => {
       .maybeSingle();
     if (data) return data;
   }
-  // Default to monthly plan
+  // Default to monthly
   const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
@@ -57,10 +66,10 @@ export const getPlanById = async (planId) => {
   return data;
 };
 
-// Kept for backward compatibility
 export const getActivePlan = () => getPlanById(null);
 
-// Get org subscription status
+// ── Subscription status ────────────────────────────────────────
+
 export const getOrgSubscription = async (orgId) => {
   const { data } = await supabase
     .from('org_subscriptions')
@@ -68,24 +77,60 @@ export const getOrgSubscription = async (orgId) => {
     .eq('org_id', orgId)
     .maybeSingle();
 
+  const now = new Date();
+
   if (!data) {
-    const plan = await getPlanById(planId);
-    return { status: 'trial', plan, is_expired: false };
+    // No subscription record at all — org is in trial
+    // Get trial end from the org itself
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('trial_ends_at, status')
+      .eq('id', orgId)
+      .single();
+
+    const trialEnd  = org?.trial_ends_at ? new Date(org.trial_ends_at) : null;
+    const isExpired = trialEnd ? now > trialEnd : false;
+
+    return {
+      status:        isExpired ? 'soft_locked' : 'trial',
+      subscription_context: 'never_subscribed', // ← key for frontend messaging
+      trial_end:     org?.trial_ends_at || null,
+      is_expired:    isExpired,
+      plan:          null,
+    };
   }
-  const now      = new Date();
-  const trialEnd = data.trial_end ? new Date(data.trial_end) : null;
+
+  const trialEnd  = data.trial_end ? new Date(data.trial_end) : null;
   const isExpired = data.status === 'trial' && trialEnd && now > trialEnd;
-  return { ...data, is_expired: isExpired };
+
+  // Determine context for frontend messaging
+  let subscription_context = 'never_subscribed';
+  if (data.status === 'active')                subscription_context = 'active';
+  else if (data.status === 'cancelled')        subscription_context = 'previously_subscribed';
+  else if (data.status === 'past_due')         subscription_context = 'previously_subscribed';
+  else if (data.status === 'trial' && isExpired) subscription_context = 'trial_expired';
+  else if (data.status === 'trial')            subscription_context = 'in_trial';
+
+  return {
+    ...data,
+    subscription_context,
+    is_expired: isExpired,
+  };
 };
 
-// Create Dodo checkout session - returns checkout_url to redirect user to
+// ── Initialize checkout ────────────────────────────────────────
+
 export const initializeSubscription = async (orgId, adminEmail, adminName, planId = null) => {
   if (!env.DODO_PAYMENTS_API_KEY) throw new AppError('Payment gateway not configured.', 503);
 
-  const plan = await getActivePlan();
+  // Use selected plan or default to monthly
+  const plan = await getPlanById(planId);
 
   if (!plan.dodo_product_id) {
-    throw new AppError('Subscription product not configured. Set the Dodo product ID on the plan in the database.', 503);
+    throw new AppError(
+      'Subscription product not configured. Set the Dodo product ID on the plan in the database.',
+      503
+    );
   }
 
   const session = await dodo.payments.create({
@@ -101,11 +146,17 @@ export const initializeSubscription = async (orgId, adminEmail, adminName, planI
   return {
     checkout_url: session.payment_link,
     payment_id:   session.payment_id,
-    plan: { name: plan.name, amount: plan.amount, currency: plan.currency, interval: plan.interval },
+    plan: {
+      name:     plan.name,
+      amount:   plan.amount,
+      currency: plan.currency,
+      interval: plan.interval,
+    },
   };
 };
 
-// Verify payment after redirect (fallback — webhooks are primary)
+// ── Verify payment ─────────────────────────────────────────────
+
 export const verifyPayment = async (paymentId) => {
   if (!paymentId) throw new AppError('Payment ID required.', 400);
   const payment = await dodo.payments.retrieve(paymentId);
@@ -118,17 +169,18 @@ export const verifyPayment = async (paymentId) => {
   if (payment.status === 'succeeded') {
     await activateOrgSubscription({
       orgId, planId,
-      dodoPaymentId:     payment.payment_id,
-      dodoCustomerId:    payment.customer?.customer_id,
+      dodoPaymentId:      payment.payment_id,
+      dodoCustomerId:     payment.customer?.customer_id,
       dodoSubscriptionId: payment.subscription_id || null,
-      amount:   payment.total_amount,
-      currency: payment.currency,
+      amount:             payment.total_amount,
+      currency:           payment.currency,
     });
   }
   return { status: payment.status, org_id: orgId };
 };
 
-// Handle Dodo webhook - uses Standard Webhooks spec for verification
+// ── Webhook handler ────────────────────────────────────────────
+
 export const handleWebhook = async (rawBody, webhookHeaders) => {
   if (!env.DODO_PAYMENTS_WEBHOOK_SECRET) throw new AppError('Webhook secret not configured.', 500);
 
@@ -160,112 +212,182 @@ export const handleWebhook = async (rawBody, webhookHeaders) => {
   return { received: true };
 };
 
+// ── Webhook handlers ───────────────────────────────────────────
+
 async function handlePaymentSucceeded(data) {
   const orgId  = data.metadata?.org_id;
   const planId = data.metadata?.plan_id;
   if (!orgId) return;
   await activateOrgSubscription({
     orgId, planId,
-    dodoPaymentId:     data.payment_id,
-    dodoCustomerId:    data.customer?.customer_id,
+    dodoPaymentId:      data.payment_id,
+    dodoCustomerId:     data.customer?.customer_id,
     dodoSubscriptionId: data.subscription_id || null,
-    amount:   data.total_amount,
-    currency: data.currency,
+    amount:             data.total_amount,
+    currency:           data.currency,
   });
 }
 
 async function handleSubscriptionActive(data) {
   const { data: sub } = await supabase
-    .from('org_subscriptions').select('org_id')
-    .eq('dodo_subscription_id', data.subscription_id).maybeSingle();
+    .from('org_subscriptions')
+    .select('org_id, plan_id, subscription_plans(interval)')
+    .eq('dodo_subscription_id', data.subscription_id)
+    .maybeSingle();
   if (!sub?.org_id) return;
 
   const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+  const planInterval = sub.subscription_plans?.interval || 'monthly';
+  const periodEnd = calcPeriodEnd(now, planInterval);
 
   await supabase.from('org_subscriptions').update({
-    status: 'active', current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(), updated_at: now.toISOString(),
+    status:               'active',
+    current_period_start: now.toISOString(),
+    current_period_end:   periodEnd.toISOString(),
+    updated_at:           now.toISOString(),
   }).eq('org_id', sub.org_id);
-  await supabase.from('organizations').update({ status: 'active', updated_at: now.toISOString() }).eq('id', sub.org_id);
+
+  await supabase.from('organizations').update({
+    status:     'active',
+    updated_at: now.toISOString(),
+  }).eq('id', sub.org_id);
 }
 
 async function handleSubscriptionFailed(data) {
   const { data: sub } = await supabase
-    .from('org_subscriptions').select('org_id')
-    .eq('dodo_subscription_id', data.subscription_id).maybeSingle();
+    .from('org_subscriptions')
+    .select('org_id')
+    .eq('dodo_subscription_id', data.subscription_id)
+    .maybeSingle();
   if (!sub?.org_id) return;
-  await supabase.from('org_subscriptions').update({ status: 'past_due', updated_at: new Date().toISOString() }).eq('org_id', sub.org_id);
-  await supabase.from('organizations').update({ status: 'suspended', updated_at: new Date().toISOString() }).eq('id', sub.org_id);
+
+  await supabase.from('org_subscriptions').update({
+    status:     'past_due',
+    updated_at: new Date().toISOString(),
+  }).eq('org_id', sub.org_id);
+
+  await supabase.from('organizations').update({
+    status:     'suspended',
+    updated_at: new Date().toISOString(),
+  }).eq('id', sub.org_id);
 }
 
 async function handleSubscriptionCancelled(data) {
   const { data: sub } = await supabase
-    .from('org_subscriptions').select('org_id')
-    .eq('dodo_subscription_id', data.subscription_id).maybeSingle();
+    .from('org_subscriptions')
+    .select('org_id')
+    .eq('dodo_subscription_id', data.subscription_id)
+    .maybeSingle();
   if (!sub?.org_id) return;
+
   await supabase.from('org_subscriptions').update({
-    status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    status:       'cancelled',
+    cancelled_at: new Date().toISOString(),
+    updated_at:   new Date().toISOString(),
   }).eq('org_id', sub.org_id);
-  await supabase.from('organizations').update({ status: 'inactive', updated_at: new Date().toISOString() }).eq('id', sub.org_id);
+
+  await supabase.from('organizations').update({
+    status:     'inactive',
+    updated_at: new Date().toISOString(),
+  }).eq('id', sub.org_id);
 }
 
-async function activateOrgSubscription({ orgId, planId, dodoPaymentId, dodoCustomerId, dodoSubscriptionId, amount, currency }) {
+async function activateOrgSubscription({
+  orgId, planId, dodoPaymentId, dodoCustomerId, dodoSubscriptionId, amount, currency,
+}) {
   const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+  // Resolve plan interval so period end is accurate for monthly, yearly, etc.
+  let planInterval = 'monthly';
+  if (planId) {
+    const { data: plan } = await supabase
+      .from('subscription_plans')
+      .select('interval')
+      .eq('id', planId)
+      .maybeSingle();
+    if (plan?.interval) planInterval = plan.interval;
+  }
+
+  const periodEnd = calcPeriodEnd(now, planInterval);
 
   await supabase.from('org_subscriptions').upsert({
-    org_id: orgId, plan_id: planId, status: 'active',
-    dodo_customer_id: dodoCustomerId || null,
+    org_id:               orgId,
+    plan_id:              planId || null,
+    status:               'active',
+    dodo_customer_id:     dodoCustomerId  || null,
     dodo_subscription_id: dodoSubscriptionId || null,
     current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    updated_at: now.toISOString(),
+    current_period_end:   periodEnd.toISOString(),
+    updated_at:           now.toISOString(),
   }, { onConflict: 'org_id' });
 
   if (dodoPaymentId) {
     await supabase.from('subscription_payments').upsert({
-      org_id: orgId, plan_id: planId, amount: amount || 0, currency: currency || 'USD',
-      status: 'success', dodo_payment_id: dodoPaymentId,
-      period_start: now.toISOString(), period_end: periodEnd.toISOString(), paid_at: now.toISOString(),
+      org_id:          orgId,
+      plan_id:         planId || null,
+      amount:          amount   || 0,
+      currency:        currency || 'USD',
+      status:          'success',
+      dodo_payment_id: dodoPaymentId,
+      period_start:    now.toISOString(),
+      period_end:      periodEnd.toISOString(),
+      paid_at:         now.toISOString(),
     }, { onConflict: 'dodo_payment_id' });
   }
 
-  await supabase.from('organizations').update({ status: 'active', updated_at: now.toISOString() }).eq('id', orgId);
+  await supabase.from('organizations').update({
+    status:     'active',
+    updated_at: now.toISOString(),
+  }).eq('id', orgId);
 }
 
-// Cancel subscription
+// ── Cancel ─────────────────────────────────────────────────────
+
 export const cancelSubscription = async (orgId, reason = '') => {
   const { data: sub } = await supabase
-    .from('org_subscriptions').select('dodo_subscription_id').eq('org_id', orgId).maybeSingle();
+    .from('org_subscriptions')
+    .select('dodo_subscription_id')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
   if (!sub?.dodo_subscription_id) throw new AppError('No active subscription found.', 404);
 
   await dodo.subscriptions.update(sub.dodo_subscription_id, { status: 'cancelled' });
+
   await supabase.from('org_subscriptions').update({
-    status: 'cancelled', cancelled_at: new Date().toISOString(),
-    cancel_reason: reason, updated_at: new Date().toISOString(),
+    status:        'cancelled',
+    cancelled_at:  new Date().toISOString(),
+    cancel_reason: reason,
+    updated_at:    new Date().toISOString(),
   }).eq('org_id', orgId);
+
   return { success: true };
 };
 
-// Customer portal - self-service subscription management
+// ── Customer portal ────────────────────────────────────────────
+
 export const getCustomerPortalUrl = async (orgId) => {
   const { data: sub } = await supabase
-    .from('org_subscriptions').select('dodo_customer_id').eq('org_id', orgId).maybeSingle();
+    .from('org_subscriptions')
+    .select('dodo_customer_id')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
   if (!sub?.dodo_customer_id) throw new AppError('No subscription found. Please subscribe first.', 404);
+
   const portal = await dodo.customers.customerPortal.create(sub.dodo_customer_id);
   return { url: portal.link };
 };
 
-// Payment history
+// ── Payment history ────────────────────────────────────────────
+
 export const getPaymentHistory = async (orgId) => {
   const { data, error } = await supabase
     .from('subscription_payments')
     .select('*, subscription_plans(name, interval)')
     .eq('org_id', orgId)
     .order('paid_at', { ascending: false });
+
   if (error) throw new AppError('Failed to fetch payment history.', 500);
   return data || [];
 };

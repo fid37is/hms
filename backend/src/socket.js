@@ -21,11 +21,18 @@ import { Server }   from 'socket.io';
 import jwt          from 'jsonwebtoken';
 import { env }      from './config/env.js';
 import { supabase } from './config/supabase.js';
+import { allowedOrigins, WEBSITE_BASE_DOMAIN } from './app.js';
 
 export const initSocket = (httpServer, app) => {
   const io = new Server(httpServer, {
     cors: {
-      origin:      env.WEBSITE_URL || 'http://localhost:5174',
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (origin.endsWith(`.${WEBSITE_BASE_DOMAIN}`)) return callback(null, true);
+        if (env.isDev && /^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      },
       credentials: true,
     },
   });
