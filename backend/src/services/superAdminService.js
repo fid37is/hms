@@ -41,9 +41,12 @@ export const superAdminLogin = async (email, password) => {
     .eq('id', admin.id);
 
   // 4. Issue super-admin JWT — no org_id, is_super_admin: true
+  // Use dedicated secret if configured; falls back to JWT_SECRET so existing
+  // deployments keep working without env changes.
+  const saSecret = env.SUPER_ADMIN_JWT_SECRET || env.JWT_SECRET;
   const token = jwt.sign(
     { sub: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role || 'admin', is_super_admin: true },
-    env.JWT_SECRET,
+    saSecret,
     { expiresIn: SA_TOKEN_TTL }
   );
 

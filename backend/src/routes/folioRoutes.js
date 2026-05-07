@@ -24,6 +24,7 @@ import {
   refundPayment,
   openShift,
   closeShift,
+  downloadReceipt,
 } from '../controllers/folioController.js';
 
 const router = Router();
@@ -76,6 +77,12 @@ router.patch('/:id/payments/:paymentId/refund',
   requirePermission(PERMISSIONS.BILLING.VOID),
   validate(refundPaymentSchema),
   refundPayment
+);
+
+// GET  /api/v1/folio/:id/receipt  — download PDF receipt
+router.get('/:id/receipt',
+  requirePermission(PERMISSIONS.BILLING.READ),
+  downloadReceipt
 );
 
 // POST /api/v1/folio/shift/open
