@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate }                 from 'react-router-dom';
 import * as configApi                  from '../../../lib/api/configApi';
 import toast, { Toaster }              from 'react-hot-toast';
+import { useAuthStore }                from '../../../store/authStore';
 import {
   Eye, EyeOff, RotateCcw, ChevronUp, ChevronDown,
   ChevronRight, ChevronLeft, GripVertical, Trash2,
@@ -565,7 +566,11 @@ export default function CustomizePage() {
   const iframeRef  = useRef(null);
   const [iframeReady, setIframeReady] = useState(false);
 
-  const HOTEL_URL = import.meta.env.VITE_HOTEL_URL || 'http://localhost:5174';
+  const { org } = useAuthStore();
+  const WEBSITE_BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'cierlo.app';
+  const HOTEL_URL = org?.slug
+    ? `https://${org.slug}.${WEBSITE_BASE_DOMAIN}`
+    : import.meta.env.VITE_HOTEL_URL || 'http://localhost:5174';
   const iframeSrc = `${HOTEL_URL}?hms_edit=${editToken.current}`;
 
   useEffect(() => {
