@@ -19,12 +19,12 @@ app.set('trust proxy', 1); // Trust first proxy (Render, Railway, Heroku etc)
 const parseOrigins = (val, fallback) =>
   (val || fallback).split(',').map(o => o.trim()).filter(Boolean);
 
-const allowedOrigins = [
+export const allowedOrigins = [
   ...parseOrigins(env.FRONTEND_URL, 'http://localhost:5173'),
   ...parseOrigins(env.WEBSITE_URL,  'http://localhost:5174'),
 ];
 
-const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'miravance.io';
+export const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'cierlo.app';
 
 const corsOptions = {
   origin: (origin, callback) => {
