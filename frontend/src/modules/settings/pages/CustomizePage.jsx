@@ -570,8 +570,8 @@ export default function CustomizePage() {
   const WEBSITE_BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'cierlo.app';
   const HOTEL_URL = org?.slug
     ? `https://${org.slug}.${WEBSITE_BASE_DOMAIN}`
-    : import.meta.env.VITE_HOTEL_URL || 'http://localhost:5174';
-  const iframeSrc = `${HOTEL_URL}?hms_edit=${editToken.current}`;
+    : null;
+  const iframeSrc = HOTEL_URL ? `${HOTEL_URL}?hms_edit=${editToken.current}` : null;
 
   useEffect(() => {
     const handler = (e) => {
@@ -958,12 +958,15 @@ export default function CustomizePage() {
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
+          {iframeSrc && (
           <iframe
+            key={iframeSrc}
             ref={iframeRef}
             src={iframeSrc}
             style={{ flex: 1, border: 'none', width: '100%', height: '100%', display: 'block', opacity: iframeReady ? 1 : 0, transition: 'opacity 0.3s' }}
             title="Hotel website preview"
           />
+          )}
         </div>
       </div>
 
