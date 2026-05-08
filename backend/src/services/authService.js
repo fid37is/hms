@@ -4,6 +4,7 @@ import jwt          from 'jsonwebtoken';
 import bcrypt       from 'bcryptjs';
 import crypto       from 'crypto';
 import { supabase } from '../config/supabase.js';
+import { provisionHotelSubdomain } from './cloudflareService.js';
 import { env }      from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { auditLogin } from './auditService.js';
@@ -162,6 +163,9 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
     })
     .select().single();
   if (orgError) throw new AppError('Failed to create organization.', 500);
+
+  // Auto-provision subdomain on Cloudflare Pages (fire-and-forget)
+  provisionHotelSubdomain(slug).catch(() => {});
 
   // 4. Create Supabase Auth user
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -475,6 +479,9 @@ export const createAdditionalOrg = async (userId, orgName) => {
       trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     }).select().single();
   if (orgError) throw new AppError('Failed to create organization.', 500);
+
+  // Auto-provision subdomain on Cloudflare Pages (fire-and-forget)
+  provisionHotelSubdomain(slug).catch(() => {});
 
   // 3. Create Admin role for the new org
   const { data: adminRole } = await supabase
