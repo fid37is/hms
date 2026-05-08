@@ -24,7 +24,7 @@ export const allowedOrigins = [
   ...parseOrigins(env.WEBSITE_URL,  'http://localhost:5174'),
 ];
 
-export const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'cierlo.app';
+export const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'miravance.io';
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -43,7 +43,7 @@ const corsOptions = {
   },
   credentials:          true,
   methods:              ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders:       ['Content-Type', 'Authorization', 'X-API-Key', 'X-Org-Slug'],  // ✅ API key + org slug headers
+  allowedHeaders:       ['Content-Type', 'Authorization', 'X-API-Key', 'X-Org-Slug', 'X-Forwarded-Host'],  // ✅ API key + org slug headers
   optionsSuccessStatus: 200,
 };
 

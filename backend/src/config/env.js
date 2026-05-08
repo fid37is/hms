@@ -1,4 +1,4 @@
-// hms/src/config/env.js
+// backend/src/config/env.js
 
 import 'dotenv/config';
 
@@ -28,19 +28,14 @@ export const env = {
   JWT_EXPIRES_IN:         optional('JWT_EXPIRES_IN', '8h'),
   JWT_REFRESH_EXPIRES_IN: optional('JWT_REFRESH_EXPIRES_IN', '30d'),
 
-  // Separate signing secret for super-admin tokens.
-  // Falls back to JWT_SECRET if not set so existing deployments keep working,
-  // but SHOULD be a different value in production.
-  SUPER_ADMIN_JWT_SECRET: optional('SUPER_ADMIN_JWT_SECRET', ''),
-
   PAYSTACK_SECRET_KEY:    optional('PAYSTACK_SECRET_KEY'),
   PAYSTACK_PUBLIC_KEY:    optional('PAYSTACK_PUBLIC_KEY'),
   FLUTTERWAVE_SECRET_KEY: optional('FLUTTERWAVE_SECRET_KEY'),
 
   // Dodo Payments
-  DODO_PAYMENTS_API_KEY:      optional('DODO_PAYMENTS_API_KEY'),
+  DODO_PAYMENTS_API_KEY:        optional('DODO_PAYMENTS_API_KEY'),
   DODO_PAYMENTS_WEBHOOK_SECRET: optional('DODO_PAYMENTS_WEBHOOK_SECRET'),
-  DODO_PAYMENTS_ENVIRONMENT:  optional('DODO_PAYMENTS_ENVIRONMENT', 'test_mode'),
+  DODO_PAYMENTS_ENVIRONMENT:    optional('DODO_PAYMENTS_ENVIRONMENT', 'test_mode'),
 
   SMTP_HOST:  optional('SMTP_HOST'),
   SMTP_PORT:  optional('SMTP_PORT', '587'),
@@ -49,7 +44,13 @@ export const env = {
   EMAIL_FROM: optional('EMAIL_FROM', 'noreply@hms.com'),
 
   FRONTEND_URL: optional('FRONTEND_URL', 'http://localhost:5173'),
+  WEBSITE_URL:  optional('WEBSITE_URL',  'http://localhost:5174'),
 
   WEBSITE_BASE_DOMAIN: optional('WEBSITE_BASE_DOMAIN', 'miravance.io'),
   DEV_ORG_ID:          optional('DEV_ORG_ID', ''),
+
+  // Cloudflare Pages subdomain auto-provisioning
+  CF_API_TOKEN:     optional('CF_API_TOKEN'),
+  CF_ACCOUNT_ID:    optional('CF_ACCOUNT_ID'),
+  CF_PAGES_PROJECT: optional('CF_PAGES_PROJECT', 'hotel-website'),
 };
