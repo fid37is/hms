@@ -25,7 +25,7 @@ const WEBSITE_BASE_DOMAIN = env.WEBSITE_BASE_DOMAIN || 'cierlo.app';
 
 export const resolveOrg = async (req, res, next) => {
     try {
-        const host = (req.hostname || '').toLowerCase();
+        const host = (req.headers['x-forwarded-host'] || req.hostname || '').toLowerCase().split(',')[0].trim();
 
         // ── 1. Try custom domain ────────────────────────────────────────────────
         // Any host that is NOT our own subdomain is treated as a potential custom domain.
