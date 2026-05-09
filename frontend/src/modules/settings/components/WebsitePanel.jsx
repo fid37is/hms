@@ -11,6 +11,7 @@ import * as authApi from '../../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
 const BASE_DOMAIN = import.meta.env.VITE_WEBSITE_BASE_DOMAIN || 'cierlo.app';
+const API_BASE     = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
 function CopyButton({ text, size = 'sm' }) {
   const [copied, setCopied] = useState(false);
