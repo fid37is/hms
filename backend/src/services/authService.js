@@ -64,7 +64,7 @@ export const login = async (email, password) => {
   // Fetch org subscription status for frontend gate
   const { data: orgData } = await supabase
     .from('organizations')
-    .select('subscription_status, trial_ends_at, name')
+    .select('id, name, slug, subscription_status, trial_ends_at')
     .eq('id', orgId)
     .maybeSingle();
 
@@ -97,6 +97,7 @@ export const login = async (email, password) => {
     org: {
       id:                  orgId,
       name:                orgData?.name,
+      slug:                orgData?.slug || null,
       subscription_status: orgData?.subscription_status || 'trial',
       trial_ends_at:       orgData?.trial_ends_at || null,
     },
@@ -112,7 +113,7 @@ export const refreshToken = async (token) => {
   catch { throw new AppError('Invalid or expired refresh token.', 401); }
 
   const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password').eq('id', decoded.sub).single();
-  if (!user)           throw new AppError('User not found.', 404);
+  if (!user)         throw new AppError('User not found.', 404);
   if (!user.is_active) throw new AppError('Account deactivated.', 403);
 
   const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
@@ -133,11 +134,7 @@ export const refreshToken = async (token) => {
     full_name: user.full_name, role: role?.name, department: user.department, permissions,
   };
 
-  return {
-    access_token:         generateAccessToken(tokenPayload),
-    expires_in:           env.JWT_EXPIRES_IN,
-    must_change_password: user.must_change_password || false,
-  };
+  return { access_token: generateAccessToken(tokenPayload), expires_in: env.JWT_EXPIRES_IN };
 };
 
 // ─── Register Organization (SaaS signup) ─────────────────
@@ -366,7 +363,6 @@ export const updateOrgProfile = async (orgId, { custom_domain }) => {
   if (error) throw new AppError('Failed to update organisation profile.', 500);
   return data;
 };
-
 // ─── Get all orgs a user belongs to ──────────────────────
 export const getUserOrgs = async (userId) => {
   const { data, error } = await supabase
@@ -429,7 +425,7 @@ export const switchOrg = async (userId, targetOrgId) => {
 
   const { data: orgData } = await supabase
     .from('organizations')
-    .select('subscription_status, trial_ends_at, name')
+    .select('id, name, slug, subscription_status, trial_ends_at')
     .eq('id', targetOrgId).maybeSingle();
 
   const tokenPayload = {
@@ -459,6 +455,7 @@ export const switchOrg = async (userId, targetOrgId) => {
     org: {
       id:                  targetOrgId,
       name:                orgData?.name,
+      slug:                orgData?.slug || null,
       subscription_status: orgData?.subscription_status || 'trial',
       trial_ends_at:       orgData?.trial_ends_at || null,
     },
