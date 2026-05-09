@@ -62,3 +62,50 @@ export const provisionHotelSubdomain = async (slug) => {
     console.error(`[cloudflare] Error provisioning ${domain}:`, err.message);
   }
 };
+
+/**
+ * Adds a hotel's fully custom domain (e.g. "www.grandmeridian.com") to
+ * Cloudflare Pages. Called when a hotel saves a custom domain in Settings.
+ *
+ * The hotel still needs to add a CNAME at their DNS provider pointing to
+ * <slug>.cierlo.app — we show them these instructions in the UI.
+ */
+export const provisionCustomDomain = async (domain) => {
+  const { CF_API_TOKEN, CF_ACCOUNT_ID, CF_PAGES_PROJECT } = env;
+
+  if (!CF_API_TOKEN || !CF_ACCOUNT_ID || !CF_PAGES_PROJECT) {
+    console.warn('[cloudflare] Skipping custom domain provisioning — CF env vars not set.');
+    return { ok: false, reason: 'CF env vars not configured' };
+  }
+
+  try {
+    const res = await fetch(
+      `${CF_BASE}/accounts/${CF_ACCOUNT_ID}/pages/projects/${CF_PAGES_PROJECT}/domains`,
+      {
+        method:  'POST',
+        headers: {
+          'Authorization': `Bearer ${CF_API_TOKEN}`,
+          'Content-Type':  'application/json',
+        },
+        body: JSON.stringify({ name: domain }),
+      }
+    );
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 409) {
+        console.log(`[cloudflare] Custom domain ${domain} already exists.`);
+        return { ok: true, alreadyExists: true };
+      }
+      console.error(`[cloudflare] Failed to provision custom domain ${domain}:`, json?.errors);
+      return { ok: false, reason: json?.errors?.[0]?.message || 'Unknown error' };
+    }
+
+    console.log(`[cloudflare] Provisioned custom domain: ${domain}`);
+    return { ok: true };
+  } catch (err) {
+    console.error(`[cloudflare] Error provisioning custom domain ${domain}:`, err.message);
+    return { ok: false, reason: err.message };
+  }
+};
