@@ -21,6 +21,7 @@ import notificationRoutes     from './notificationRoutes.js';
 import nightAuditRoutes       from './nightAuditRoutes.js';
 import eventRoutes            from './eventRoutes.js';
 import subscriptionRoutes    from './subscriptionRoutes.js';
+import searchRoutes           from './searchRoutes.js';
 
 const router = Router();
 
@@ -48,6 +49,7 @@ router.use('/fnb',              fnbRoutes);
 router.use('/notifications',    notificationRoutes);
 router.use('/night-audit',      nightAuditRoutes);
 router.use('/events',           eventRoutes);
+router.use('/search',           searchRoutes);
 router.use('/subscriptions',    subscriptionRoutes);
 
 export default router;
