@@ -4,7 +4,7 @@ import jwt          from 'jsonwebtoken';
 import bcrypt       from 'bcryptjs';
 import crypto       from 'crypto';
 import { supabase } from '../config/supabase.js';
-import { provisionHotelSubdomain } from './cloudflareService.js';
+import { provisionHotelSubdomain, provisionCustomDomain } from './cloudflareService.js';
 import { env }      from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { auditLogin } from './auditService.js';
@@ -361,6 +361,10 @@ export const updateOrgProfile = async (orgId, { custom_domain }) => {
     .single();
 
   if (error) throw new AppError('Failed to update organisation profile.', 500);
+
+  // Auto-provision the custom domain on Cloudflare Pages (fire-and-forget)
+  if (domain) provisionCustomDomain(domain).catch(() => {});
+
   return data;
 };
 // ─── Get all orgs a user belongs to ──────────────────────

@@ -132,23 +132,23 @@ function CustomDomainSection({ org }) {
   });
 
   const verify = async () => {
-    if (!domain) return;
+    if (!org.custom_domain) return;
     setVerifyStatus('checking');
     setVerifyDetail('');
     try {
-      const url = `https://${domain}/api/v1/public/config`;
+      const url = `https://${org.custom_domain}/api/v1/public/config`;
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       const json = await res.json();
       if (res.ok && json?.data) {
         setVerifyStatus('ok');
-        setVerifyDetail('Domain is resolving and public API responds correctly');
+        setVerifyDetail('Domain is live and returning your hotel data correctly.');
       } else {
         setVerifyStatus('fail');
-        setVerifyDetail(`Server responded but returned an error (${res.status})`);
+        setVerifyDetail(`Server responded but returned an error (${res.status}). DNS may still be propagating.`);
       }
-    } catch (e) {
+    } catch {
       setVerifyStatus('fail');
-      setVerifyDetail('Could not reach domain — check DNS and SSL are configured');
+      setVerifyDetail('Could not reach your domain. Make sure the CNAME record is saved at your registrar and allow up to 48 hours for DNS to propagate.');
     }
   };
 
@@ -160,54 +160,18 @@ function CustomDomainSection({ org }) {
   const vc = verifyStatus ? verifyColors[verifyStatus] : null;
 
   const hasChanged = domain !== (org.custom_domain || '');
+  const cname = `${org.slug}.${BASE_DOMAIN}`;
 
   return (
-    <div className="space-y-4">
-      {/* DNS instructions */}
-      <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-soft)' }}>
-        <div className="flex items-center gap-2">
-          <Info size={13} style={{ color: 'var(--text-muted)' }} />
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>
-            DNS Configuration
-          </p>
-        </div>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Point your domain to this server by adding a CNAME record at your DNS provider:
-        </p>
-        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-soft)' }}>
-          <table className="w-full text-xs">
-            <thead>
-              <tr style={{ backgroundColor: 'var(--bg-muted)' }}>
-                {['Type', 'Name', 'Value', 'TTL'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ backgroundColor: 'var(--bg-surface)' }}>
-                <td className="px-3 py-2"><code style={{ color: 'var(--brand)' }}>CNAME</code></td>
-                <td className="px-3 py-2"><code style={{ color: 'var(--text-base)' }}>www</code></td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <code style={{ color: 'var(--text-base)' }}>
-                      {`${org.slug}.${BASE_DOMAIN}`}
-                    </code>
-                    <CopyButton text={`${org.slug}.${BASE_DOMAIN}`} />
-                  </div>
-                </td>
-                <td className="px-3 py-2"><code style={{ color: 'var(--text-muted)' }}>Auto</code></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          DNS changes can take up to 48 hours to propagate. SSL is provisioned automatically once DNS resolves.
-        </p>
-      </div>
+    <div className="space-y-5">
 
-      {/* Domain input */}
+      {/* Step 1 — Enter domain */}
       <div className="space-y-2">
-        <label className="label">Custom Domain</label>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+            style={{ backgroundColor: 'var(--brand)', color: '#fff' }}>1</span>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Enter your domain</p>
+        </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
@@ -230,17 +194,13 @@ function CustomDomainSection({ org }) {
             </button>
           )}
         </div>
-
-        {/* Current status badge */}
         {org.custom_domain && !hasChanged && (
           <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1.5"
               style={{ backgroundColor: 'var(--s-green-bg)', color: 'var(--s-green-text)' }}>
-              <Link2 size={10} /> Active
+              <Link2 size={10} /> Saved
             </span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {org.custom_domain}
-            </span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{org.custom_domain}</span>
             <button
               onClick={() => { setDomain(''); save.mutate(''); }}
               className="text-xs flex items-center gap-1 ml-1"
@@ -251,28 +211,81 @@ function CustomDomainSection({ org }) {
         )}
       </div>
 
-      {/* Verify button */}
+      {/* Step 2 — DNS instructions (only shown after domain is saved) */}
       {org.custom_domain && !hasChanged && (
         <div className="space-y-2">
-          <button onClick={verify} disabled={verifyStatus === 'checking'}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all"
-            style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-base)', border: '1px solid var(--border-soft)' }}>
-            {verifyStatus === 'checking'
-              ? <Loader2 size={14} className="animate-spin" />
-              : <RefreshCw size={14} />}
-            Verify domain
-          </button>
-
-          {vc && (
-            <div className="flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-xs"
-              style={{ backgroundColor: vc.bg }}>
-              <vc.Icon size={13} className={verifyStatus === 'checking' ? 'animate-spin mt-0.5' : 'mt-0.5'}
-                style={{ color: vc.text, flexShrink: 0 }} />
-              <span style={{ color: vc.text }}>{verifyDetail}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+              style={{ backgroundColor: 'var(--brand)', color: '#fff' }}>2</span>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>
+              Add a CNAME record at your domain registrar
+            </p>
+          </div>
+          <p className="text-xs pl-7" style={{ color: 'var(--text-muted)' }}>
+            Log in to where you bought your domain (GoDaddy, Namecheap, Cloudflare, etc.) and add the following DNS record:
+          </p>
+          <div className="rounded-lg overflow-hidden ml-7" style={{ border: '1px solid var(--border-soft)' }}>
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-muted)' }}>
+                  {['Type', 'Name', 'Value', 'TTL'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: 'var(--text-muted)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ backgroundColor: 'var(--bg-surface)' }}>
+                  <td className="px-3 py-2"><code style={{ color: 'var(--brand)' }}>CNAME</code></td>
+                  <td className="px-3 py-2"><code style={{ color: 'var(--text-base)' }}>www</code></td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <code style={{ color: 'var(--text-base)' }}>{cname}</code>
+                      <CopyButton text={cname} />
+                    </div>
+                  </td>
+                  <td className="px-3 py-2"><code style={{ color: 'var(--text-muted)' }}>Auto</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs pl-7" style={{ color: 'var(--text-muted)' }}>
+            DNS changes can take up to 48 hours to propagate. SSL is provisioned automatically once your domain resolves.
+          </p>
         </div>
       )}
+
+      {/* Step 3 — Verify (only shown after domain is saved) */}
+      {org.custom_domain && !hasChanged && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+              style={{ backgroundColor: 'var(--brand)', color: '#fff' }}>3</span>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-base)' }}>Verify your domain</p>
+          </div>
+          <div className="pl-7 space-y-2">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Once you have added the CNAME record, click below to check if your domain is live.
+            </p>
+            <button onClick={verify} disabled={verifyStatus === 'checking'}
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all"
+              style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-base)', border: '1px solid var(--border-soft)' }}>
+              {verifyStatus === 'checking'
+                ? <Loader2 size={14} className="animate-spin" />
+                : <RefreshCw size={14} />}
+              Check domain
+            </button>
+            {vc && (
+              <div className="flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-xs"
+                style={{ backgroundColor: vc.bg }}>
+                <vc.Icon size={13} className={verifyStatus === 'checking' ? 'animate-spin mt-0.5' : 'mt-0.5'}
+                  style={{ color: vc.text, flexShrink: 0 }} />
+                <span style={{ color: vc.text }}>{verifyDetail}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
