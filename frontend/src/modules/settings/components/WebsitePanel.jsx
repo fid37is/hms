@@ -66,7 +66,10 @@ function ConnectionTest({ slug }) {
     try {
       const url = `${API_BASE}/public/config`;
       const res = await fetch(url, {
-        headers: { 'x-org-slug': slug },
+        headers: {
+          'x-org-slug':       slug,
+          'X-Forwarded-Host': `${slug}.${BASE_DOMAIN}`,
+        },
       });
       const json = await res.json();
       if (res.ok && json?.data?.hotel_name) {
