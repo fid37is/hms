@@ -562,8 +562,9 @@ export default function CustomizePage() {
   });
 
   // ── iframe edit mode ─────────────────────────────────────────────────────
-  const editToken  = useRef(Math.random().toString(36).slice(2));
-  const iframeRef  = useRef(null);
+  const editToken          = useRef(Math.random().toString(36).slice(2));
+  const iframeRef          = useRef(null);
+  const pendingEditRequest = useRef(false); // true if HMS_EDIT_REQUEST arrived before content loaded
   const [iframeReady, setIframeReady] = useState(false);
 
   const { org } = useAuthStore();
@@ -573,17 +574,36 @@ export default function CustomizePage() {
     : null;
   const iframeSrc = HOTEL_URL ? `${HOTEL_URL}?hms_edit=${editToken.current}` : null;
 
+  // If HMS_EDIT_REQUEST arrived while content was still loading (null),
+  // respond now that content is available.
+  useEffect(() => {
+    if (pendingEditRequest.current && content !== null) {
+      pendingEditRequest.current = false;
+      setIframeReady(true);
+      iframeRef.current?.contentWindow?.postMessage({
+        type:    'HMS_EDIT_READY',
+        token:   editToken.current,
+        content,
+      }, '*');
+    }
+  }, [content]);
+
   useEffect(() => {
     const handler = (e) => {
       if (!e.data?.type) return;
 
       if (e.data.type === 'HMS_EDIT_REQUEST' && e.data.token === editToken.current) {
-        setIframeReady(true);
-        iframeRef.current?.contentWindow?.postMessage({
-          type:    'HMS_EDIT_READY',
-          token:   editToken.current,
-          content,
-        }, '*');
+        if (contentRef.current === null) {
+          // Content not loaded yet — store the request and respond once it loads
+          pendingEditRequest.current = true;
+        } else {
+          setIframeReady(true);
+          iframeRef.current?.contentWindow?.postMessage({
+            type:    'HMS_EDIT_READY',
+            token:   editToken.current,
+            content: contentRef.current,
+          }, '*');
+        }
       }
 
       if (e.data.type === 'HMS_CONTENT_UPDATE') {
@@ -602,7 +622,7 @@ export default function CustomizePage() {
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [content]);
+  }, []);
 
   useEffect(() => {
     if (!iframeReady || !activeSection) return;

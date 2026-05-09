@@ -112,7 +112,7 @@ export const refreshToken = async (token) => {
   catch { throw new AppError('Invalid or expired refresh token.', 401); }
 
   const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password').eq('id', decoded.sub).single();
-  if (!user)         throw new AppError('User not found.', 404);
+  if (!user)           throw new AppError('User not found.', 404);
   if (!user.is_active) throw new AppError('Account deactivated.', 403);
 
   const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
@@ -133,7 +133,11 @@ export const refreshToken = async (token) => {
     full_name: user.full_name, role: role?.name, department: user.department, permissions,
   };
 
-  return { access_token: generateAccessToken(tokenPayload), expires_in: env.JWT_EXPIRES_IN };
+  return {
+    access_token:         generateAccessToken(tokenPayload),
+    expires_in:           env.JWT_EXPIRES_IN,
+    must_change_password: user.must_change_password || false,
+  };
 };
 
 // ─── Register Organization (SaaS signup) ─────────────────
@@ -362,6 +366,7 @@ export const updateOrgProfile = async (orgId, { custom_domain }) => {
   if (error) throw new AppError('Failed to update organisation profile.', 500);
   return data;
 };
+
 // ─── Get all orgs a user belongs to ──────────────────────
 export const getUserOrgs = async (userId) => {
   const { data, error } = await supabase
