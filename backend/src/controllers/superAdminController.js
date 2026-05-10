@@ -144,9 +144,14 @@ export const deleteAdmin = async (req, res, next) => {
 
 export const resetAdminPassword = async (req, res, next) => {
   try {
-    const { password } = req.body;
-    if (!password || password.length < 8) throw new AppError('Password must be at least 8 characters.', 400);
-    await superAdminService.resetAdminPassword(req.params.id, password);
-    return sendSuccess(res, null, 'Password reset successfully.');
+    const { password, current_password } = req.body;
+    const isSelf = req.params.id === req.admin.id;
+
+    // Changing own password requires current password verification
+    if (isSelf && !current_password) throw new AppError('Current password is required.', 400);
+    if (!password || password.length < 8) throw new AppError('New password must be at least 8 characters.', 400);
+
+    await superAdminService.resetAdminPassword(req.params.id, isSelf ? current_password : null, password);
+    return sendSuccess(res, null, 'Password updated successfully.');
   } catch (e) { next(e); }
 };
