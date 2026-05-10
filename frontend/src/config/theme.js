@@ -51,7 +51,7 @@ export const lightTokens = {
 };
 
 export const darkTokens = {
-  '--bg-page':      '#120C05',
+  '--bg-page':      '#1C1208',
   '--bg-surface':   '#1C1208',
   '--bg-subtle':    '#261809',
   '--bg-muted':     '#33220E',

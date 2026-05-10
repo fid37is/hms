@@ -1,15 +1,15 @@
 // src/services/authService.js
 
-import jwt          from 'jsonwebtoken';
-import bcrypt       from 'bcryptjs';
-import crypto       from 'crypto';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { supabase } from '../config/supabase.js';
 import { provisionHotelSubdomain, provisionCustomDomain } from './cloudflareService.js';
-import { env }      from '../config/env.js';
+import { env } from '../config/env.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { auditLogin } from './auditService.js';
 
-const generateAccessToken  = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+const generateAccessToken = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
 const generateRefreshToken = (payload) => jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN });
 
 // ─── Login ────────────────────────────────────────────────
@@ -23,10 +23,14 @@ export const login = async (email, password) => {
     .select('id, org_id, email, full_name, department, role_id, is_active, must_change_password')
     .eq('id', authData.user.id).single();
 
-  if (userError || !user)  throw new AppError('User profile not found. Contact administrator.', 404);
-  if (!user.is_active)     throw new AppError('Your account has been deactivated. Contact administrator.', 403);
-  if (!user.role_id)       throw new AppError('User role not assigned. Contact administrator.', 403);
-  if (!user.org_id)        throw new AppError('No organization assigned. Contact administrator.', 403);
+  console.log('[DEBUG] Looking up user ID:', authData.user.id);
+  const testQuery = await supabase.from('users').select('id').eq('id', authData.user.id);
+  console.log('[DEBUG] test query result:', JSON.stringify(testQuery));
+
+  if (userError || !user) throw new AppError('User profile not found. Contact administrator.', 404);
+  if (!user.is_active) throw new AppError('Your account has been deactivated. Contact administrator.', 403);
+  if (!user.role_id) throw new AppError('User role not assigned. Contact administrator.', 403);
+  if (!user.org_id) throw new AppError('No organization assigned. Contact administrator.', 403);
 
   // org_id must be a plain UUID string — explicit select prevents FK auto-expansion
   const orgId = String(user.org_id);
@@ -52,11 +56,11 @@ export const login = async (email, password) => {
   auditLogin(orgId, user.id, `Login: ${user.email}`);
 
   const tokenPayload = {
-    sub:        user.id,
-    org_id:     orgId,
-    email:      user.email,
-    full_name:  user.full_name,
-    role:       role.name,
+    sub: user.id,
+    org_id: orgId,
+    email: user.email,
+    full_name: user.full_name,
+    role: role.name,
     department: user.department,
     permissions,
   };
@@ -80,26 +84,26 @@ export const login = async (email, password) => {
   }));
 
   return {
-    access_token:  generateAccessToken(tokenPayload),
+    access_token: generateAccessToken(tokenPayload),
     refresh_token: generateRefreshToken({ sub: user.id, org_id: orgId }),
-    expires_in:    env.JWT_EXPIRES_IN,
+    expires_in: env.JWT_EXPIRES_IN,
     must_change_password: user.must_change_password || false,
     user: {
-      id:          user.id,
-      org_id:      orgId,
-      full_name:   user.full_name,
-      email:       user.email,
-      role:        role.name,
-      department:  user.department,
+      id: user.id,
+      org_id: orgId,
+      full_name: user.full_name,
+      email: user.email,
+      role: role.name,
+      department: user.department,
       permissions,
       must_change_password: user.must_change_password || false,
     },
     org: {
-      id:                  orgId,
-      name:                orgData?.name,
-      slug:                orgData?.slug || null,
+      id: orgId,
+      name: orgData?.name,
+      slug: orgData?.slug || null,
       subscription_status: orgData?.subscription_status || 'trial',
-      trial_ends_at:       orgData?.trial_ends_at || null,
+      trial_ends_at: orgData?.trial_ends_at || null,
     },
     orgs, // all orgs user belongs to
   };
@@ -113,7 +117,7 @@ export const refreshToken = async (token) => {
   catch { throw new AppError('Invalid or expired refresh token.', 401); }
 
   const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password').eq('id', decoded.sub).single();
-  if (!user)         throw new AppError('User not found.', 404);
+  if (!user) throw new AppError('User not found.', 404);
   if (!user.is_active) throw new AppError('Account deactivated.', 403);
 
   const { data: role } = await supabase.from('roles').select('*').eq('id', user.role_id).single();
@@ -155,18 +159,18 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
   const { data: org, error: orgError } = await supabase
     .from('organizations')
     .insert({
-      name:                org_name,
+      name: org_name,
       slug,
-      plan:                'trial',
-      status:              'active',
+      plan: 'trial',
+      status: 'active',
       subscription_status: 'trial',
-      trial_ends_at:       new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select().single();
   if (orgError) throw new AppError('Failed to create organization.', 500);
 
   // Auto-provision subdomain on Cloudflare Pages (fire-and-forget)
-  provisionHotelSubdomain(slug).catch(() => {});
+  provisionHotelSubdomain(slug).catch(() => { });
 
   // 4. Create Supabase Auth user
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -196,11 +200,11 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
   const { data: user, error: userError } = await supabase
     .from('users')
     .insert({
-      id:        authUser.user.id,
-      org_id:    org.id,
-      email:     admin_email,
+      id: authUser.user.id,
+      org_id: org.id,
+      email: admin_email,
       full_name: admin_name,
-      role_id:   adminRole?.id || null,
+      role_id: adminRole?.id || null,
       is_active: true,
       must_change_password: false,
     })
@@ -220,15 +224,15 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
 
   // 7. Seed hotel_config for this org
   const { error: configError } = await supabase.from('hotel_config').insert({
-    org_id:          org.id,
-    hotel_name:      org_name,
-    currency:        'NGN',
+    org_id: org.id,
+    hotel_name: org_name,
+    currency: 'NGN',
     currency_symbol: '₦',
-    tax_rate:        7.5,
-    service_charge:  10,
-    timezone:        'Africa/Lagos',
-    check_in_time:   '14:00',
-    check_out_time:  '11:00',
+    tax_rate: 7.5,
+    service_charge: 10,
+    timezone: 'Africa/Lagos',
+    check_in_time: '14:00',
+    check_out_time: '11:00',
   });
   if (configError) console.error('hotel_config seed failed:', configError.message);
 
@@ -239,8 +243,8 @@ export const registerOrg = async ({ org_name, admin_email, admin_password, admin
 
 export const generateApiKey = async (orgId, label, createdBy) => {
   // Generate a secure random key
-  const rawKey  = `pk_live_${crypto.randomBytes(24).toString('hex')}`;
-  const prefix  = rawKey.slice(0, 15);
+  const rawKey = `pk_live_${crypto.randomBytes(24).toString('hex')}`;
+  const prefix = rawKey.slice(0, 15);
   const keyHash = await bcrypt.hash(rawKey, 10);
 
   const { data, error } = await supabase
@@ -294,7 +298,7 @@ export const changePassword = async (userId, currentPassword, newPassword, force
 
   // Update password and force-invalidate all existing Supabase Auth sessions
   const { data: updatedUser, error: pwError } = await supabase.auth.admin.updateUserById(userId, {
-    password:      newPassword,
+    password: newPassword,
     email_confirm: true,
   });
 
@@ -316,7 +320,7 @@ export const forgotPassword = async (email) => {
 
 export const adminResetPassword = async (userId, newPassword) => {
   const { data: updatedUser, error } = await supabase.auth.admin.updateUserById(userId, {
-    password:      newPassword,
+    password: newPassword,
     email_confirm: true,
   });
   if (error || !updatedUser) throw new AppError(`Failed to reset password: ${error?.message || 'unknown error'}`, 500);
@@ -363,7 +367,7 @@ export const updateOrgProfile = async (orgId, { custom_domain }) => {
   if (error) throw new AppError('Failed to update organisation profile.', 500);
 
   // Auto-provision the custom domain on Cloudflare Pages (fire-and-forget)
-  if (domain) provisionCustomDomain(domain).catch(() => {});
+  if (domain) provisionCustomDomain(domain).catch(() => { });
 
   return data;
 };
@@ -382,13 +386,13 @@ export const getUserOrgs = async (userId) => {
 
   if (error) throw new AppError('Failed to fetch organisations.', 500);
   return (data || []).map(m => ({
-    org_id:              m.organizations.id,
-    name:                m.organizations.name,
-    slug:                m.organizations.slug,
+    org_id: m.organizations.id,
+    name: m.organizations.name,
+    slug: m.organizations.slug,
     subscription_status: m.organizations.subscription_status,
-    trial_ends_at:       m.organizations.trial_ends_at,
-    status:              m.organizations.status,
-    role_id:             m.role_id,
+    trial_ends_at: m.organizations.trial_ends_at,
+    status: m.organizations.status,
+    role_id: m.role_id,
   }));
 };
 
@@ -433,35 +437,35 @@ export const switchOrg = async (userId, targetOrgId) => {
     .eq('id', targetOrgId).maybeSingle();
 
   const tokenPayload = {
-    sub:        user.id,
-    org_id:     targetOrgId,
-    email:      user.email,
-    full_name:  user.full_name,
-    role:       role?.name,
+    sub: user.id,
+    org_id: targetOrgId,
+    email: user.email,
+    full_name: user.full_name,
+    role: role?.name,
     department: user.department,
     permissions,
   };
 
   return {
-    access_token:  generateAccessToken(tokenPayload),
+    access_token: generateAccessToken(tokenPayload),
     refresh_token: generateRefreshToken({ sub: user.id, org_id: targetOrgId }),
-    expires_in:    env.JWT_EXPIRES_IN,
+    expires_in: env.JWT_EXPIRES_IN,
     user: {
-      id:          user.id,
-      org_id:      targetOrgId,
-      full_name:   user.full_name,
-      email:       user.email,
-      role:        role?.name,
-      department:  user.department,
+      id: user.id,
+      org_id: targetOrgId,
+      full_name: user.full_name,
+      email: user.email,
+      role: role?.name,
+      department: user.department,
       permissions,
       must_change_password: user.must_change_password || false,
     },
     org: {
-      id:                  targetOrgId,
-      name:                orgData?.name,
-      slug:                orgData?.slug || null,
+      id: targetOrgId,
+      name: orgData?.name,
+      slug: orgData?.slug || null,
       subscription_status: orgData?.subscription_status || 'trial',
-      trial_ends_at:       orgData?.trial_ends_at || null,
+      trial_ends_at: orgData?.trial_ends_at || null,
     },
   };
 };
@@ -487,7 +491,7 @@ export const createAdditionalOrg = async (userId, orgName) => {
   if (orgError) throw new AppError('Failed to create organization.', 500);
 
   // Auto-provision subdomain on Cloudflare Pages (fire-and-forget)
-  provisionHotelSubdomain(slug).catch(() => {});
+  provisionHotelSubdomain(slug).catch(() => { });
 
   // 3. Create Admin role for the new org
   const { data: adminRole } = await supabase

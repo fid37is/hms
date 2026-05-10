@@ -19,7 +19,7 @@ const BLANK = {
   currency: 'NGN', currency_symbol: '₦', tax_rate: '7.5', service_charge: '10',
   // Payment
   pay_on_arrival: true, bank_transfer: false, paystack_enabled: false,
-  bank_name: '', bank_account_number: '', bank_account_name: '', paystack_public_key: '',
+  bank_name: '', bank_account_number: '', bank_account_name: '', paystack_public_key: '', paystack_secret_key: '',
   // Operations
   timezone: 'Africa/Lagos', check_in_time: '14:00', check_out_time: '11:00',
   // Policies
@@ -91,6 +91,7 @@ export default function HotelConfig() {
       bank_account_number: data.bank_account_number ?? '',
       bank_account_name:   data.bank_account_name   ?? '',
       paystack_public_key: data.paystack_public_key ?? '',
+      paystack_secret_key: data.paystack_secret_key ?? '',
       // Operations
       timezone:            data.timezone            ?? 'Africa/Lagos',
       check_in_time:       (data.check_in_time  ?? '14:00').slice(0, 5),
@@ -125,7 +126,8 @@ export default function HotelConfig() {
       check_out_time:   stripSeconds(form.check_out_time),
       pay_on_arrival:   Boolean(form.pay_on_arrival),
       bank_transfer:    Boolean(form.bank_transfer),
-      paystack_enabled: Boolean(form.paystack_enabled),
+      paystack_enabled:    Boolean(form.paystack_enabled),
+      paystack_secret_key: form.paystack_secret_key || '',
     });
   };
 
@@ -313,9 +315,14 @@ export default function HotelConfig() {
                   <input name="paystack_public_key" className="input font-mono" placeholder="pk_live_…"
                     value={form.paystack_public_key} onChange={handleChange} />
                 </Field>
+                <Field label="Secret Key">
+                  <input name="paystack_secret_key" className="input font-mono" placeholder="sk_live_…"
+                    type="password"
+                    value={form.paystack_secret_key} onChange={handleChange} />
+                </Field>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Get your public key from your Paystack dashboard → Settings → API Keys.
-                  Never enter your secret key here.
+                  Get your keys from your Paystack dashboard → Settings → API Keys.
+                  Your secret key is stored securely and used only to verify payments server-side.
                 </p>
               </div>
             )}
