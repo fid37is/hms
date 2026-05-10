@@ -23,7 +23,7 @@ const UPDATABLE_FIELDS = new Set([
   'instagram_url', 'facebook_url', 'twitter_url',
   'currency', 'currency_symbol',
   'pay_on_arrival', 'bank_transfer', 'paystack_enabled',
-  'paystack_public_key', 'bank_name', 'bank_account_number', 'bank_account_name',
+  'paystack_public_key', 'paystack_secret_key', 'bank_name', 'bank_account_number', 'bank_account_name',
   'tax_rate', 'service_charge',
   'cancellation_policy', 'pets_policy', 'smoking_policy',
   'receipt_footer',

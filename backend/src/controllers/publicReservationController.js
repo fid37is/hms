@@ -287,3 +287,66 @@ export const publicCancelReservation = async (req, res, next) => {
     return sendSuccess(res, data, 'Your reservation has been cancelled.');
   } catch (err) { next(err); }
 };
+// ─── POST /api/v1/public/reservations/:id/confirm-payment ────────────────────
+// Called after a successful Paystack charge.
+// Verifies the payment with Paystack using the hotel's own secret key,
+// then marks the reservation as paid.
+export const publicConfirmPayment = async (req, res, next) => {
+  try {
+    const { reference } = req.body;
+    if (!reference) throw new AppError('Payment reference is required.', 422);
+
+    // 1. Fetch reservation
+    const { data: reservation, error: resError } = await supabase
+      .from('reservations')
+      .select('id, guest_id, total_amount, org_id')
+      .eq('id', req.params.id)
+      .eq('org_id', req.orgId)
+      .single();
+
+    if (resError || !reservation) throw new AppError('Reservation not found.', 404);
+
+    // 2. Fetch hotel's Paystack secret key from hotel_config
+    const { data: config } = await supabase
+      .from('hotel_config')
+      .select('paystack_secret_key')
+      .eq('org_id', req.orgId)
+      .maybeSingle();
+
+    const secretKey = config?.paystack_secret_key;
+    if (!secretKey) throw new AppError('Paystack is not configured for this hotel.', 400);
+
+    // 3. Verify payment with Paystack API
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${secretKey}` },
+    });
+
+    const verifyJson = await verifyRes.json();
+
+    if (!verifyRes.ok || verifyJson?.data?.status !== 'success') {
+      throw new AppError(
+        `Payment verification failed: ${verifyJson?.data?.gateway_response || 'Payment not successful'}`,
+        402
+      );
+    }
+
+    // 4. Mark reservation as paid
+    await supabase
+      .from('reservations')
+      .update({
+        payment_status:    'paid',
+        payment_reference: reference,
+      })
+      .eq('id', reservation.id);
+
+    notify(req.app, {
+      orgId:  req.orgId,
+      type:   'payment',
+      title:  'Online Payment Received',
+      body:   `Paystack payment verified — ref: ${reference}`,
+      link:   '/reservations',
+    });
+
+    return sendSuccess(res, { reference, verified: true }, 'Payment verified and confirmed.');
+  } catch (err) { next(err); }
+};

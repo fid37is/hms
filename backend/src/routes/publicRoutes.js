@@ -25,6 +25,7 @@ import {
   publicCreateReservation,
   publicCancelReservation,
   lookupReservation,
+  publicConfirmPayment,
 } from '../controllers/publicReservationController.js';
 
 // ─── Folio ────────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ router.get('/chat-departments',              rateLimiter, getActiveDepartments);
 
 router.get('/reservations/:id',                 rateLimiter, verifyGuestToken, authorizeGuestReservation, getReservationById);
 router.patch('/reservations/:id/cancel',        rateLimiter, verifyGuestToken, authorizeGuestReservation, validate(publicCancelReservationSchema), publicCancelReservation);
+router.post('/reservations/:id/confirm-payment', rateLimiter, verifyGuestToken, publicConfirmPayment);
 
 router.get('/folio/reservation/:reservationId', rateLimiter, verifyGuestToken, authorizeGuestReservation, getFolioByReservation);
 router.get('/folio/:id/summary',                rateLimiter, verifyGuestToken, getFolioSummary);
