@@ -4,6 +4,11 @@ export const login            = (data)  => api.post('/auth/login', data);
 export const logout           = ()      => api.post('/auth/logout');
 export const getProfile       = ()      => api.get('/auth/me');
 export const updateProfile    = (data)   => api.patch('/auth/me', data);
+export const uploadAvatar     = (file)   => {
+  const fd = new FormData();
+  fd.append('avatar', file);
+  return api.post('/auth/me/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+};
 export const changePassword      = (data)  => api.patch('/auth/change-password', data);
 export const forceChangePassword = (data)  => api.patch('/auth/force-change-password', data);
 export const forgotPassword   = (data)  => api.post('/auth/forgot-password', data);

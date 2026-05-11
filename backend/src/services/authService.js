@@ -295,7 +295,7 @@ export const revokeApiKey = async (orgId, keyId) => {
 // ─── Profile / Password ───────────────────────────────────
 
 export const getProfile = async (userId) => {
-  const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, role_id, is_active, must_change_password, last_login').eq('id', userId).single();
+  const { data: user } = await supabase.from('users').select('id, org_id, email, full_name, department, phone, role_id, is_active, must_change_password, last_login, avatar_url').eq('id', userId).single();
   if (!user) throw new AppError('User not found.', 404);
   const { data: role } = await supabase.from('roles').select('id, name, description').eq('id', user.role_id).single();
   return { ...user, role };
@@ -588,4 +588,32 @@ export const updateProfile = async (userId, { full_name, department, phone }) =>
 
   if (error) throw new AppError('Failed to update profile.', 500);
   return data;
+};
+
+// ─── Upload avatar ────────────────────────────────────────
+export const uploadAvatar = async (userId, file) => {
+  const ext      = file.originalname.split('.').pop().toLowerCase();
+  const filename = `avatars/${userId}/avatar.${ext}`;
+
+  // Remove old avatar first (upsert=true handles this but let's be explicit)
+  await supabase.storage.from('avatars').remove([filename]).catch(() => {});
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filename, file.buffer, {
+      contentType:  file.mimetype,
+      cacheControl: '3600',
+      upsert:       true,
+    });
+
+  if (uploadError) throw new AppError(`Avatar upload failed: ${uploadError.message}`, 500);
+
+  const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filename);
+
+  // Add cache-busting timestamp so browser picks up the new image
+  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+  await supabase.from('users').update({ avatar_url: avatarUrl }).eq('id', userId);
+
+  return { avatar_url: avatarUrl };
 };

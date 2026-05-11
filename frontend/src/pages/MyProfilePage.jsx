@@ -2,9 +2,9 @@
 // Personal profile page for the logged-in staff/admin user.
 // Accessible from the sidebar user popup — separate from hotel Settings.
 
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Mail, Briefcase, Building2, Shield, Clock, KeyRound, Save } from 'lucide-react';
+import { User, Mail, Briefcase, Building2, Shield, Clock, KeyRound, Save, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as authApi from '../lib/api/authApi';
 import { useAuthStore } from '../store/authStore';
@@ -16,6 +16,23 @@ export default function MyProfilePage() {
   const [changePw, setChangePw] = useState(false);
   const [editing,  setEditing]  = useState(false);
   const [form,     setForm]     = useState(null);
+  const fileInputRef            = React.useRef(null);
+
+  const avatarUpload = useMutation({
+    mutationFn: (file) => authApi.uploadAvatar(file),
+    onSuccess:  (res) => {
+      toast.success('Avatar updated');
+      qc.invalidateQueries({ queryKey: ['my-profile'] });
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to upload avatar'),
+  });
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return; }
+    avatarUpload.mutate(file);
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['my-profile'],
@@ -55,9 +72,24 @@ export default function MyProfilePage() {
 
       {/* Avatar + name card */}
       <div className="rounded-2xl p-6 flex items-center gap-5" style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-soft)' }}>
-        <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold uppercase flex-shrink-0"
-          style={{ backgroundColor: 'var(--sidebar-item-active)', color: 'var(--accent)' }}>
-          {p?.full_name?.charAt(0) || 'U'}
+        <div className="relative flex-shrink-0">
+          <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-2xl font-bold uppercase"
+            style={{ backgroundColor: 'var(--sidebar-item-active)', color: 'var(--accent)' }}>
+            {p?.avatar_url
+              ? <img src={p.avatar_url} alt={p.full_name} className="w-full h-full object-cover" />
+              : (p?.full_name?.charAt(0) || 'U')}
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={avatarUpload.isPending}
+            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'var(--brand)', color: '#fff', border: '2px solid var(--bg-surface)' }}
+            title="Upload avatar">
+            {avatarUpload.isPending
+              ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+              : <Camera size={11} />}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
         </div>
         <div>
           <p className="text-lg font-semibold" style={{ color: 'var(--text-base)' }}>{p?.full_name}</p>

@@ -230,9 +230,17 @@ export default function Sidebar() {
             <div className="absolute bottom-full mb-1 rounded-xl shadow-xl overflow-hidden z-50"
               style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-soft)', left: 0, width: 220 }}>
               {/* User info header */}
-              <div className="px-3 py-2.5" style={{ borderBottom: '1px solid var(--border-soft)' }}>
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-base)' }}>{user?.full_name}</p>
-                <p className="text-xs truncate capitalize" style={{ color: 'var(--text-muted)' }}>{user?.role}</p>
+              <div className="px-3 py-2.5 flex items-center gap-2.5" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+                <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold uppercase flex-shrink-0"
+                  style={{ backgroundColor: 'var(--sidebar-item-active)', color: 'var(--accent)' }}>
+                  {user?.avatar_url
+                    ? <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                    : (user?.full_name?.charAt(0) || 'U')}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-base)' }}>{user?.full_name}</p>
+                  <p className="text-xs truncate capitalize" style={{ color: 'var(--text-muted)' }}>{user?.role}</p>
+                </div>
               </div>
               {/* Upgrade banner — trial or expired */}
               {(isTrial || isExpired) && (
@@ -276,9 +284,11 @@ export default function Sidebar() {
             title={!sidebarOpen ? user?.full_name : undefined}
           >
             {/* Avatar */}
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold uppercase"
+            <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 text-xs font-bold uppercase"
               style={{ backgroundColor: 'var(--sidebar-item-active)', color: 'var(--accent)' }}>
-              {user?.full_name?.charAt(0) || 'U'}
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                : (user?.full_name?.charAt(0) || 'U')}
             </div>
             {/* Name + role */}
             {sidebarOpen && (
