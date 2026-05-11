@@ -131,3 +131,11 @@ export const updateProfileController = async (req, res, next) => {
     return sendSuccess(res, data, 'Profile updated.');
   } catch (e) { next(e); }
 };
+
+export const uploadAvatarController = async (req, res, next) => {
+  try {
+    if (!req.file) throw new Error('No file uploaded.');
+    const data = await authService.uploadAvatar(req.user.sub, req.file);
+    return sendSuccess(res, data, 'Avatar updated.');
+  } catch (e) { next(e); }
+};

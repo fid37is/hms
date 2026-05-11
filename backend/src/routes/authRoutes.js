@@ -1,8 +1,11 @@
 // src/routes/authRoutes.js
 
 import { Router }       from 'express';
+import multer          from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import { validate }     from '../middleware/validate.js';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 import {
   loginSchema,
   refreshTokenSchema,
@@ -15,6 +18,7 @@ import {
   refreshTokenController,
   getProfileController,
   updateProfileController,
+  uploadAvatarController,
   changePasswordController,
   forceChangePasswordController,
   logoutController,
@@ -44,6 +48,7 @@ router.post('/register-org',    validate(registerOrgSchema),   registerOrgContro
 router.post('/logout',          authenticate, logoutController);
 router.get('/me',               authenticate, getProfileController);
 router.patch('/me',             authenticate, updateProfileController);
+router.post('/me/avatar',        authenticate, upload.single('avatar'), uploadAvatarController);
 router.patch('/change-password',       authenticate, validate(changePasswordSchema),      changePasswordController);
 router.patch('/force-change-password', authenticate, validate(forceChangePasswordSchema), forceChangePasswordController);
 
