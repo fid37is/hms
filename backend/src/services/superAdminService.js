@@ -41,12 +41,9 @@ export const superAdminLogin = async (email, password) => {
     .eq('id', admin.id);
 
   // 4. Issue super-admin JWT — no org_id, is_super_admin: true
-  // Use dedicated secret if configured; falls back to JWT_SECRET so existing
-  // deployments keep working without env changes.
-  const saSecret = env.SUPER_ADMIN_JWT_SECRET || env.JWT_SECRET;
   const token = jwt.sign(
     { sub: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role || 'admin', is_super_admin: true },
-    saSecret,
+    env.JWT_SECRET,
     { expiresIn: SA_TOKEN_TTL }
   );
 
@@ -460,8 +457,18 @@ export const deleteAdmin = async (id, requesterId) => {
   if (error) throw new AppError('Failed to delete admin.', 500);
 };
 
-export const resetAdminPassword = async (id, newPassword) => {
+export const resetAdminPassword = async (id, currentPassword, newPassword) => {
+  const { data: admin } = await supabase
+    .from('platform_admins').select('password_hash').eq('id', id).single();
+  if (!admin) throw new AppError('Admin not found.', 404);
+
+  // Only verify current password when changing own password (currentPassword will be null for admin resets)
+  if (currentPassword !== null) {
+    const valid = await bcrypt.compare(currentPassword, admin.password_hash);
+    if (!valid) throw new AppError('Current password is incorrect.', 401);
+  }
+
   const password_hash = await bcrypt.hash(newPassword, 12);
   const { error } = await supabase.from('platform_admins').update({ password_hash }).eq('id', id);
-  if (error) throw new AppError('Failed to reset password.', 500);
+  if (error) throw new AppError('Failed to update password.', 500);
 };

@@ -43,10 +43,11 @@ export default function SuperAdminShell() {
   const navigate        = useNavigate();
   const [collapsed,    setCollapsed]    = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
-  const [newPassword,  setNewPassword]  = useState('');
+  const [newPassword,     setNewPassword]     = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
 
   const resetPwd = useMutation({
-    mutationFn: (password) => resetAdminPassword(admin.id, { password }),
+    mutationFn: (data) => resetAdminPassword(admin.id, data),
     onSuccess: () => {
       toast.success('Password updated');
       setChangePwOpen(false);
@@ -186,19 +187,23 @@ export default function SuperAdminShell() {
       </div>
 
       {/* Change Password SlidePanel */}
-      <SlidePanel open={changePwOpen} onClose={() => { setChangePwOpen(false); setNewPassword(''); }} title="Change Password">
-        <form onSubmit={e => { e.preventDefault(); resetPwd.mutate(newPassword); }} className="space-y-4">
+      <SlidePanel open={changePwOpen} onClose={() => { setChangePwOpen(false); setNewPassword(''); setCurrentPassword(''); }} title="Change Password">
+        <form onSubmit={e => { e.preventDefault(); resetPwd.mutate({ current_password: currentPassword, password: newPassword }); }} className="space-y-4">
           <div className="form-group">
             <label className="label">Account</label>
             <input className="input" disabled value={admin?.email || ''} />
+          </div>
+          <div className="form-group">
+            <label className="label" htmlFor="cp-current">Current Password *</label>
+            <PasswordInput id="cp-current" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
           </div>
           <div className="form-group">
             <label className="label" htmlFor="cp-pw">New Password *</label>
             <PasswordInput id="cp-pw" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={() => { setChangePwOpen(false); setNewPassword(''); }} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={newPassword.length < 8 || resetPwd.isPending} className="btn-primary">
+            <button type="button" onClick={() => { setChangePwOpen(false); setNewPassword(''); setCurrentPassword(''); }} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={!currentPassword || newPassword.length < 8 || resetPwd.isPending} className="btn-primary">
               {resetPwd.isPending ? 'Saving…' : 'Update Password'}
             </button>
           </div>

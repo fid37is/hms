@@ -570,3 +570,22 @@ export const createAdditionalOrg = async (userId, orgName) => {
     role_id: adminRole?.id,
   };
 };
+// ─── Update own profile ───────────────────────────────────
+export const updateProfile = async (userId, { full_name, department, phone }) => {
+  const updates = {};
+  if (full_name)  updates.full_name  = full_name.trim();
+  if (department !== undefined) updates.department = department.trim();
+  if (phone !== undefined)      updates.phone      = phone.trim() || null;
+
+  if (!Object.keys(updates).length) throw new AppError('No fields to update.', 400);
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select('id, full_name, email, department, phone, role_id')
+    .single();
+
+  if (error) throw new AppError('Failed to update profile.', 500);
+  return data;
+};
