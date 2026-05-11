@@ -42,6 +42,7 @@ import RoomsPage         from './modules/rooms/RoomsPage';
 import ReservationsPage  from './modules/reservations/ReservationsPage';
 import GuestsPage        from './modules/guests/GuestsPage';
 import GuestProfilePage  from './modules/guests/GuestProfilePage';
+import MyProfilePage     from './pages/MyProfilePage';
 import FolioPage         from './modules/billing/FolioPage';
 import BillingPage       from './modules/billing/BillingPage';
 import HousekeepingPage  from './modules/housekeeping/HousekeepingPage';
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="/reservations" element={<ReservationsPage />} />
           <Route path="/guests"       element={<GuestsPage />} />
           <Route path="/guests/:id"   element={<GuestProfilePage />} />
+          <Route path="/profile"        element={<MyProfilePage />} />
           <Route path="/billing"      element={<BillingPage />} />
           <Route path="/folio/:id"    element={<FolioPage />} />
           <Route path="/housekeeping" element={<HousekeepingPage />} />

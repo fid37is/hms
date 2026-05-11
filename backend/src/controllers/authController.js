@@ -125,3 +125,9 @@ export const createAdditionalOrgController = async (req, res, next) => {
     return sendSuccess(res, data, 'New property created. Switch to it now.');
   } catch (e) { next(e); }
 };
+export const updateProfileController = async (req, res, next) => {
+  try {
+    const data = await authService.updateProfile(req.user.sub, req.body);
+    return sendSuccess(res, data, 'Profile updated.');
+  } catch (e) { next(e); }
+};
