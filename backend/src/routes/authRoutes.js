@@ -14,6 +14,7 @@ import {
   loginController,
   refreshTokenController,
   getProfileController,
+  updateProfileController,
   changePasswordController,
   forceChangePasswordController,
   logoutController,
