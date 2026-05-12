@@ -131,13 +131,11 @@ export default function RoomsPage() {
         />
       )}
 
-      {viewRoom && (
-        <RoomDetailModal
-          room={viewRoom}
-          onClose={() => setViewRoomId(null)}
-          onEdit={(room) => { setViewRoomId(null); setEditRoom(room); setShowRoomForm(true); }}
-        />
-      )}
+      <RoomDetailModal
+        room={viewRoom}
+        onClose={() => setViewRoomId(null)}
+        onEdit={(room) => { setViewRoomId(null); setEditRoom(room); setShowRoomForm(true); }}
+      />
 
       </div>  {/* end space-y-4 */}
       </div>  {/* end contentStyle wrapper */}

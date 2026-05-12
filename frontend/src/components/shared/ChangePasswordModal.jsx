@@ -1,6 +1,9 @@
+// src/components/shared/ChangePasswordModal.jsx
+// Uses SlidePanel — consistent with the rest of the app
+
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import Modal from './Modal';
+import SlidePanel from './SlidePanel';
 import * as authApi from '../../lib/api/authApi';
 import toast from 'react-hot-toast';
 
@@ -9,8 +12,12 @@ export default function ChangePasswordModal({ open, onClose }) {
 
   const save = useMutation({
     mutationFn: (d) => authApi.changePassword(d),
-    onSuccess: () => { toast.success('Password changed'); setForm({ current_password: '', new_password: '', confirm: '' }); onClose(); },
-    onError:   (e) => toast.error(e.response?.data?.message || 'Failed to change password'),
+    onSuccess: () => {
+      toast.success('Password changed');
+      setForm({ current_password: '', new_password: '', confirm: '' });
+      onClose();
+    },
+    onError: (e) => toast.error(e.response?.data?.message || 'Failed to change password'),
   });
 
   const handleChange = (e) => {
@@ -26,8 +33,8 @@ export default function ChangePasswordModal({ open, onClose }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Change Password">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <SlidePanel open={open} onClose={onClose} title="Change Password">
+      <form onSubmit={handleSubmit} className="space-y-4 p-1">
         <div className="form-group">
           <label className="label" htmlFor="cp-current">Current Password</label>
           <input id="cp-current" name="current_password" type="password" className="input" required
@@ -43,13 +50,13 @@ export default function ChangePasswordModal({ open, onClose }) {
           <input id="cp-confirm" name="confirm" type="password" className="input" required
             value={form.confirm} onChange={handleChange} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>
           <button type="submit" disabled={save.isPending} className="btn-primary flex-1 justify-center">
             {save.isPending ? 'Saving…' : 'Change Password'}
           </button>
         </div>
       </form>
-    </Modal>
+    </SlidePanel>
   );
 }

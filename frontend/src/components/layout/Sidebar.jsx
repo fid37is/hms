@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Logo from '../brand/cierlo_logo';
+import MyProfilePanel from '../shared/MyProfilePanel';
 import {
   LayoutDashboard, BedDouble, CalendarCheck, Users, Receipt,
   Sparkles, Wrench, Package, HardHat, BarChart3, Settings, User,
@@ -87,8 +88,9 @@ export default function Sidebar() {
   const { user, logout, hasPermission, orgs } = useAuthStore();
   const navigate    = useNavigate();
   const unreadCount = useUnreadCount();
-  const [menuOpen,  setMenuOpen]  = useState(false);
-  const [changePw,  setChangePw]  = useState(false);
+  const [menuOpen,     setMenuOpen]     = useState(false);
+  const [changePw,     setChangePw]     = useState(false);
+  const [profileOpen,  setProfileOpen]  = useState(false);
   const menuRef = useRef();
 
   const { data: org } = useQuery({
@@ -262,8 +264,7 @@ export default function Sidebar() {
               <div className="p-1">
                 {menuItem(<Palette size={14} />, 'Customise',       () => window.open('/settings/customize', '_blank'))}
                 {menuItem(<HelpCircle size={14} />, 'Help & Support', () => window.open('/help', '_blank'))}
-                {menuItem(<User size={14} />, 'My Profile',       () => navigate('/profile'))}
-                {menuItem(<KeyRound size={14} />, 'Change Password', () => setChangePw(true))}
+                {menuItem(<User size={14} />, 'My Profile',       () => { setMenuOpen(false); setProfileOpen(true); })}
                 <div style={{ height: 1, backgroundColor: 'var(--border-soft)', margin: '4px 0' }} />
                 {menuItem(<LogOut size={14} />, 'Sign out', handleLogout, true)}
               </div>
@@ -304,7 +305,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      <ChangePasswordModal open={changePw} onClose={() => setChangePw(false)} />
+      <MyProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 }

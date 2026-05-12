@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, CreditCard, XCircle } from 'lucide-react';
 import * as folioApi from '../../lib/api/folioApi';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import StatusBadge    from '../../components/shared/StatusBadge';
-import Modal          from '../../components/shared/Modal';
+import SlidePanel      from '../../components/shared/SlidePanel';
 import AddChargeForm  from './components/AddChargeForm';
 import PaymentForm    from './components/PaymentForm';
 import { formatCurrency, formatDateTime } from '../../utils/format';
@@ -170,7 +170,7 @@ export default function FolioPage() {
       </div>
 
       {/* Void charge modal */}
-      <Modal open={!!voidItem} onClose={() => setVoidItem(null)} title="Void Charge" size="sm">
+      <SlidePanel open={!!voidItem} onClose={() => setVoidItem(null)} title="Void Charge">
         {voidItem && (
           <div className="space-y-4">
             <p className="text-sm" style={{ color: 'var(--text-sub)' }}>
@@ -194,17 +194,17 @@ export default function FolioPage() {
             </div>
           </div>
         )}
-      </Modal>
+      </SlidePanel>
 
-      <Modal open={showCharge} onClose={() => setShowCharge(false)} title="Add Charge">
+      <SlidePanel open={showCharge} onClose={() => setShowCharge(false)} title="Add Charge">
         <AddChargeForm folioId={id}
           onSuccess={() => { setShowCharge(false); qc.invalidateQueries(['folio', id]); }} />
-      </Modal>
+      </SlidePanel>
 
-      <Modal open={showPayment} onClose={() => setShowPayment(false)} title="Record Payment">
+      <SlidePanel open={showPayment} onClose={() => setShowPayment(false)} title="Record Payment">
         <PaymentForm folioId={id} balance={balance}
           onSuccess={() => { setShowPayment(false); qc.invalidateQueries(['folio', id]); }} />
-      </Modal>
+      </SlidePanel>
     </div>
   );
 }
