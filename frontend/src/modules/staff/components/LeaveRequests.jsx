@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as staffApi from '../../../lib/api/staffApi';
 import DataTable     from '../../../components/shared/DataTable';
 import StatusBadge   from '../../../components/shared/StatusBadge';
-import Modal         from '../../../components/shared/Modal';
+import SlidePanel    from '../../../components/shared/SlidePanel';
 import { formatDate } from '../../../utils/format';
 import toast from 'react-hot-toast';
 
@@ -80,7 +80,7 @@ export default function LeaveRequests({ openForm, onFormClose }) {
         <DataTable columns={columns} data={data || []} loading={isLoading} emptyTitle="No leave requests" />
       </div>
 
-      <Modal open={showForm} onClose={handleClose} title="Leave Request">
+      <SlidePanel open={showForm} onClose={handleClose} title="Leave Request">
         <form onSubmit={e => { e.preventDefault(); create.mutate(form); }} className="space-y-4">
           <div className="form-group">
             <label className="label" htmlFor="lr-staff_id">Staff Member *</label>
@@ -122,7 +122,7 @@ export default function LeaveRequests({ openForm, onFormClose }) {
             </button>
           </div>
         </form>
-      </Modal>
+      </SlidePanel>
     </>
   );
 }

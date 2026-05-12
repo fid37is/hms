@@ -247,7 +247,7 @@ export default function StaffDetail({ staffId }) {
       </div>
 
       {/* Grant access modal */}
-      <Modal open={showGrant} onClose={() => setShowGrant(false)} title="Grant System Access">
+      <SlidePanel open={showGrant} onClose={() => setShowGrant(false)} title="Grant System Access">
         <GrantAccessForm
           staff={staff}
           roles={roles || []}
@@ -257,7 +257,7 @@ export default function StaffDetail({ staffId }) {
             qc.invalidateQueries(['users']);
           }}
         />
-      </Modal>
+      </SlidePanel>
 
       {/* Revoke confirmation */}
       <ConfirmDialog
