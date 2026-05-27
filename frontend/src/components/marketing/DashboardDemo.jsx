@@ -103,7 +103,7 @@ function ScreenDashboard() {
 
         <In delay={.32}>
           <div style={{ background: white, border: `1px solid ${border}`, borderRadius: 10, padding: '14px 16px', height: '100%', boxSizing: 'border-box' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: ink, marginBottom: 12 }}>Revenue — 7 days</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: ink, marginBottom: 12 }}>Revenue - 7 days</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>
               {[38, 55, 44, 70, 100, 78, 60].map((h, i) => (
                 <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -126,12 +126,12 @@ function ScreenDashboard() {
 
 function ScreenReservations() {
   const rows = [
-    ['Chidi Okonkwo',   '201 — Suite',    'Mar 12','Mar 15','Confirmed', blue,   blueL],
-    ['Emeka Okafor',    '304 — Deluxe',   'Mar 10','Mar 14','Checked In',amber,  amberL],
-    ['Ngozi Adeyemi',   '112 — Standard', 'Mar 13','Mar 15','Arriving',  orange, orangeL],
-    ['Sarah Bello',     '408 — Deluxe',   'Mar 8', 'Mar 12','Checked Out',muted, surface],
-    ['Michael Eze',     '305 — Standard', 'Mar 13','Mar 16','Confirmed', blue,   blueL],
-    ['Fatima Ibrahim',  '210 — Suite',    'Mar 14','Mar 18','Confirmed', blue,   blueL],
+    ['Chidi Okonkwo',   '201 - Suite',    'Mar 12','Mar 15','Confirmed', blue,   blueL],
+    ['Emeka Okafor',    '304 - Deluxe',   'Mar 10','Mar 14','Checked In',amber,  amberL],
+    ['Ngozi Adeyemi',   '112 - Standard', 'Mar 13','Mar 15','Arriving',  orange, orangeL],
+    ['Sarah Bello',     '408 - Deluxe',   'Mar 8', 'Mar 12','Checked Out',muted, surface],
+    ['Michael Eze',     '305 - Standard', 'Mar 13','Mar 16','Confirmed', blue,   blueL],
+    ['Fatima Ibrahim',  '210 - Suite',    'Mar 14','Mar 18','Confirmed', blue,   blueL],
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
@@ -186,9 +186,9 @@ function ScreenCheckin() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {[
-              { l:'Room Ready',   sub:'Suite 201 — clean & inspected',    done:true },
+              { l:'Room Ready',   sub:'Suite 201 - clean & inspected',    done:true },
               { l:'ID Verified',  sub:'Passport No. NG4829031',           done:true },
-              { l:'Deposit Paid', sub:'₦92,250 — Card ending 4242',       done:true },
+              { l:'Deposit Paid', sub:'₦92,250 - Card ending 4242',       done:true },
             ].map((row,i)=>(
               <div key={i} style={{
                 display:'flex', alignItems:'center', gap:12,
@@ -283,7 +283,7 @@ function ScreenBilling() {
               <div style={{ fontSize:13, fontWeight:700, color:ink }}>Folio #F-2094</div>
               <div style={{ fontSize:10, color:muted, marginTop:2 }}>Chidi Okonkwo · Suite 201</div>
             </div>
-            <Bdg label="Closed — Paid" color={green} bg={greenL}/>
+            <Bdg label="Closed - Paid" color={green} bg={greenL}/>
           </div>
           {[
             ['Suite Rate × 3','₦135,000'],
@@ -321,7 +321,7 @@ function ScreenBilling() {
         </In>
         <In delay={.24}>
           <div style={{ background:dark, borderRadius:10, padding:'16px 18px' }}>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,.4)', marginBottom:4 }}>Total Revenue — March</div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,.4)', marginBottom:4 }}>Total Revenue - March</div>
             <div style={{ fontSize:28, fontWeight:700, color:white, letterSpacing:'-.03em', lineHeight:1 }}>₦5.2M</div>
             <div style={{ fontSize:11, color:amber, marginTop:6, fontWeight:500 }}>↑ 22% vs February</div>
           </div>

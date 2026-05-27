@@ -117,7 +117,7 @@ export default function App() {
           <AuthRoute><OnboardingPage /></AuthRoute>
         } />
 
-        {/* Public pages — no auth required */}
+        {/* Public pages - no auth required */}
         <Route path="/help"          element={<HelpPage />} />
         <Route path="/help/docs"     element={<DocsPage />} />
         <Route path="/help/support"  element={<SupportPage />} />
@@ -126,7 +126,7 @@ export default function App() {
         <Route path="/terms"         element={<TermsPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />
 
-        {/* Protected app — inside AppShell */}
+        {/* Protected app - inside AppShell */}
         <Route element={<Guard><AppShell /></Guard>}>
           <Route path="/dashboard"    element={<DashboardPage />} />
           <Route path="/group"        element={<GroupDashboardPage />} />
@@ -149,11 +149,11 @@ export default function App() {
           <Route path="/settings"     element={<SettingsPage />} />
         </Route>
 
-        {/* Full-screen customizer — protected but no AppShell */}
+        {/* Full-screen customizer - protected but no AppShell */}
         <Route path="/settings/customize"   element={<Guard><CustomizePage /></Guard>} />
         <Route path="/billing/callback"      element={<Guard><BillingCallbackPage /></Guard>} />
 
-        {/* Super-Admin Console — completely separate from tenant auth */}
+        {/* Super-Admin Console - completely separate from tenant auth */}
         <Route path="/super-admin/login"            element={<SuperAdminLoginPage />} />
         <Route path="/super-admin/forgot-password" element={<SuperAdminForgotPasswordPage />} />
         <Route path="/super-admin/reset-password"  element={<SuperAdminResetPasswordPage />} />

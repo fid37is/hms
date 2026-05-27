@@ -658,7 +658,7 @@ export default function LandingPage() {
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', animation: 'clpulse 2s infinite' }} />
                     <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent)' }}>Your hotel, online</span>
                   </div>
-                  <span style={{ fontFamily: "'SF Mono','Fira Code',monospace", fontSize: 13, color: '#93c5fd' }}>amarahotel.cierlo.io</span>
+                  <span style={{ fontFamily: "'SF Mono','Fira Code',monospace", fontSize: 13, color: '#93c5fd' }}>amarahotel.cierlo.app</span>
                 </div>
               </div>
             </Reveal>

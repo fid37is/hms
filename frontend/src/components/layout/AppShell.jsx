@@ -10,7 +10,7 @@ export default function AppShell() {
   const { sidebarOpen, setSidebar } = useUIStore();
   const { pathname } = useLocation();
 
-  // Only close sidebar on nav on MOBILE — leave desktop state alone
+  // Only close sidebar on nav on MOBILE - leave desktop state alone
   useEffect(() => {
     if (window.innerWidth < 768) setSidebar(false);
   }, [pathname]);
@@ -18,7 +18,7 @@ export default function AppShell() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-page)' }}>
 
-      {/* ── Desktop sidebar — participates in flex layout ── */}
+      {/* ── Desktop sidebar - participates in flex layout ── */}
       <div
         className="hidden md:flex flex-col flex-shrink-0 h-full transition-all duration-200"
         style={{ width: sidebarOpen ? '240px' : '64px' }}
@@ -44,7 +44,7 @@ export default function AppShell() {
         <Sidebar />
       </div>
 
-      {/* ── Main content — takes remaining flex space ── */}
+      {/* ── Main content - takes remaining flex space ── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />
         <TrialBanner />
