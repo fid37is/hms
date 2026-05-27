@@ -6,7 +6,7 @@ import App from './App';
 import './styles/globals.css';
 import { useThemeStore } from './store/themeStore';
 
-// Apply saved theme before first paint — prevents flash
+// Apply saved theme before first paint - prevents flash
 useThemeStore.getState().initTheme();
 
 const queryClient = new QueryClient({

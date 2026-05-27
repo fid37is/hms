@@ -1,5 +1,5 @@
 // Shared nav + footer for all public pages.
-// Flame palette — warm, light, hospitality-first.
+// Flame palette - warm, light, hospitality-first.
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';

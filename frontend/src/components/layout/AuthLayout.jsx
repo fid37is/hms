@@ -14,7 +14,7 @@ const DEFAULT_HEADLINE = (
   <>Everything your<br />hotel needs to<br /><em>run smoothly</em></>
 );
 
-const DEFAULT_BODY = 'Rooms, reservations, billing, housekeeping, inventory, maintenance, and staff — one platform, fully yours.';
+const DEFAULT_BODY = 'Rooms, reservations, billing, housekeeping, inventory, maintenance, and staff - one platform, fully yours.';
 
 const DEFAULT_EYEBROW = 'Your hotel, always on.';
 
@@ -67,10 +67,10 @@ export default function AuthLayout({
           pointer-events: none;
         }
 
-        /* logo — anchored top, same edge as stats */
+        /* logo - anchored top, same edge as stats */
         .al-left-logo { position: relative; z-index: 1; }
 
-        /* hero copy — inset slightly for editorial hierarchy */
+        /* hero copy - inset slightly for editorial hierarchy */
         .al-left-content {
           position: relative; z-index: 1;
           padding: 0 16px;
@@ -102,7 +102,7 @@ export default function AuthLayout({
           line-height: 1.7; max-width: 340px;
         }
 
-        /* stats — anchored bottom, same edge as logo */
+        /* stats - anchored bottom, same edge as logo */
         .al-stats {
           position: relative; z-index: 1;
           display: flex; gap: 32px;
@@ -280,19 +280,19 @@ export default function AuthLayout({
         <div className="al-left">
           <div className="al-left-grid" />
 
-          {/* Logo — top, at outer padding */}
+          {/* Logo - top, at outer padding */}
           <div className="al-left-logo">
             <Logo size="sm" theme="light" />
           </div>
 
-          {/* Hero copy — inset 16px more than logo/stats */}
+          {/* Hero copy - inset 16px more than logo/stats */}
           <div className="al-left-content">
             <div className="al-eyebrow">{eyebrow}</div>
             <h2 className="al-headline">{headline}</h2>
             <p className="al-body">{body}</p>
           </div>
 
-          {/* Stats — bottom, at outer padding */}
+          {/* Stats - bottom, at outer padding */}
           <div className="al-stats">
             {stats.map(s => (
               <div key={s.label}>
