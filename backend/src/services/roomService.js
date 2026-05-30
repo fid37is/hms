@@ -103,13 +103,34 @@ export const deleteRoomType = async (orgId, id) => {
 
 const sanitiseRatePlan = (payload) => {
   const d = { ...payload };
+
+  // Map frontend aliases to DB column names
+  if (d.rate_per_night !== undefined && d.base_rate === undefined) d.base_rate = d.rate_per_night;
+  if (d.rate           !== undefined && d.base_rate === undefined) d.base_rate = d.rate;
+  delete d.rate_per_night;
+  delete d.rate;
+
+  // Map cancellation_policy -> is_refundable
+  if (d.cancellation_policy !== undefined && d.is_refundable === undefined) {
+    d.is_refundable = d.cancellation_policy !== 'non_refundable';
+  }
+  delete d.cancellation_policy;
+  delete d.free_cancellation_window;
+  delete d.payment_timing;
+
+  // Always populate NOT NULL columns with sensible defaults
+  if (d.is_refundable === undefined) d.is_refundable = true;
+
   if (d.is_refundable === false) {
-    d.cancellation_hours  = 0;
+    d.cancellation_hours  = d.cancellation_hours  ?? 0;
     d.prepayment_required = true;
+    d.prepayment_percent  = d.prepayment_percent  ?? 100;
+  } else {
+    d.cancellation_hours  = d.cancellation_hours  ?? 24;
+    d.prepayment_required = d.prepayment_required ?? false;
+    d.prepayment_percent  = d.prepayment_percent  ?? 0;
   }
-  if (d.prepayment_required && !d.prepayment_percent) {
-    d.prepayment_percent = 100;
-  }
+
   return d;
 };
 
