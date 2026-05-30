@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Pencil, Plus, Users, ImagePlus, ImageOff } from 'lucide-react';
+import { Trash2, Pencil, Plus, Users, ImagePlus, X, ImageOff } from 'lucide-react';
 import SlidePanel from '../../../components/shared/SlidePanel';
 import * as roomApi from '../../../lib/api/roomApi';
 import { formatCurrency } from '../../../utils/format';
