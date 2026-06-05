@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Wrench, CheckCircle, XCircle, Pencil } from 'lucide-react';
+import { MoreVertical, Wrench, CheckCircle, XCircle, Pencil, CalendarClock } from 'lucide-react';
 import { formatCurrency } from '../../../utils/format';
 
 const STATUS_META = {
@@ -11,9 +11,16 @@ const STATUS_META = {
   out_of_order: { label: 'Out of Order', color: 'var(--s-gray-text)',   bg: 'var(--s-gray-bg)'   },
 };
 
+const RESERVED_META = { label: 'Reserved', color: 'var(--s-blue-text)', bg: 'var(--s-blue-bg)' };
+
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+
 function RoomCard({ room, onStatusChange, onView }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const meta = STATUS_META[room.status] || STATUS_META.available;
+  const upcomingRes = room.upcoming_reservation;
+  // Show Reserved badge only when room is available/clean but has a confirmed upcoming booking
+  const showReserved = upcomingRes && ['available', 'clean'].includes(room.status);
+  const meta = showReserved ? RESERVED_META : (STATUS_META[room.status] || STATUS_META.available);
 
   const actions = [
     { label: 'Mark Clean',        icon: CheckCircle, status: 'clean',        show: ['dirty'] },
@@ -83,6 +90,27 @@ function RoomCard({ room, onStatusChange, onView }) {
         <p className="text-xs mt-2 font-mono" style={{ color: 'var(--text-muted)' }}>
           {formatCurrency(room.room_types.base_rate)}/night
         </p>
+      )}
+
+      {/* Upcoming reservation info */}
+      {showReserved && (
+        <div className="mt-2 px-2 py-1.5 rounded-md flex items-start gap-1.5"
+          style={{ backgroundColor: 'var(--s-blue-bg)' }}>
+          <CalendarClock size={11} style={{ color: 'var(--s-blue-text)', flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <p className="text-xs font-medium" style={{ color: 'var(--s-blue-text)' }}>
+              {upcomingRes.reservation_no}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--s-blue-text)', opacity: 0.8 }}>
+              {fmtDate(upcomingRes.check_in_date)} → {fmtDate(upcomingRes.check_out_date)}
+            </p>
+            {upcomingRes.guest_name && (
+              <p className="text-xs" style={{ color: 'var(--s-blue-text)', opacity: 0.7 }}>
+                {upcomingRes.guest_name}
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {room.is_blocked && (

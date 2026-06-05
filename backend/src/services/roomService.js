@@ -202,7 +202,37 @@ export const getAllRooms = async (orgId, filters = {}) => {
 
   const { data, error } = await query;
   if (error) throw new AppError('Failed to fetch rooms.', 500);
-  return data;
+
+  // Enrich rooms with upcoming confirmed reservations so the board
+  // shows 'Reserved' between booking date and actual check-in.
+  const today = new Date().toISOString().split('T')[0];
+  const { data: upcoming } = await supabase
+    .from('reservations')
+    .select('room_id, reservation_no, check_in_date, check_out_date, guests(full_name)')
+    .eq('org_id', orgId)
+    .eq('status', 'confirmed')
+    .not('room_id', 'is', null)
+    .gte('check_out_date', today);
+
+  // Build a map of room_id -> nearest upcoming reservation
+  const upcomingByRoom = {};
+  for (const r of (upcoming || [])) {
+    if (!upcomingByRoom[r.room_id] ||
+        r.check_in_date < upcomingByRoom[r.room_id].check_in_date) {
+      upcomingByRoom[r.room_id] = {
+        reservation_no: r.reservation_no,
+        check_in_date:  r.check_in_date,
+        check_out_date: r.check_out_date,
+        guest_name:     r.guests?.full_name || null,
+      };
+    }
+  }
+
+  // Attach upcoming_reservation to each room
+  return (data || []).map(room => ({
+    ...room,
+    upcoming_reservation: upcomingByRoom[room.id] || null,
+  }));
 };
 
 export const getRoomById = async (orgId, id) => {
